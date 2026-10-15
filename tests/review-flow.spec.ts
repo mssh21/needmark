@@ -12,7 +12,7 @@ async function saved(): Promise<Feedback[]> {
 async function configure(page: Page) {
   await page.getByRole('button', { name: '設定', exact: true }).click();
   await page.getByLabel('キャプチャ方式').selectOption('none');
-  await page.getByRole('button', { name: '設定を保存' }).click();
+  await page.getByRole('button', { name: '保存', exact: true }).click();
 }
 async function clickAt(page: Page, selector: string) {
   const rect = (await page.locator(selector).boundingBox())!;
@@ -53,7 +53,7 @@ test('the bottom-centred icon toolbar names each tool, explains its purpose in t
   await page.getByRole('button', { name: '設定', exact: true }).click();
   await page.getByLabel('キーボードショートカット').selectOption('false');
   await page.getByLabel('表示言語').selectOption('en');
-  await page.getByRole('button', { name: '設定を保存' }).click();
+  await page.getByRole('button', { name: '保存', exact: true }).click();
   await page.getByRole('button', { name: 'Comment', exact: true }).hover();
   await expect(tip).toHaveText('CommentPick a spot on the page and leave a comment');
 });

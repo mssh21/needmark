@@ -110,7 +110,7 @@ test('a padded bordered iframe saves its original target geometry and DOM PNG ou
       await testInfo.attach('padded-frame-native.png', { body: native, contentType: 'image/png' });
       expect(nativePixels.inside).toEqual(currentColor); expectPrivacy(nativePixels.privacy, [153, 34, 169, 255]);
       await page.getByRole('button', { name: '設定', exact: true }).click();
-      await page.getByLabel('キャプチャ方式').selectOption('dom'); await page.getByRole('button', { name: '設定を保存', exact: true }).click();
+      await page.getByLabel('キャプチャ方式').selectOption('dom'); await page.getByRole('button', { name: '保存', exact: true }).click();
       const response = page.waitForResponse((item) => item.url() === origin + '/__needmark/source' && item.request().method() === 'POST');
       await page.getByRole('button', { name: 'コメント', exact: true }).click();
       await expect(page.locator('[data-needmark] .cover')).toBeVisible();
@@ -173,7 +173,7 @@ async function privacyRects(frame: import('@playwright/test').Frame): Promise<Re
 async function configureMethod(page: Page, method: 'none' | 'tab') {
   await page.getByRole('button', { name: '設定', exact: true }).click();
   await page.getByLabel('キャプチャ方式').selectOption(method);
-  await page.getByRole('button', { name: '設定を保存', exact: true }).click();
+  await page.getByRole('button', { name: '保存', exact: true }).click();
 }
 async function storedComment(output: string, comment: string) {
   const ids = (await readdir(output, { withFileTypes: true })).filter((entry) => entry.isDirectory() && !entry.name.startsWith('.'));
@@ -362,7 +362,7 @@ test('a normal area review over iframe padding never attributes a wholly unpaint
       expect(originalIdentity).toEqual({ sameDocument: true, sameNode: true });
       expect(rect.width).toBeCloseTo(15); expect(rect.height).toBeCloseTo(9.6, 1); expect(area.width).toBeGreaterThan(5); expect(area.height).toBeGreaterThan(5);
       await page.getByRole('button', { name: '設定', exact: true }).click();
-      await page.getByLabel('キャプチャ方式').selectOption('dom'); await page.getByRole('button', { name: '設定を保存', exact: true }).click();
+      await page.getByLabel('キャプチャ方式').selectOption('dom'); await page.getByRole('button', { name: '保存', exact: true }).click();
       const frameBefore = await page.locator('#outer-capture-frame').evaluate((element) => element.outerHTML);
       const childBefore = await frame.evaluate(() => ({ html: document.body.innerHTML, url: location.href, scrollX, scrollY }));
       const native = await page.screenshot({ caret: 'initial' });

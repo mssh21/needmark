@@ -79,7 +79,7 @@ test('inherited html typography leaves review fields readable and editable while
   expect(appStyle['#app-typography-probe']?.direction).toBe('rtl');
   await evidence(page, info, 'review-on-styled-rtl-page');
   await page.getByLabel('Author name').fill('投稿者名をそのまま残す');
-  await page.getByRole('button', { name: 'Save settings', exact: true }).click();
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
   await selectTarget(page, '#purchase-button');
   const comment = '日本語と MixedCase をそのまま保存する';
   await page.getByLabel('Comment text').fill(comment);
@@ -108,7 +108,7 @@ test('body typography stays outside the review host before a native dialog and a
   expect(actual).toEqual(expected);
   await evidence(page, info, 'review-in-styled-native-dialog');
   await page.getByLabel('Author name').fill('Dialog reviewer');
-  await page.getByRole('button', { name: 'Save settings', exact: true }).click();
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
   await page.getByRole('button', { name: 'Modal action', exact: true }).click();
   await expect(page.locator('#styled-native-dialog')).toHaveAttribute('data-clicks', '1');
   await selectTarget(page, '#app-modal-target');
@@ -131,7 +131,7 @@ test('global important div rules preserve page clicks while selection still inte
   const appStyle = await sourceTypography(page), actual = await typography(widget(page), clientSamples);
   const pointerEvents = await widget(page).evaluate((node) => getComputedStyle(node).pointerEvents);
   await info.attach('global-rule-comparison', { body: JSON.stringify({ expected, actual, pointerEvents }, null, 2), contentType: 'application/json' });
-  await page.getByRole('button', { name: 'Save settings', exact: true }).click();
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
   const appBounds = (await page.locator('#purchase-button').boundingBox())!;
   await page.mouse.click(appBounds.x + appBounds.width / 2, appBounds.y + appBounds.height / 2);
   await expect(page.locator('#purchase-status')).toHaveText('Trial reserved. Check your inbox for the setup link.');

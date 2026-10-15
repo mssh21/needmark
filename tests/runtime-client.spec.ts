@@ -14,7 +14,7 @@ async function setup(page: Page) {
   await page.goto('/');
   await page.getByRole('button', { name: '設定', exact: true }).click();
   await page.getByLabel('キャプチャ方式').selectOption('none');
-  await page.getByRole('button', { name: '設定を保存' }).click();
+  await page.getByRole('button', { name: '保存', exact: true }).click();
   await page.evaluate(() => {
     document.querySelectorAll('[data-needmark-source]').forEach((element) => element.removeAttribute('data-needmark-source'));
     for (const selector of ['#purchase-button', '#product-title']) {

@@ -30,7 +30,7 @@ async function exportedPrompt(page: Page, browserName: string): Promise<string> 
   await page.getByRole('button', { name: 'プロンプトをコピー' }).click();
   const status = page.locator('[data-needmark] .toast');
   if (browserName === 'chromium') {
-    await expect(page.getByRole('button', { name: 'コピーしました', exact: true })).toHaveText('コピーしました');
+    await expect(page.getByRole('button', { name: 'コピーしました', exact: true })).toBeVisible();
     return page.evaluate(() => navigator.clipboard.readText());
   }
   await expect(status).toHaveText('自動コピーできませんでした。表示したテキストを手動でコピーできます。');
@@ -45,7 +45,7 @@ test('area selection saves image and feedback, survives reload, and shares statu
   await page.getByRole('button', { name: '設定', exact: true }).click();
   await page.getByLabel('投稿者名').fill('Designer A');
   await page.getByLabel('キャプチャ方式').selectOption('dom');
-  await page.getByRole('button', { name: '設定を保存' }).click();
+  await page.getByRole('button', { name: '保存', exact: true }).click();
   await page.getByRole('button', { name: 'コメント', exact: true }).click();
   const bounds = await page.locator('#product-title').boundingBox();
   await page.mouse.move(bounds!.x - 10, bounds!.y - 10);
@@ -106,7 +106,7 @@ test('native tab capture records the selected element and actual browser frame',
   await page.goto('/');
   await page.getByRole('button', { name: '設定', exact: true }).click();
   await page.getByLabel('キャプチャ方式').selectOption('tab');
-  await page.getByRole('button', { name: '設定を保存' }).click();
+  await page.getByRole('button', { name: '保存', exact: true }).click();
   await page.getByRole('button', { name: 'コメント', exact: true }).click();
   await expect(page.locator('[data-needmark] .cover')).toBeVisible();
   const button = await page.locator('#purchase-button').boundingBox();
@@ -148,7 +148,7 @@ test('React comments retain source locations, runtime ownership and distinguish 
   await expect(purchase).toHaveText('Add seats · 1');
   await page.getByRole('button', { name: '設定', exact: true }).click();
   await page.getByLabel('キャプチャ方式').selectOption('dom');
-  await page.getByRole('button', { name: '設定を保存' }).click();
+  await page.getByRole('button', { name: '保存', exact: true }).click();
   await page.getByRole('button', { name: 'コメント', exact: true }).click();
   const bounds = await purchase.boundingBox();
   await page.mouse.click(bounds!.x + bounds!.width / 2, bounds!.y + bounds!.height / 2);

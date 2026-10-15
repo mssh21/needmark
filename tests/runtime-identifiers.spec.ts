@@ -62,7 +62,7 @@ async function withReview(page: Page, scenario: Scenario, run: (review: Review) 
     await expect(page.locator('.targets [data-cy]')).toBeVisible();
     await page.getByRole('button', { name: '設定', exact: true }).click();
     await page.getByLabel('キャプチャ方式').selectOption('none');
-    await page.getByRole('button', { name: '設定を保存', exact: true }).click();
+    await page.getByRole('button', { name: '保存', exact: true }).click();
     await run({ root, output: `${root}/.needmark/feedback`, source, origin, mapRequests: () => maps });
   } finally {
     await proxy?.close(); if (upstream?.listening) await close(upstream); await rm(root, { recursive: true, force: true });
@@ -144,7 +144,8 @@ test('real proxy verifies cy, component and configured custom identifiers throug
       const target = await cy.boundingBox(), marker = await pin.boundingBox();
       return marker && target ? Math.abs((marker.y + marker.height / 2) - (target.y + target.height / 2)) : Infinity;
     }).toBeLessThan(1);
-    await pin.hover(); await expect(page.locator('[data-needmark] .tip')).not.toContainText('対象未確認');
+    // Pins hold still while hovered, so the pointer leaves before the page changes the target.
+    await pin.hover(); await expect(page.locator('[data-needmark] .tip')).not.toContainText('対象未確認'); await page.mouse.move(10, 10);
     await cy.evaluate((element) => { const duplicate = document.createElement('button'); duplicate.hidden = true; duplicate.setAttribute('data-cy', 'cy-checkout'); document.body.append(duplicate); });
     await expect.poll(async () => {
       const marker = await pin.boundingBox();
@@ -230,7 +231,7 @@ test('real shadow and iframe React targets keep per-root unique identifiers and 
       expect(identity).toMatchObject({ resolvedExactNode: true, hostFiberMatches: true, isConnected: true, ownerDocumentIsCurrent: true });
       const pin = page.getByRole('button', { name: `コメント: ${target.comment}`, exact: true });
       await expect(pin).toBeVisible(); await pin.hover();
-      await expect(page.locator('[data-needmark] .tip')).not.toContainText('対象未確認');
+      await expect(page.locator('[data-needmark] .tip')).not.toContainText('対象未確認'); await page.mouse.move(10, 10);
       const original = await target.target.elementHandle();
       if (!original) throw new Error('Original root target is missing');
       await original.evaluate((element) => element.setAttribute('data-cy', 'changed-root-target'));

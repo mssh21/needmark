@@ -9,7 +9,7 @@ async function configure(page: Page, shortcuts = true) {
   await expect(page.getByLabel('キーボードショートカット')).toHaveValue('true');
   await page.getByLabel('キャプチャ方式').selectOption('none');
   await page.getByLabel('キーボードショートカット').selectOption(String(shortcuts));
-  await page.getByRole('button', { name: '設定を保存' }).click();
+  await page.getByRole('button', { name: '保存', exact: true }).click();
 }
 async function chooseTarget(page: Page) {
   await page.getByRole('button', { name: 'コメント', exact: true }).click();
@@ -71,7 +71,7 @@ test('disabled global shortcuts pass through to the host and stay disabled after
   expect(await page.evaluate(() => localStorage.getItem('needmark-shortcuts'))).toBe('false');
   await page.reload(); await page.getByRole('button', { name: '設定', exact: true }).click();
   await expect(page.getByLabel('キーボードショートカット')).toHaveValue('false');
-  await page.getByLabel('キーボードショートカット').selectOption('true'); await page.getByRole('button', { name: '設定を保存' }).click();
+  await page.getByLabel('キーボードショートカット').selectOption('true'); await page.getByRole('button', { name: '保存', exact: true }).click();
   await page.locator('#purchase-button').focus(); await page.keyboard.press('Shift+C');
   await expect(page.locator('[data-needmark] .cover')).toBeVisible();
   await page.keyboard.press('Escape'); await expect(page.locator('[data-needmark] .cover')).toBeHidden();

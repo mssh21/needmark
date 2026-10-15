@@ -30,7 +30,7 @@ test('legacy browser preferences restore review behavior and canonical preferenc
   await expect(page.getByLabel('AIへの情報量')).toHaveValue('compact');
   await expect(page.getByLabel('キーボードショートカット')).toHaveValue('false');
   await expect(page.getByLabel('表示テーマ')).toHaveValue('dark');
-  await page.getByRole('button', { name: 'パネルを閉じる', exact: true }).click();
+  await page.getByRole('button', { name: 'キャンセル', exact: true }).click();
   const canonical = {
     'needmark-author': 'Current reviewer', 'needmark-detail': 'standard', 'needmark-shortcuts': 'true',
     'needmark-theme': 'light', 'needmark-toolbar-position': JSON.stringify({ x: 220, y: 180 }),

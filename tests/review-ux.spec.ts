@@ -13,7 +13,7 @@ async function configure(page: import('@playwright/test').Page, method = 'none')
   await page.getByRole('button', { name: '設定', exact: true }).click();
   await page.getByLabel('投稿者名').fill('Reviewer');
   await page.getByLabel('キャプチャ方式').selectOption(method);
-  await page.getByRole('button', { name: '設定を保存' }).click();
+  await page.getByRole('button', { name: '保存', exact: true }).click();
 }
 async function clickTarget(page: import('@playwright/test').Page, selector = '#purchase-button') {
   await page.getByRole('button', { name: 'コメント', exact: true }).click();
@@ -45,7 +45,7 @@ test('image-free comments edit, cancel, reply, survive reload and delete through
   await expect(page.getByText('変更しました。確認してください。', { exact: true })).toBeVisible();
   expect((await stored()).replies?.[0]?.author).toBe('Reviewer');
   await page.reload(); await page.getByRole('button', { name: '設定', exact: true }).click();
-  await expect(page.getByLabel('キャプチャ方式')).toHaveValue('none'); await page.getByRole('button', { name: '設定を保存' }).click();
+  await expect(page.getByLabel('キャプチャ方式')).toHaveValue('none'); await page.getByRole('button', { name: '保存', exact: true }).click();
   await page.getByRole('button', { name: `コメント: ${(await stored()).comment}`, exact: true }).click();
   await page.getByRole('button', { name: 'コメントの操作', exact: true }).click(); await page.getByRole('menuitem', { name: '削除', exact: true }).click(); await page.getByRole('button', { name: '削除する', exact: true }).click();
   await expect(page.locator('[data-needmark] .card')).toHaveCount(0); expect((await readdir(output)).filter((id) => !id.startsWith('.'))).toHaveLength(0);
@@ -406,4 +406,34 @@ test('focus rings appear after keyboard input but not after clicks that move foc
   await page.getByRole('button', { name: '絞り込み', exact: true }).click();
   await expect(page.getByRole('menuitemcheckbox', { name: 'このページのみ', exact: true })).toBeFocused(); expect(await ring()).toBe('none');
   await page.keyboard.press('Escape'); await expect(page.getByRole('button', { name: '絞り込み', exact: true })).toBeFocused(); expect(await ring()).toBe('solid');
+});
+
+test('a pin stays put and opens while hovering it changes the text of its target', async ({ page }) => {
+  // The card mimics a chart tooltip: entering it adds text, so the saved text only matches while the pointer is elsewhere.
+  await page.addInitScript(() => addEventListener('DOMContentLoaded', () => {
+    const card = document.createElement('div'); card.id = 'hover-card'; card.textContent = 'Card';
+    card.style.cssText = 'position:fixed;left:100px;top:100px;width:400px;height:200px;background:#eee;z-index:5';
+    card.addEventListener('mouseenter', () => { const tip = document.createElement('span'); tip.className = 'tip'; tip.textContent = ' Mar $171,000'; card.append(tip); });
+    card.addEventListener('mouseleave', () => card.querySelector('.tip')?.remove());
+    document.body.append(card);
+  }));
+  await page.goto('/'); await configure(page);
+  const token = await page.locator('script[data-needmark-token]').getAttribute('data-needmark-token');
+  const rect = { x: 300, y: 150, width: 40, height: 40 };
+  const saved = await page.request.post('/__needmark/feedback', { headers: { 'x-needmark-token': token! }, data: {
+    comment: 'ホバーで中身が変わるカード', author: 'Reviewer', url: 'http://127.0.0.1:4192/', title: 'Review', capturedAt: new Date().toISOString(),
+    viewport: { width: 1200, height: 850, devicePixelRatio: 1, scrollX: 0, scrollY: 0 }, capture: { method: 'none', width: 0, height: 0 },
+    target: { kind: 'element', text: 'Card', selector: '#hover-card', rect, code: { truncated: false, elements: [{ tag: 'div', selector: '#hover-card', text: 'Card', rect,
+      attributes: { id: 'hover-card' }, styles: {}, headings: [], components: [] }] } },
+  } });
+  expect(saved.status()).toBe(201);
+  const pin = page.locator('[data-needmark] .pin'); await expect(pin).toBeVisible({ timeout: 5000 });
+  // Over the card the text no longer matches, so the pin falls back to its recorded spot inside the card.
+  await page.mouse.move(150, 280); await expect.poll(async () => (await pin.boundingBox())!.x + 12).toBeCloseTo(320, 0);
+  const box = (await pin.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.waitForTimeout(300);
+  expect(await pin.boundingBox()).toEqual(box);
+  await page.mouse.down(); await page.mouse.up();
+  await expect(page.getByLabel('返信', { exact: true })).toBeVisible();
 });
