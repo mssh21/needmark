@@ -37,6 +37,9 @@ export async function enableWidgetOption(page: Page, attribute: 'data-needmark-s
 // 新しいコメントを保存すると一覧を開かずに選択へ戻るため、保存結果を確かめるテストは選択を終えて自分で一覧を開く。
 export async function saveAndList(page: Page, language: 'ja' | 'en' = 'ja') {
   const cover = page.locator('[data-needmark] .cover');
+  // Save is enabled as the capture preview appears, while the panel still grows to fit it, so the click waits for that motion to end instead of landing above the moving button on a slow runner.
+  // 撮影プレビューが現れた時点で保存は押せるが、パネルはまだ伸びている途中なので、遅い環境で動くボタンの上を押さないよう動きが終わるのを待つ。
+  await expect(page.locator('[data-needmark] .morphing')).toHaveCount(0);
   await page.getByRole('button', { name: language === 'ja' ? '保存' : 'Save', exact: true }).click();
   await expect(page.getByLabel(language === 'ja' ? 'コメント本文' : 'Comment text')).toBeHidden();
   await expect(cover).toBeVisible();
