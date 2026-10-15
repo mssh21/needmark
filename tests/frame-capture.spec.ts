@@ -173,7 +173,7 @@ function expectPixels(actual: Awaited<ReturnType<typeof evidence>>, samples: Sam
   }
 }
 
-test('only the top document owns the review toolbar while a child opened directly remains reviewable', async ({ page }, testInfo) => {
+test('only the top document owns the review toolbar while a child opened directly remains reviewable', { tag: '@cross-engine' }, async ({ page }, testInfo) => {
   await withReview(page, true, async (review) => {
     const { outer, leaf } = await frames(page, true);
     const state = { topUrl: page.url(), outerUrl: outer.url(), leafUrl: leaf.url(), top: await page.locator('[data-needmark] .dock').count(), outer: await outer.locator('[data-needmark] .dock').count(), leaf: await leaf.locator('[data-needmark] .dock').count() };
@@ -189,7 +189,7 @@ test('only the top document owns the review toolbar while a child opened directl
   });
 });
 
-test('CSS-sized iframe DOM PNG records current React pixels and edited text with source, DPR and private regions', async ({ page }, testInfo) => {
+test('CSS-sized iframe DOM PNG records current React pixels and edited text with source, DPR and private regions', { tag: '@cross-engine' }, async ({ page }, testInfo) => {
   await withReview(page, false, async (review) => {
     const leaf = await currentChild(page), { samples, note } = await captureSamples(page);
     const dimensions = await page.locator('#outer-capture-frame').evaluate((frame) => ({ width: frame.getAttribute('width'), height: frame.getAttribute('height'), rect: frame.getBoundingClientRect().toJSON() }));
@@ -213,7 +213,7 @@ test('CSS-sized iframe DOM PNG records current React pixels and edited text with
   });
 });
 
-test('nested iframe DOM capture preserves live pixels and private rectangles after child and root scrolling', async ({ page }, testInfo) => {
+test('nested iframe DOM capture preserves live pixels and private rectangles after child and root scrolling', { tag: '@cross-engine' }, async ({ page }, testInfo) => {
   await withReview(page, true, async (review) => {
     const { outer, leaf } = await frames(page, true); await currentChild(page, true);
     await page.evaluate(() => scrollTo(0, 80)); await outer.evaluate(() => scrollTo(0, 340)); await leaf.evaluate(() => scrollTo(0, 160));
@@ -234,7 +234,7 @@ test('nested iframe DOM capture preserves live pixels and private rectangles aft
   });
 });
 
-test('a scrolled page with smooth scrolling still captures its iframe with DOM capture', async ({ page }, testInfo) => {
+test('a scrolled page with smooth scrolling still captures its iframe with DOM capture', { tag: '@cross-engine' }, async ({ page }, testInfo) => {
   await withReview(page, false, async (review) => {
     await currentChild(page);
     await page.evaluate(() => { document.documentElement.style.scrollBehavior = 'smooth'; scrollTo({ top: 80, behavior: 'instant' }); });
@@ -246,7 +246,6 @@ test('a scrolled page with smooth scrolling still captures its iframe with DOM c
 });
 
 test('native tab PNG excludes review controls while preserving current child pixels and privacy masks', async ({ page, browserName }, testInfo) => {
-  test.skip(browserName !== 'chromium', 'The automated native tab picker is supported by the Chromium launch configuration.');
   await withReview(page, false, async (review) => {
     await currentChild(page); const { samples } = await captureSamples(page); await method(page, 'tab');
     const rect = await select(page, review), item = await save(page, review, '高精度の子画面画像にレビューツールを混ぜない');
@@ -258,7 +257,7 @@ test('native tab PNG excludes review controls while preserving current child pix
 });
 
 
-test('an inline frame keeps its current pixels between interleaved direct text and style siblings without changing original order', async ({ page }, testInfo) => {
+test('an inline frame keeps its current pixels between interleaved direct text and style siblings without changing original order', { tag: '@cross-engine' }, async ({ page }, testInfo) => {
   await withReview(page, false, async (review) => {
     await currentChild(page); const { samples } = await captureSamples(page);
     const originalLine = await page.locator('#inline-frame-line').evaluate((element) => ({
@@ -287,7 +286,7 @@ test('an inline frame keeps its current pixels between interleaved direct text a
 });
 
 
-test('an unrelated iframe added during real image acquisition rejects stale pixels and retains the typed comment for image-free saving', async ({ page }, testInfo) => {
+test('an unrelated iframe added during real image acquisition rejects stale pixels and retains the typed comment for image-free saving', { tag: '@cross-engine' }, async ({ page }, testInfo) => {
   await withReview(page, false, async (review) => {
     const leaf = await currentChild(page); await method(page, 'dom');
     let release = () => {}, entered = () => {};

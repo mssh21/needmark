@@ -4,7 +4,7 @@ import type { ElementContext, RuntimeSourceFrame } from '../src/shared/types.js'
 
 const moduleUrl = `/@fs/${resolve('src/client/context/code-context.ts')}`;
 
-test('real React dev host creation frames are aligned, bounded and do not use parent metadata', async ({ page }) => {
+test('real React dev host creation frames are aligned, bounded and do not use parent metadata', { tag: '@cross-engine' }, async ({ page }) => {
   await page.goto('/react.html');
   await expect(page.locator('#purchase-one')).toBeVisible();
   const evidence = await page.evaluate(async (url) => {
@@ -199,7 +199,7 @@ test('JavaScriptCore frame syntax is parsed conservatively in creation order wit
   expect(JSON.stringify(evidence.code)).not.toContain('http://');
 });
 
-test('a real React component with a retained creation frame exposes its own source and captured identifiers in both engines', async ({ page }) => {
+test('a real React component with a retained creation frame exposes its own source and captured identifiers in both engines', { tag: '@cross-engine' }, async ({ page }) => {
   await page.goto('/react.html');
   const fixtureUrl = `/@fs/${resolve('tests/fixtures/runtime-nontail.tsx')}`;
   await page.evaluate(async (url) => {

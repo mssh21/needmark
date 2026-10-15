@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 
 const moduleUrl = `/@fs/${resolve('src/client/context/code-context.ts')}`;
 
-test('area context keeps text blocks with inline children, controls and image names without duplicate spans', async ({ page }) => {
+test('area context keeps text blocks with inline children, controls and image names without duplicate spans', { tag: '@cross-engine' }, async ({ page }) => {
   await page.goto('/');
   await page.setContent(`<main style="position:fixed;left:0;top:0;width:480px;height:420px">
     <h2 id="heading">Title <span>with emphasis</span></h2>
@@ -41,7 +41,7 @@ test('selectors escape unusual identifiers and remain unique with duplicate ids 
   expect(contexts.same).toEqual([true, true, true, true]);
 });
 
-test('text ranges identify semantic owners and accessibility names without reading field values', async ({ page }) => {
+test('text ranges identify semantic owners and accessibility names without reading field values', { tag: '@cross-engine' }, async ({ page }) => {
   await page.goto('/');
   await page.setContent('<h2>Selected <span>heading</span></h2><p>Description <strong>selected text</strong><br>second line.</p><label for="password">Secret field</label><input id="password" type="password"><span id="label">Confirm changes</span><button aria-labelledby="label">OK</button>');
   const evidence = await page.evaluate(async (url) => {
@@ -58,7 +58,7 @@ test('text ranges identify semantic owners and accessibility names without readi
   expect(JSON.stringify(evidence)).not.toContain('private-password');
 });
 
-test('open shadow roots and same-origin frames retain source evidence, resolvable paths and top viewport bounds', async ({ page }) => {
+test('open shadow roots and same-origin frames retain source evidence, resolvable paths and top viewport bounds', { tag: '@cross-engine' }, async ({ page }) => {
   await page.goto('/');
   await page.setContent('<div id="shadow-host" style="position:fixed;left:10px;top:10px;width:150px;height:80px"></div>');
   const evidence = await page.evaluate(async (url) => {
@@ -92,7 +92,7 @@ test('open shadow roots and same-origin frames retain source evidence, resolvabl
   expect(evidence.area.elements.map((element: { text: string }) => element.text)).toEqual(['Shadow buy', 'Frame buy']);
 });
 
-test('text caret selection works in open roots and scaled frames, accepts reversed drags and rejects root crossings', async ({ page }) => {
+test('text caret selection works in open roots and scaled frames, accepts reversed drags and rejects root crossings', { tag: '@cross-engine' }, async ({ page }) => {
   await page.goto('/');
   await page.setContent('<p id="top-text" style="position:fixed;left:10px;top:0;margin:0;font:16px monospace">Top words</p><div id="text-host" style="position:fixed;left:10px;top:50px;width:180px;height:40px"></div><input id="private-field" type="password" style="position:fixed;left:10px;top:250px">');
   const evidence = await page.evaluate(async (url) => {
@@ -133,7 +133,7 @@ test('text caret selection works in open roots and scaled frames, accepts revers
   expect(evidence.privateCaret).toBe(true);
 });
 
-test('text caret selection falls back to the legacy browser API when the standard API is unavailable', async ({ page }) => {
+test('text caret selection falls back to the legacy browser API when the standard API is unavailable', { tag: '@cross-engine' }, async ({ page }) => {
   await page.goto('/');
   await page.setContent('<p style="margin:0;font:16px monospace">Legacy text</p>');
   const evidence = await page.evaluate(async (url) => {
@@ -269,7 +269,7 @@ test('explicit multiple context keeps twenty owners while area and text collecti
   }
 });
 
-test('area sampling requires half of the original box to be visibly covered and preserves native center fallback', async ({ page }) => {
+test('area sampling requires half of the original box to be visibly covered and preserves native center fallback', { tag: '@cross-engine' }, async ({ page }) => {
   await page.setViewportSize({ width: 800, height: 600 });
   await page.goto('/');
   await page.setContent('<div id="clip" style="position:fixed;left:80px;top:80px;width:50px;height:60px;overflow:hidden"><button id="partial" style="display:block;width:100px;height:40px;border:0;margin:0;padding:0">Partial target</button></div>');
@@ -300,7 +300,7 @@ test('area sampling requires half of the original box to be visibly covered and 
   expect(evidence.after).toMatchObject(evidence.bounds);
 });
 
-test('area sampling keeps painted absolute and fixed escapes but rejects their containing block clips', async ({ page }) => {
+test('area sampling keeps painted absolute and fixed escapes but rejects their containing block clips', { tag: '@cross-engine' }, async ({ page }) => {
   await page.setViewportSize({ width: 800, height: 600 });
   await page.goto('/');
   await page.setContent('<body style="margin:0"><div id="clip" style="margin-left:20px;margin-top:20px;width:40px;height:40px;overflow:hidden"><button id="positioned" style="position:absolute;left:200px;top:120px;width:100px;height:40px;border:0;margin:0;padding:0">Positioned target</button></div></body>');
@@ -333,7 +333,7 @@ test('area sampling keeps painted absolute and fixed escapes but rejects their c
   }
 });
 
-test('area sampling rejects ancestor opacity zero while retaining an explicitly visible child of a hidden ancestor', async ({ page }) => {
+test('area sampling rejects ancestor opacity zero while retaining an explicitly visible child of a hidden ancestor', { tag: '@cross-engine' }, async ({ page }) => {
   await page.setViewportSize({ width: 800, height: 600 });
   await page.goto('/');
   await page.setContent('<div id="transparent-owner" style="position:fixed;left:80px;top:80px;opacity:0"><button id="transparent" style="width:100px;height:40px;border:0;padding:0">Transparent target</button></div><button id="solid" style="position:fixed;left:250px;top:80px;width:100px;height:40px;border:0;padding:0">Visible target</button><div id="hidden-owner" style="position:fixed;left:80px;top:180px;visibility:hidden"><button id="override" style="width:100px;height:40px;border:0;padding:0;visibility:visible">Visible override</button></div>');

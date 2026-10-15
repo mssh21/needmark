@@ -51,7 +51,7 @@ async function nativeFixture(page: Page) {
 }
 
 
-test('DOM pixels, selection outline and committed code geometry agree after the same original element moves before prepare', async ({ page }) => {
+test('DOM pixels, selection outline and committed code geometry agree after the same original element moves before prepare', { tag: '@cross-engine' }, async ({ page }) => {
   await modulePage(page);
   const result = await page.evaluate(async (urls) => {
     const { ScreenshotCapture } = await import(urls.capture), { createCaptureGuard, applyCaptureSnapshot } = await import(urls.identity);
@@ -79,7 +79,7 @@ test('DOM pixels, selection outline and committed code geometry agree after the 
   expect(result.capture).toEqual({ method: 'dom', ...result.image });
 });
 
-test('native frames prepare after the hide delay, rebase before acquisition and reject later original movement without committing', async ({ page }) => {
+test('native frames prepare after the hide delay, rebase before acquisition and reject later original movement without committing', { tag: '@cross-engine' }, async ({ page }) => {
   await nativeFixture(page);
   const result = await page.evaluate(async (urls) => {
     const fixture = (window as unknown as { nativeHarness: NativeHarness }).nativeHarness;
@@ -107,7 +107,7 @@ test('native frames prepare after the hide delay, rebase before acquisition and 
   expect(result.capture).toEqual({ method: 'tab', width: 1200, height: 850 });
 });
 
-test('native pixel acquisition rejects privacy identity, geometry, URL and DPR drift and masks tolerated subpixel movement at the original edges', async ({ page }) => {
+test('native pixel acquisition rejects privacy identity, geometry, URL and DPR drift and masks tolerated subpixel movement at the original edges', { tag: '@cross-engine' }, async ({ page }) => {
   await nativeFixture(page);
   const result = await page.evaluate(async () => {
     const fixture = (window as unknown as { nativeHarness: NativeHarness }).nativeHarness;
@@ -144,7 +144,7 @@ test('native pixel acquisition rejects privacy identity, geometry, URL and DPR d
 });
 
 for (const change of ['move', 'replace'] as const) {
-  test(`widget preserves typed feedback after original ${change} during DOM rendering and falls back to image-free saving`, async ({ page }) => {
+  test(`widget preserves typed feedback after original ${change} during DOM rendering and falls back to image-free saving`, { tag: '@cross-engine' }, async ({ page }) => {
     await page.goto('/'); await configureReview(page, { method: 'dom' });
     await page.evaluate(() => {
       const state = window as unknown as { captureGateReached: boolean; releaseCaptureGate: () => void; captureGateObserver: MutationObserver };

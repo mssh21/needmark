@@ -18,7 +18,7 @@ async function clickTarget(page: import('@playwright/test').Page, selector = '#p
   const rect = await page.locator(selector).boundingBox(); await page.mouse.click(rect!.x + rect!.width / 2, rect!.y + rect!.height / 2);
 }
 
-test('image-free comments edit, cancel, reply, survive reload and delete through the local API', async ({ page }) => {
+test('image-free comments edit, cancel, reply, survive reload and delete through the local API', { tag: '@cross-engine' }, async ({ page }) => {
   await page.goto('/'); await configure(page); await clickTarget(page);
   await page.getByLabel('コメント本文').fill('余白を20pxにしてください。');
   await saveAndList(page);
@@ -84,19 +84,6 @@ test('failed save preserves text and image preview opens accessible zoom and pan
   await saveAndList(page); await expect(page.getByRole('button', { name: '解決にする', exact: true })).toBeVisible();
   await page.locator('[data-needmark] .open-item').click();
   await page.getByRole('img', { name: 'コメントのキャプチャ', exact: true }).click(); await expect(dialog).toBeVisible();
-});
-
-test('multiple separate elements and exact text ranges retain code context without screenshots', async ({ page }) => {
-  await page.goto('/'); await configure(page);
-  await page.getByRole('button', { name: 'コメント', exact: true }).click();
-  for (const [index, selector] of ['#purchase-button', '#product-title'].entries()) { const rect = await page.locator(selector).boundingBox(); if (!index) await page.keyboard.down('Shift'); await page.mouse.click(rect!.x + rect!.width / 2, rect!.y + rect!.height / 2); if (!index) await page.keyboard.up('Shift'); }
-  await page.getByRole('button', { name: '選択を完了' }).click(); await page.getByLabel('コメント本文').fill('選んだ2つの整列を直す'); await saveAndList(page);
-  await expect(page.getByRole('button', { name: '解決にする', exact: true })).toHaveCount(1); let saved = await stored(); expect(saved.target.kind).toBe('multi'); expect(saved.target.code?.elements.map((element) => element.attributes.id)).toEqual(['purchase-button', 'product-title']);
-  await page.getByRole('button', { name: 'コメント', exact: true }).click();
-  const rect = await page.locator('#product-title').boundingBox(); await page.keyboard.down('Alt'); await page.mouse.move(rect!.x + 2, rect!.y + rect!.height / 2); await page.mouse.down(); await page.mouse.move(rect!.x + 85, rect!.y + rect!.height / 2, { steps: 3 }); await page.mouse.up(); await page.keyboard.up('Alt');
-  await page.getByLabel('コメント本文').fill('この文字だけ変えて'); await saveAndList(page); await expect(page.getByRole('button', { name: '解決にする', exact: true })).toHaveCount(2);
-  const ids = (await readdir(output)).filter((id) => !id.startsWith('.')); const comments: Feedback[] = await Promise.all(ids.map(async (id) => JSON.parse(await readFile(`${output}/${id}/context.json`, 'utf8')))); saved = comments.find((item) => item.target.kind === 'text')!;
-  expect(saved.target.text.length).toBeGreaterThan(1); expect('Halden for Teams').toContain(saved.target.text); expect(saved.target.code?.elements[0]?.source?.file).toBe('demo/index.html');
 });
 
 test('an Alt/Option text drag previews and captures the text range instead of an area rectangle', async ({ page }) => {

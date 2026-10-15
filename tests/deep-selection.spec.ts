@@ -31,7 +31,7 @@ async function saved(): Promise<Feedback> {
 }
 
 
-test('ordinary clicks still select the frontmost overlay and do not activate the application', async ({ page }) => {
+test('ordinary clicks still select the frontmost overlay and do not activate the application', { tag: '@cross-engine' }, async ({ page }) => {
   await fixture(page); await page.mouse.click(200, 210); await field(page).fill('Review the overlay');
   await saveAndList(page);
   await expect(page.getByText('コメントを保存しました。', { exact: true })).toBeVisible();
@@ -41,7 +41,7 @@ test('ordinary clicks still select the frontmost overlay and do not activate the
 });
 
 for (const modifier of ['Control', 'Meta'] as const) {
-  test(`${modifier} at gesture onset selects the covered target, saves pixels and shares its actual context`, async ({ page }, info) => {
+  test(`${modifier} at gesture onset selects the covered target, saves pixels and shares its actual context`, { tag: '@cross-engine' }, async ({ page }, info) => {
     // caret: 'hide' writes and removes inline styles on the page's inputs, and NeedMark clears the hover a frame after any page change.
     await fixture(page, 'dom'); const reference = await page.screenshot({ caret: 'initial' });
     await page.keyboard.down(modifier); await page.mouse.move(200, 210);
@@ -86,7 +86,7 @@ for (const modifier of ['Control', 'Meta'] as const) {
   });
 }
 
-test('a modifier pressed only after pointerdown cannot retarget the gesture', async ({ page }) => {
+test('a modifier pressed only after pointerdown cannot retarget the gesture', { tag: '@cross-engine' }, async ({ page }) => {
   await fixture(page); await page.mouse.move(200, 210); await page.mouse.down();
   await page.keyboard.down('Meta'); await page.mouse.up(); await page.keyboard.up('Meta');
   await field(page).fill('Keep the initially selected overlay');

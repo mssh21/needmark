@@ -10,6 +10,17 @@ Common rules for developing and maintaining NeedMark. They apply to every agent 
 - `.mise.toml` and `package.json#packageManager` are the version source of truth.
 - Do not push, publish or create releases unless explicitly asked. Changing `package.json#version` on `main` publishes to npm ([`docs/releasing.md`](./docs/releasing.md)), so bump it only when a release is requested.
 
+## Procedures and skills
+
+| Task | Reference | Claude Code skill |
+| --- | --- | --- |
+| Adding, changing, running or pruning tests | [`docs/testing.md`](./docs/testing.md) | `testing` |
+| Writing or reviewing code comments in `src/` | This file, [Source layout](#source-layout) | `code-comments` |
+| Checking a user-facing change by hand | [`docs/testing.md#manual-check`](./docs/testing.md#manual-check) | `testing` |
+| Releasing to npm | [`docs/releasing.md`](./docs/releasing.md) | — |
+
+Skills live in `.claude/skills/`. They hold procedures only; rules and behaviour stay in this file and `docs/`, which a skill links to instead of repeating.
+
 ## Product boundaries
 
 - Keep NeedMark independent of the hosted NeedBack service: no imports from its repository and no requirement on its API.
@@ -21,7 +32,7 @@ Common rules for developing and maintaining NeedMark. They apply to every agent 
 
 - `src/index.ts`, `src/proxy.ts` and `src/cli.ts` are the only public entries. Add another only with `package.json#exports` and `scripts/build.mjs`.
 - `src/shared/` is browser-safe code for both sides, `src/server/` is Node only, and `src/client/` is the browser bundle (`capture/`, `context/`). Shared code imports neither side nor `node:`; client code never imports server code or `node:`; server code never imports client code. `src/structure.test.ts` enforces this.
-- Keep unit tests next to the file they test, and name files by responsibility inside their directory.
+- Keep unit tests next to the file they test, and name files by responsibility inside their directory. Browser specs live in `tests/` and share setup through `tests/support/`.
 - Code comments explain why an implementation was chosen, in English and Japanese, and never restate the specification (`src/comments.test.ts` checks both languages are present; Claude Code loads the `code-comments` skill).
 
 **Tradeoff:** the guidelines below favor caution over speed. Use judgment for trivial tasks.
@@ -58,9 +69,9 @@ Common rules for developing and maintaining NeedMark. They apply to every agent 
 **Define success criteria. Loop until verified.**
 
 - Turn tasks into verifiable goals: "fix the bug" → "write a failing test that reproduces it, then make it pass"; "refactor X" → "tests pass before and after".
-- Follow [`docs/testing.md`](./docs/testing.md) to choose test layers and for the manual check in the demo.
-- Update existing tests in the same change when behavior changes intentionally.
-- A task is not done until `pnpm typecheck`, `pnpm test`, `pnpm build` and `pnpm test:e2e` pass, and user-facing changes were checked in the demo.
+- Follow [`docs/testing.md`](./docs/testing.md): test behaviour through public interfaces, at the smallest layer that can catch the failure, one behaviour per test. Browser tests are for what needs a real engine; tag them `@cross-engine` only when WebKit could behave differently.
+- Update existing tests in the same change when behavior changes intentionally, and delete or merge tests the change makes redundant instead of adding more beside them.
+- While iterating, run the tests the change touches. A task is not done until `pnpm typecheck`, `pnpm test`, `pnpm build` and `pnpm test:e2e` pass, and user-facing changes were checked in the demo.
 - For multi-step work, state a short plan with a verification for each step.
 
 ---

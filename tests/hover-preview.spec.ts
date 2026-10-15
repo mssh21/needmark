@@ -76,7 +76,7 @@ test('preview, outline and saved target agree without requesting source while ho
   await info.attach('capture-without-preview', { body: png, contentType: 'image/png' });
 });
 
-test('stationary Ctrl and Cmd update the same hit and keep gesture depth latched when shortcuts are disabled', async ({ page }) => {
+test('stationary Ctrl and Cmd update the same hit and keep gesture depth latched when shortcuts are disabled', { tag: '@cross-engine' }, async ({ page }) => {
   await start(page, false);
   await page.evaluate(() => {
     const node = document.createElement('div'); node.id = 'hover-layered';
@@ -186,7 +186,7 @@ test('a slotted leaf observes rendered shadow scrolling and mutations through it
   await expect(preview(page)).toBeHidden(); await expect(outline(page)).toBeHidden();
 });
 
-test('long plain labels fit near viewport edges and a native modal remains selectable', async ({ page }, info) => {
+test('long plain labels fit near viewport edges and a native modal remains selectable', { tag: '@cross-engine' }, async ({ page }, info) => {
   await start(page);
   await page.evaluate(() => {
     const button = document.createElement('button'); button.id = 'edge-booking'; button.textContent = 'Edge booking'; button.setAttribute('aria-label', '長い予約ボタン '.repeat(100));

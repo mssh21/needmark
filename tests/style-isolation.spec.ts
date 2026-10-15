@@ -68,7 +68,7 @@ async function saved() {
 }
 
 
-test('inherited html typography leaves review fields readable and editable while the RTL page retains its styles', async ({ page }, info) => {
+test('inherited html typography leaves review fields readable and editable while the RTL page retains its styles', { tag: '@cross-engine' }, async ({ page }, info) => {
   await prepare(page);
   const expected = await typography(widget(page), clientSamples);
   await page.addStyleTag({ content: `html{${inheritedTypography}}` });
@@ -89,7 +89,7 @@ test('inherited html typography leaves review fields readable and editable while
   await expect(widget(page)).toHaveAttribute('lang', 'en');
 });
 
-test('body typography stays outside the review host before a native dialog and after reparenting into it', async ({ page }, info) => {
+test('body typography stays outside the review host before a native dialog and after reparenting into it', { tag: '@cross-engine' }, async ({ page }, info) => {
   await prepare(page);
   const expected = await typography(widget(page), clientSamples);
   await page.addStyleTag({ content: `body{${inheritedTypography}}` });
@@ -123,7 +123,7 @@ test('body typography stays outside the review host before a native dialog and a
   expect(await typography(widget(page), clientSamples)).toEqual(expected);
 });
 
-test('global important div rules preserve page clicks while selection still intercepts them', async ({ page }, info) => {
+test('global important div rules preserve page clicks while selection still intercepts them', { tag: '@cross-engine' }, async ({ page }, info) => {
   await prepare(page);
   const expected = await typography(widget(page), clientSamples);
   await page.addStyleTag({ content: `div{${inheritedTypography.split(';').map((value) => `${value}!important`).join(';')};pointer-events:auto!important}` });

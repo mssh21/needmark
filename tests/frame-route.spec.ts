@@ -129,7 +129,7 @@ async function attachState(page: Page, frame: Frame, saved: Feedback, name: stri
   await testInfo.attach(name + '-screen', { body: await page.screenshot(), contentType: 'image/png' });
 }
 
-test('saved sourced child review refuses the identical target on another child route and recovers only the exact URL', async ({ page }, testInfo) => {
+test('saved sourced child review refuses the identical target on another child route and recovers only the exact URL', { tag: '@cross-engine' }, async ({ page }, testInfo) => {
   await withReview(page, false, async (review) => {
     await method(page, 'dom'); await select(page, review);
     const comment = '子画面Aにだけ対応するコメント', item = await save(page, review, comment);
@@ -156,7 +156,7 @@ test('saved sourced child review refuses the identical target on another child r
   });
 });
 
-test('connected child-only push, replace, hash and back changes notify automatically without DOM mutations and legacy contexts remain readable', async ({ page }, testInfo) => {
+test('connected child-only push, replace, hash and back changes notify automatically without DOM mutations and legacy contexts remain readable', { tag: '@cross-engine' }, async ({ page }, testInfo) => {
   await withReview(page, false, async (review) => {
     await method(page, 'none'); await select(page, review);
     const comment = 'pure child history', item = await save(page, review, comment);
@@ -208,7 +208,7 @@ test('connected child-only push, replace, hash and back changes notify automatic
   });
 });
 
-test('nested iframe, shadow and iframe evidence records only ordered frame URLs and rejects independent outer or inner route changes', async ({ page }) => {
+test('nested iframe, shadow and iframe evidence records only ordered frame URLs and rejects independent outer or inner route changes', { tag: '@cross-engine' }, async ({ page }) => {
   await withReview(page, true, async (review) => {
     await method(page, 'none'); await select(page, review, true);
     const comment = 'nested child identity', item = await save(page, review, comment);
@@ -232,7 +232,7 @@ test('nested iframe, shadow and iframe evidence records only ordered frame URLs 
   });
 });
 
-test('same connected child route drift rejects original-node and range capture and preserves typed feedback for image-free saving', async ({ page }, testInfo) => {
+test('same connected child route drift rejects original-node and range capture and preserves typed feedback for image-free saving', { tag: '@cross-engine' }, async ({ page }, testInfo) => {
   await withReview(page, false, async (review) => {
     const guardResult = await page.evaluate(async (origin) => {
       const { contextForElement, contextForRange, createCaptureGuard, viewportRectOf, viewportRectForRange } = await import(origin + '/identity.js');
@@ -291,7 +291,7 @@ test('same connected child route drift rejects original-node and range capture a
   });
 });
 
-test('child history observation preserves native behavior and reconnects without duplicate or obsolete callbacks', async ({ page }, testInfo) => {
+test('child history observation preserves native behavior and reconnects without duplicate or obsolete callbacks', { tag: '@cross-engine' }, async ({ page }, testInfo) => {
   await withReview(page, false, async (review) => {
     const result = await page.evaluate(async (origin) => {
       const { installPageChanges } = await import(origin + '/identity.js');

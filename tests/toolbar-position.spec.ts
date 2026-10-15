@@ -62,7 +62,7 @@ test('only a completed primary drag saves toolbar coordinates and reload restore
   expect(await bounds(page)).toEqual(moved); expect(await stored(page)).toBe(raw);
 });
 
-test('secondary pointers cannot replace the drag, a pointer cancellation keeps the shown spot and Escape rolls back without saving', async ({ page }) => {
+test('secondary pointers cannot replace the drag, a pointer cancellation keeps the shown spot and Escape rolls back without saving', { tag: '@cross-engine' }, async ({ page }) => {
   await setup(page); await restore(page, { x: 150, y: 120 }); await recordPointer(page);
   const original = await bounds(page), raw = await stored(page);
   await startDrag(page, 100, 60); const moving = await bounds(page); expect(await captured(page)).toBe(true);

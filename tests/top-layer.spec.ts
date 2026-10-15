@@ -3,7 +3,7 @@ import { readFile, readdir } from 'node:fs/promises';
 import type { Feedback } from '../src/shared/types.js';
 
 
-test('native modal keeps page controls usable and review drafts through nested modal changes', async ({ page }) => {
+test('native modal keeps page controls usable and review drafts through nested modal changes', { tag: '@cross-engine' }, async ({ page }) => {
   await page.goto('/');
   await configureReview(page, { method: 'none' });
   await page.getByRole('button', { name:'コメント', exact:true }).click(); const target = await page.locator('#purchase-button').boundingBox(); await page.mouse.click(target!.x + target!.width / 2, target!.y + target!.height / 2); await page.getByLabel('コメント本文').fill('モーダルの外のコメント'); await saveAndList(page); await page.getByRole('button', { name:'パネルを閉じる' }).click();
@@ -47,7 +47,7 @@ test('native modal keeps page controls usable and review drafts through nested m
   await expect(page.getByRole('button', { name:'コメント: 移動しても下書きを保持する', exact:true })).toBeHidden();
 });
 
-test('DOM capture preserves a native modal target and redaction while excluding review controls', async ({ page }) => {
+test('DOM capture preserves a native modal target and redaction while excluding review controls', { tag: '@cross-engine' }, async ({ page }) => {
   await page.goto('/');
   await configureReview(page, { method: 'dom' });
   await page.evaluate(() => {
