@@ -74,11 +74,12 @@
    コメントをGitで共有するよう私が頼んだ場合だけ、--share=gitにしてください。
 5. 開発サーバーでNeedMarkを読み込んでください。
    - Vite（vite.config.*）：`import { needmark } from 'needmark';`を追加し、`plugins`に`needmark()`を入れます。@vitejs/plugin-reactなどJSXを変換するプラグインより前に置いてください。
-   - Next.jsやAstroなどそれ以外：ファイルは変更しません。NeedMarkはアプリの隣でレビュー用プロキシとして動きます。
+   - Astro（astro.config.*）：同じimportを追加し、`vite.plugins`に`needmark()`を入れます。`vite`オプションがなければ`vite: { plugins: [needmark()] }`を追加してください。
+   - Next.jsなどそれ以外：ファイルは変更しません。NeedMarkはアプリの隣でレビュー用プロキシとして動きます。
    ほかの変更はしないでください。NeedMarkは本番ビルドには入りません。
 6. `&lt;needmark&gt; list`を実行し、`[]`と表示されることを確認してください。
 7. あなたがMCPサーバーを使える場合は、NeedMarkを登録するか私に確認してください。登録するとコメントとスクリーンショットを直接読めます。私が同意した場合だけ、このフォルダで登録してください。例：`claude mcp add needmark -- &lt;needmark&gt; mcp`、`codex mcp add needmark -- &lt;needmark&gt; mcp`
-8. 最後に、レビューの始め方を伝えてください。Viteなら、いつもの開発コマンドとURL。それ以外なら、アプリを起動してから`&lt;needmark&gt; dev --target=http://localhost:&lt;アプリのポート&gt;`を実行し、http://localhost:4190を開く手順です。4190番ポートが使用中なら、`--origin=http://localhost:&lt;空いているポート&gt;`を付けてそのURLを開く手順にしてください。</pre>
+8. 最後に、レビューの始め方を伝えてください。ViteかAstroなら、いつもの開発コマンドとURL。それ以外なら、アプリを起動してから`&lt;needmark&gt; dev --target=http://localhost:&lt;アプリのポート&gt;`を実行し、http://localhost:4190を開く手順です。4190番ポートが使用中なら、`--origin=http://localhost:&lt;空いているポート&gt;`を付けてそのURLを開く手順にしてください。</pre>
       </div>
     </section>
 
@@ -99,7 +100,7 @@ npx needmark init</pre></div>
 yarn needmark init</pre></div>
         <button class="copy" type="button" aria-label="コピー"><svg class="idle" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="5" y="5" width="8.5" height="8.5" rx="1.5"/><path d="M10.5 5V3.5A1 1 0 0 0 9.5 2.5h-6a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1H5"/></svg><svg class="done" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8.5l3 3 7-7"/></svg></button>
       </div>
-      <p><code>init</code>はレビュー画面の言語、コメントの保存先、スクリーンショットの撮り方を尋ね、<code>needmark.config.ts</code>とGitの除外ルールを作ります。</p>
+      <p><code>init</code>は最初に推奨設定（レビュー画面はターミナルの言語、コメントはこのコンピューターだけに保存、スクリーンショットはページを描き直して作成）を示します。Enterでそのまま使い、<code>n</code>と答えると説明付きの一覧から項目ごとに選べます。その後、<code>needmark.config.ts</code>とGitの除外ルールを作ります。質問と表示は英語です。</p>
 
       <h3>Vite</h3>
       <p>既存の設定にプラグインを追加します。開発サーバーでだけ動き、本番ビルドには含まれません。</p>
