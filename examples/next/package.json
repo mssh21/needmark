@@ -1,0 +1,21 @@
+{
+  "name": "needmark-example-next",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently --kill-others --names app,needmark \"next dev --hostname 127.0.0.1 --port 4341\" \"needmark dev --target=http://127.0.0.1:4341 --origin=http://127.0.0.1:4340\""
+  },
+  "dependencies": {
+    "next": "^16.4.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "concurrently": "^10.0.6",
+    "needmark": "workspace:*",
+    "typescript": "^6.0.3"
+  }
+}

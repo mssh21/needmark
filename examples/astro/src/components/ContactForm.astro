@@ -1,0 +1,19 @@
+<form id="contact">
+  <label>Name <input name="name" autocomplete="name" required></label>
+  <label>Email <input name="email" type="email" autocomplete="email"></label>
+  <label>Topic
+    <select name="topic"><option>Question</option><option>Bug report</option><option>Other</option></select>
+  </label>
+  <label>Message <textarea name="message" rows="3"></textarea></label>
+  <label><input name="subscribe" type="checkbox"> Subscribe to updates</label>
+  <button type="submit" class="primary">Send</button>
+  <p role="status" id="form-status"></p>
+</form>
+
+<script>
+  const form = document.getElementById('contact') as HTMLFormElement;
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    document.getElementById('form-status')!.textContent = `Thanks, ${new FormData(form).get('name')}.`;
+  });
+</script>

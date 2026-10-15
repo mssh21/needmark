@@ -13,7 +13,7 @@ Start with the overview in your preferred language, then use the getting-started
 | Implementation and operating limits / 実装と動作上の制約 | [Architecture](architecture.md) | [英語リファレンス](architecture.md) |
 | Benchmark and product evaluation / ベンチマークと評価 | [Japanese only](agentation-comparison.ja.md) | [Agentationとの比較](agentation-comparison.ja.md) |
 | Contributor and agent rules / 開発・AIエージェントの共通ルール | [AGENTS.md](../AGENTS.md) | [AGENTS.md](../AGENTS.md) |
-| Testing and manual checks / テストと手動確認 | [Testing](testing.md) | [Testing（英語）](testing.md) |
+| Testing, manual checks and framework examples / テスト・手動確認・フレームワーク別の例 | [Testing](testing.md) | [Testing（英語）](testing.md) |
 | Releasing to npm / npmへのリリース | [Releasing](releasing.md) | [Releasing（英語）](releasing.md) |
 
 Detailed reference sections / 詳細リファレンス:
