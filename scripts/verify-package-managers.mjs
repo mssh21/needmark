@@ -96,11 +96,14 @@ async function verify(name, runner, spec, port) {
   const step = async (label, action) => { await action(); console.log(`  ok ${label}`); };
   await step('install', () => run(runner.install, { cwd }));
   await step('--help', async () => { if (!(await run([...runner.exec, '--help'], { cwd })).stdout.includes('needmark init')) throw new Error('help text missing'); });
+  // The example already loads the plugin, so `remove` takes it out first and `init --connect=yes` has to add it back for the dev check below.
+  await step('remove', async () => { await run([...runner.exec, 'remove'], { cwd }); if ((await readFile(join(cwd, 'vite.config.ts'), 'utf8')).includes('needmark')) throw new Error('vite.config.ts still loads NeedMark'); });
   await step('init', async () => {
-    const { stdout } = await run([...runner.exec, 'init', '--share=local', '--capture=dom', '--language=en'], { cwd });
+    const { stdout } = await run([...runner.exec, 'init', '--share=local', '--capture=dom', '--language=en', '--connect=yes'], { cwd });
+    if (!(await readFile(join(cwd, 'vite.config.ts'), 'utf8')).includes('needmark()')) throw new Error('vite.config.ts not connected');
     if (!(await readFile(join(cwd, 'needmark.config.ts'), 'utf8')).includes('outputDir')) throw new Error('needmark.config.ts not written');
     if (!(await readFile(join(cwd, '.gitignore'), 'utf8')).includes('/.needmark/')) throw new Error('.gitignore rule not written');
-    if (!stdout.includes(`${runner.hint} dev`)) throw new Error(`init guidance does not use "${runner.hint}":\n${stdout}`);
+    if (!stdout.includes(`${runner.hint} remove`)) throw new Error(`init guidance does not use "${runner.hint}":\n${stdout}`);
   });
   await step('list', async () => { if (!Array.isArray(JSON.parse((await run([...runner.exec, 'list'], { cwd })).stdout))) throw new Error('list did not print an array'); });
   await step('mcp initialize', () => mcpHandshake(runner, cwd));

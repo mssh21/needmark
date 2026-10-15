@@ -22,51 +22,21 @@ Node.js 22.12以降が必要です。アプリケーションのプロジェク�
 
 ```sh
 pnpm add -D needmark   # npm install -D needmark / yarn add -D needmark
-pnpm exec needmark init --language=ja
+pnpm exec needmark init
+pnpm dev               # いつもの開発コマンド
 ```
 
-例はpnpmで記載しています。npmでは`npx needmark`、Yarnでは`yarn needmark`でCLIを実行します。初期設定の案内とAIへの指示には、プロジェクトのロックファイルに合ったコマンドが入ります。
+いつもどおりアプリを開くと、ページ下部にNeedMarkのツールバーが表示されます。例はpnpmで記載しています。npmでは`npx needmark`、Yarnでは`yarn needmark`でCLIを実行します。
 
-初期設定で`needmark.config.ts`と用途に応じたGitの除外ルールを作成します。ターミナルでは推奨設定をそのまま使うか、説明付きの一覧から項目ごとに選びます。英語にする場合は`--language=en`を指定します。[非対話実行の全フラグ](docs/getting-started.ja.md#インストールと初期設定)はガイドに記載しています。
+`init`は推奨設定を示し、同意するとNeedMarkを開発サーバーにつなぎます。アプリのソースと本番ビルドには触れません。
 
-### Vite
+| プロジェクト | `init`が変更するもの |
+| --- | --- |
+| Vite（React、Vueなど） | `vite.config.*`の`plugins`に`needmark()`を追加 |
+| Astro | `astro.config.*`に`vite: { plugins: [needmark()] }`を追加 |
+| Next.js | `dev`スクリプトを`needmark dev --`経由にする。いつものポートのままNext.jsをその裏で動かします |
 
-既存のVite設定にプラグインを明示的に追加します。
-
-```ts
-import { defineConfig } from 'vite';
-import { needmark } from 'needmark';
-
-export default defineConfig({
-  plugins: [needmark()],
-});
-```
-
-プラグインは開発時だけ動作し、本番ビルドと`vite preview`には入りません。引数なしで呼ぶと、Viteを起動したディレクトリの`needmark.config.ts`を読み込みます。`localhost`、`127.0.0.1`、`[::1]`では設定なしで動作します。LANのアドレスやトンネルなど別のホスト名でレビューする場合だけ`origins`を指定します。
-
-### Astro
-
-AstroはViteで動くため、`vite`オプションにプラグインを追加し、いつもどおり`astro dev`を実行します。
-
-```js
-// astro.config.mjs
-import { defineConfig } from 'astro/config';
-import { needmark } from 'needmark';
-
-export default defineConfig({
-  vite: { plugins: [needmark()] },
-});
-```
-
-### Next.jsなどの開発サーバー
-
-通常の方法でアプリケーションを起動し、同じプロジェクトで次を実行します。
-
-```sh
-pnpm exec needmark dev --target=http://localhost:3000
-```
-
-`http://localhost:4190`を開きます。プロキシはアプリのimportやビルドを変更せずにウィジェットを追加します。対象とレビュー先は異なるループバックHTTPオリジンが必要です。詳しくは[プロキシの設定と制約](docs/getting-started.ja.md#nextjsなどの開発サーバー)を参照してください。
+あわせて`needmark.config.ts`と用途に応じたGitの除外ルールを作ります。`NEEDMARK=off pnpm dev`で自分だけNeedMarkなしで起動でき、`needmark.config.ts`の`enabled: false`で全員分を止められます。`pnpm exec needmark remove`で接続を元に戻せます。`init`が読めない設定やほかの開発サーバーは、[はじめに](docs/getting-started.ja.md#開発サーバーにつなぐ)の手順で手動で設定します。[非対話実行の全フラグ](docs/getting-started.ja.md#インストールと初期設定)も記載しています。
 
 ## コメントして、AIに渡して、確認する
 

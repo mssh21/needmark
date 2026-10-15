@@ -11,7 +11,8 @@ import { normalizeContextAttributes } from '../shared/context-attributes.js';
 import { isNeedMarkLanguage, type NeedMarkLanguage } from '../shared/language.js';
 import { isAllowedOrigin } from '../shared/origin.js';
 
-export function validateReviewOptions(options: Pick<NeedMarkOptions, 'origins' | 'language' | 'capture' | 'editor' | 'contextAttributes'>): { origins?: string[]; capture: CaptureMethod; language: NeedMarkLanguage } {
+export function validateReviewOptions(options: Pick<NeedMarkOptions, 'enabled' | 'origins' | 'language' | 'capture' | 'editor' | 'contextAttributes'>): { origins?: string[]; capture: CaptureMethod; language: NeedMarkLanguage } {
+  if (options.enabled !== undefined && typeof options.enabled !== 'boolean') throw new Error('NeedMark enabled must be true or false.');
   if (options.language !== undefined && !isNeedMarkLanguage(options.language)) throw new Error('Invalid NeedMark language. Use en or ja.');
   if (options.editor !== undefined && !['vscode', 'cursor'].includes(options.editor)) throw new Error('Invalid NeedMark editor.');
   normalizeContextAttributes(options.contextAttributes);

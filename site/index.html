@@ -69,22 +69,18 @@
 1. Run `node -v`. NeedMark needs Node.js 22.12 or newer; if it is older, stop and tell me.
 2. Work in the app that has the development server (in a monorepo, that package's folder). Pick the package manager from the nearest lockfile: pnpm-lock.yaml → pnpm, yarn.lock → Yarn, package-lock.json or none → npm. The NeedMark command is then `pnpm exec needmark`, `yarn needmark` or `npx needmark`; below it is written as &lt;needmark&gt;.
 3. Install it as a dev dependency: `pnpm add -D needmark`, `yarn add -D needmark` or `npm install -D needmark`.
-4. If needmark.config.ts does not exist yet, initialize without questions:
-   &lt;needmark&gt; init --language=en --share=local --capture=dom
+4. If needmark.config.ts does not exist yet, initialize without questions and connect the development server:
+   &lt;needmark&gt; init --language=en --share=local --capture=dom --connect=yes
    Use --share=git instead only if I asked to share feedback through Git.
-5. Load NeedMark in the development server:
-   - Vite (vite.config.*): add `import { needmark } from 'needmark';` and put `needmark()` in `plugins`, before any plugin that compiles JSX, such as @vitejs/plugin-react.
-   - Astro (astro.config.*): add the same import and put `needmark()` in `vite.plugins`, adding `vite: { plugins: [needmark()] }` if there is no `vite` option yet.
-   - Anything else, such as Next.js: change no files. NeedMark runs as a review proxy next to the app instead.
-   Make no other changes. NeedMark never enters production builds.
+5. Read the output of init. It adds needmark() to vite.config.* or astro.config.*, or runs a Next.js dev script through `needmark dev --`, and prints each changed line; keep those changes. If it says the development server was not detected, connect it by hand as described in https://github.com/mssh21/needmark/blob/main/docs/getting-started.md#connect-the-development-server. Make no other changes. NeedMark never enters production builds.
 6. Run `&lt;needmark&gt; list` and check that it prints `[]`.
 7. If you can use MCP servers, ask me whether to register NeedMark so you can read feedback and its screenshots directly. Only if I agree, register it from this folder, for example `claude mcp add needmark -- &lt;needmark&gt; mcp` or `codex mcp add needmark -- &lt;needmark&gt; mcp`.
-8. Finish by telling me how to start reviewing. Vite or Astro: the usual dev command and URL. Anything else: start the app, run `&lt;needmark&gt; dev --target=http://localhost:&lt;app port&gt;`, then open http://localhost:4190. If port 4190 is already in use, add `--origin=http://localhost:&lt;free port&gt;` and open that URL instead.</pre>
+8. Finish by telling me to start the development server with its usual command and open it as usual: the NeedMark toolbar appears at the bottom of the page. Mention that NEEDMARK=off starts it without NeedMark and `&lt;needmark&gt; remove` undoes the connection.</pre>
       </div>
     </section>
 
     <section id="install">
-      <h2>Manual installation</h2>
+      <h2>Install</h2>
       <p>Requires Node.js 22.12 or newer. In your application project:</p>
       <div class="code">
         <div class="tabs" role="tablist">
@@ -93,41 +89,24 @@
           <button type="button" role="tab" data-tab="yarn" aria-selected="false">Yarn</button>
         </div>
         <div data-panel="pnpm"><pre>pnpm add -D needmark
-pnpm exec needmark init</pre></div>
+pnpm exec needmark init
+pnpm dev</pre></div>
         <div data-panel="npm" hidden><pre>npm install -D needmark
-npx needmark init</pre></div>
+npx needmark init
+npm run dev</pre></div>
         <div data-panel="yarn" hidden><pre>yarn add -D needmark
-yarn needmark init</pre></div>
+yarn needmark init
+yarn dev</pre></div>
         <button class="copy" type="button" aria-label="Copy"><svg class="idle" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="5" y="5" width="8.5" height="8.5" rx="1.5"/><path d="M10.5 5V3.5A1 1 0 0 0 9.5 2.5h-6a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1H5"/></svg><svg class="done" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8.5l3 3 7-7"/></svg></button>
       </div>
-      <p><code>init</code> first offers recommended settings: the review screen in your terminal's language, feedback kept on this computer and screenshots redrawn from the page. Press Enter to accept them, or answer <code>n</code> to choose each one from a list that explains it. It then writes <code>needmark.config.ts</code> and targeted Git ignore rules.</p>
-
-      <h3>Vite</h3>
-      <p>Add the plugin to your existing configuration. It runs only in the development server and is absent from production builds.</p>
-      <div class="code">
-<pre>import { defineConfig } from 'vite';
-import { needmark } from 'needmark';
-
-export default defineConfig({
-  plugins: [needmark()],
-});</pre>
-        <button class="copy" type="button" aria-label="Copy"><svg class="idle" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="5" y="5" width="8.5" height="8.5" rx="1.5"/><path d="M10.5 5V3.5A1 1 0 0 0 9.5 2.5h-6a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1H5"/></svg><svg class="done" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8.5l3 3 7-7"/></svg></button>
-      </div>
-      <p>With Astro, add <code>needmark()</code> to <code>vite.plugins</code> in <code>astro.config.mjs</code>.</p>
-
-      <h3>Next.js and other development servers</h3>
-      <p>Start your app as usual, then run the review proxy and open <code>http://localhost:4190</code>. Your imports and builds stay unchanged.</p>
-      <div class="code">
-        <div class="tabs" role="tablist">
-          <button type="button" role="tab" data-tab="pnpm" aria-selected="true">pnpm</button>
-          <button type="button" role="tab" data-tab="npm" aria-selected="false">npm</button>
-          <button type="button" role="tab" data-tab="yarn" aria-selected="false">Yarn</button>
-        </div>
-        <div data-panel="pnpm"><pre>pnpm exec needmark dev --target=http://localhost:3000</pre></div>
-        <div data-panel="npm" hidden><pre>npx needmark dev --target=http://localhost:3000</pre></div>
-        <div data-panel="yarn" hidden><pre>yarn needmark dev --target=http://localhost:3000</pre></div>
-        <button class="copy" type="button" aria-label="Copy"><svg class="idle" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="5" y="5" width="8.5" height="8.5" rx="1.5"/><path d="M10.5 5V3.5A1 1 0 0 0 9.5 2.5h-6a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1H5"/></svg><svg class="done" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8.5l3 3 7-7"/></svg></button>
-      </div>
+      <p>Open your app as usual; the NeedMark toolbar appears at the bottom of the page.</p>
+      <p><code>init</code> first offers recommended settings: the review screen in your terminal's language, feedback kept on this computer, screenshots redrawn from the page and connecting your development server. Press Enter to accept them, or answer <code>n</code> to choose each one from a list that explains it. It lists every line it changes, and never touches your application source or production builds:</p>
+      <ul>
+        <li><b>Vite</b> (React, Vue and others): adds <code>needmark()</code> to <code>plugins</code> in <code>vite.config.*</code>.</li>
+        <li><b>Astro</b>: adds <code>needmark()</code> to <code>vite.plugins</code> in <code>astro.config.*</code>.</li>
+        <li><b>Next.js</b>: starts the <code>dev</code> script through <code>needmark dev --</code>, so the usual port shows the toolbar.</li>
+      </ul>
+      <p><code>NEEDMARK=off</code> starts the development server without NeedMark for you, <code>enabled: false</code> in <code>needmark.config.ts</code> turns it off for everyone, and <code>needmark remove</code> undoes the connection. For other servers, see <a href="https://github.com/mssh21/needmark/blob/main/docs/getting-started.md#connect-the-development-server">Connect the development server</a>.</p>
     </section>
 
     <section id="usage">

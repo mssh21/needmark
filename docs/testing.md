@@ -19,7 +19,7 @@ Install the browser engines once with `pnpm exec playwright install chromium web
 
 `pnpm test:package-managers` packs the package and, for each runner, copies [`examples/vite-react`](#examples) (without its `needmark.config.ts`) into a temporary project, points its `needmark` dependency at the tarball and installs it. The runners are npm (the one bundled with Node), pnpm 11, Yarn 4 with Plug'n'Play and Yarn 1. pnpm and Yarn are fetched through `npx` at those versions, so global installs and Corepack do not affect the result. In each project it checks:
 
-- `needmark --help`, `init` (config, Git ignore rule and the runner's own command in the output) and `list` through the runner;
+- `needmark --help`, `remove` (which takes the plugin out of the copied `vite.config.ts`), `init --connect=yes` (config, Git ignore rule, the plugin added back and the runner's own command in the output) and `list` through the runner;
 - an MCP `initialize` handshake over `needmark mcp`;
 - that the example's `dev` script, started through the runner, serves the page with the review client injected, the Vite plugin reading the `needmark.config.ts` that `init` wrote;
 - that the `needmark/proxy` review proxy injects and serves the client;
@@ -47,10 +47,10 @@ Pass options after `--`, for example `pnpm test:package-managers -- --only=yarn`
 | `pnpm examples:react` | `examples/vite-react` (Vite 8, React) | Vite plugin | `http://127.0.0.1:4310` |
 | `pnpm examples:vue` | `examples/vite-vue` (Vite 8, Vue) | Vite plugin | `http://127.0.0.1:4320` |
 | `pnpm examples:astro` | `examples/astro` (Astro 5) | Vite plugin in `astro.config.mjs` | `http://127.0.0.1:4330` |
-| `pnpm examples:next` | `examples/next` (Next.js 16 App Router, Turbopack) | `needmark dev` proxy, app on 4341 | `http://127.0.0.1:4340` |
+| `pnpm examples:next` | `examples/next` (Next.js 16 App Router, Turbopack) | `needmark dev -- next dev`, app on a free port | `http://localhost:4340` |
 | `pnpm examples:html` | `examples/html` (static files served by `sirv`) | `needmark dev` proxy, app on 4351 | `http://127.0.0.1:4350` |
 
-Each command runs `pnpm build` first and then the example's `dev` script, which starts the application and, for proxy examples, `needmark dev` together through `concurrently`; Ctrl+C stops both. Every example has its own `needmark.config.ts` (Japanese UI, DOM capture) and saves feedback to its own `.needmark/feedback`, which Git ignores. Rebuild after changing `src/` by restarting the command.
+Each command runs `pnpm build` first and then the example's `dev` script, which starts the application with NeedMark: the Next.js example wraps `next dev` with `needmark dev --`, and the HTML example starts the static server and `needmark dev --target` together through `concurrently`; Ctrl+C stops both. Every example has its own `needmark.config.ts` (Japanese UI, DOM capture) and saves feedback to its own `.needmark/feedback`, which Git ignores. Rebuild after changing `src/` by restarting the command.
 
 `examples/next/proxy.ts` is a pass-through Next.js proxy: without it, Turbopack takes the workspace root as the project root and loads this repository's `src/proxy.ts` as the app's proxy.
 

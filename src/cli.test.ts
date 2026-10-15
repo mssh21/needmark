@@ -63,6 +63,40 @@ describe('CLI initialization', () => {
     expect(questions[0]).toContain('Use the recommended settings?');
   });
 
+  it('connects a Vite project only with consent and remove undoes it while keeping the settings', async () => {
+    const directory = await temporary(), original = "import { defineConfig } from 'vite';\n\nexport default defineConfig({});\n";
+    await writeFile(join(directory, 'vite.config.ts'), original);
+    await writeFile(join(directory, 'pnpm-lock.yaml'), '');
+    const declined = await run(directory, ['init']);
+    expect(await readFile(join(directory, 'vite.config.ts'), 'utf8')).toBe(original);
+    expect(declined.stdout).toContain('init --connect=yes');
+    const config = await readFile(join(directory, 'needmark.config.ts'), 'utf8');
+    const connected = await run(directory, ['init', '--connect=yes']);
+    expect(connected.stdout).toContain('Kept the existing needmark.config.ts');
+    expect(await readFile(join(directory, 'needmark.config.ts'), 'utf8')).toBe(config);
+    expect(await readFile(join(directory, 'vite.config.ts'), 'utf8')).toContain('plugins: [needmark()]');
+    expect(connected.stdout).toContain('Changed vite.config.ts');
+    expect(connected.stdout).toContain('start your development server as usual (pnpm dev)');
+    const removed = await run(directory, ['remove']);
+    expect(await readFile(join(directory, 'vite.config.ts'), 'utf8')).toBe(original);
+    expect(removed.stdout).toContain('pnpm remove needmark');
+    expect(await readFile(join(directory, 'needmark.config.ts'), 'utf8')).toContain('capture');
+  });
+
+  it('serves a wrapped development command on its usual port and passes it through when switched off', async () => {
+    const directory = await temporary(), port = 4000 + Math.floor(Math.random() * 900);
+    await writeFile(join(directory, 'app.mjs'), "import { createServer } from 'node:http';\ncreateServer((q, r) => { r.setHeader('content-type', 'text/html'); r.end('<html><body>app ' + process.env.PORT + '</body></html>'); }).listen(Number(process.env.PORT));\n");
+    const child = execFile(process.execPath, [cli, 'dev', '--', process.execPath, 'app.mjs', '--port', String(port)], { cwd: directory });
+    try {
+      let html = '';
+      for (let attempt = 0; attempt < 100 && !html; attempt++) html = await fetch(`http://localhost:${port}/`).then((response) => response.text(), async () => { await new Promise((wait) => setTimeout(wait, 100)); return ''; });
+      expect(html).toContain('/__needmark/client.js');
+      expect(html).not.toContain(`app ${port}`);
+    } finally { child.kill('SIGINT'); }
+    const plain = await execute(process.execPath, [cli, 'dev', '--', process.execPath, '-e', 'console.log("plain " + (process.env.PORT ?? "none"))'], { cwd: directory, env: { ...process.env, NEEDMARK: 'off' } });
+    expect(plain.stdout).toContain('plain none');
+  });
+
   it('asks each remaining choice by number after the recommendation is declined', async () => {
     const directory = await temporary();
     await run(directory, ['init', '--language=en'], ['n', '2', '3']);

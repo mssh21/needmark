@@ -8,6 +8,7 @@ import type { NeedMarkOptions } from './shared/types.js';
 import { instrumentHtml, instrumentJsx } from './server/code-source.js';
 import { isAllowedOrigin } from './shared/origin.js';
 import { appendReviewScript } from './server/review-script.js';
+import { needmarkEnabled } from './server/enabled.js';
 
 export { formatFeedbackPrompt } from './shared/prompt.js';
 export type { PromptDetail } from './shared/prompt.js';
@@ -24,6 +25,9 @@ export function needmark(options?: NeedMarkOptions): Plugin {
   let endpoint = '/__needmark';
   let api: ReturnType<typeof createReviewApi>;
   let root = '';
+  // Vite has already decided which plugins apply before the project config is loaded, so a switched-off plugin stays registered and every hook returns early instead.
+  // プロジェクトの設定を読む前にViteが適用するプラグインを決めてしまうため、止めたプラグインも登録したまま、各フックで何もせずに戻る。
+  let active = true;
 
   return {
     name: 'needmark',
@@ -37,6 +41,8 @@ export function needmark(options?: NeedMarkOptions): Plugin {
       // TypeScriptの設定の読み込みは非同期で、ファクトリーはvite.config内で同期的に呼ばれるため、このフックまで待つ。
       // ビルド時に設定を実行しないことにもなる。
       if (!options) ({ origins } = validateReviewOptions(settings = await loadProjectConfig()));
+      active = needmarkEnabled(settings);
+      if (!active) return;
       const output = resolve(config.root ?? process.cwd(), settings.outputDir ?? defaultFeedbackDirectory(config.root ?? process.cwd()));
       const pattern = `${output.replaceAll('\\', '/')}/**`;
       const legacyPattern = `${resolve(config.root ?? process.cwd(), '.needback/feedback').replaceAll('\\', '/')}/**`;
@@ -49,6 +55,7 @@ export function needmark(options?: NeedMarkOptions): Plugin {
       } };
     },
     configResolved(config) {
+      if (!active) return;
       root = config.root;
       endpoint = `${config.base.replace(/\/$/, '')}/__needmark`;
       const output = resolve(config.root, settings.outputDir ?? defaultFeedbackDirectory(config.root));
@@ -59,6 +66,7 @@ export function needmark(options?: NeedMarkOptions): Plugin {
       api = createReviewApi({ ...settings, root: config.root, sourceRoot: process.cwd(), endpoint, secure: !!config.server.https, logger: config.logger });
     },
     configureServer(server) {
+      if (!active) return;
       server.middlewares.use((request, response, next) => {
         if (api.handle(request, response)) return;
         const origin = `${server.config.server.https ? 'https' : 'http'}://${request.headers.host ?? ''}`;
@@ -71,6 +79,7 @@ export function needmark(options?: NeedMarkOptions): Plugin {
     transform: {
       order: 'pre',
       handler(code, id, transformOptions) {
+        if (!active) return;
         const file = id.split('?')[0]!;
         const local = relative(root, file);
         if (transformOptions?.ssr || !/\.[jt]sx$/.test(file) || local.startsWith('..') || local.includes('node_modules')) return;
@@ -83,7 +92,7 @@ export function needmark(options?: NeedMarkOptions): Plugin {
       order: 'pre',
       handler(html, context) {
         const page = requestPage.getStore();
-        if (!page || !isAllowedOrigin(page.origin, origins)) return;
+        if (!active || !page || !isAllowedOrigin(page.origin, origins)) return;
         page.injected = true;
         return { html: instrumentHtml(html, relative(process.cwd(), context.filename).replaceAll('\\', '/')), tags: [{ tag: 'script', attrs: api.scriptAttrs, injectTo: 'body' }] };
       },
