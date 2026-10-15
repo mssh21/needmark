@@ -1,21 +1,15 @@
-import { test, expect, type Page } from '@playwright/test';
-import { readdir, readFile, rm } from 'node:fs/promises';
+import { type Page } from '@playwright/test';
+import { test, expect, saveAndList, searchList, output, configureReview, enableWidgetOption } from './support/review.js';
+import { readdir, readFile } from 'node:fs/promises';
 import type { Feedback, FeedbackInput } from '../src/shared/types.js';
 import { input } from './fixtures.js';
-import { saveAndList, searchList } from './save.js';
 
-const output = '/private/tmp/needmark-e2e-feedback';
-test.beforeEach(async () => { await rm(output, { recursive: true, force: true }); });
 async function setup(page: Page) {
   await page.addInitScript(() => {
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async (value: string) => { (window as unknown as { referenceCopied: string }).referenceCopied = value; } } });
   });
-  await page.route('http://127.0.0.1:4192/', async (route) => {
-    const response = await route.fetch();
-    await route.fulfill({ response, body: (await response.text()).replace('data-needmark-capture=', 'data-needmark-submit="true" data-needmark-capture=') });
-  });
-  await page.goto('/'); await page.getByRole('button', { name: '設定', exact: true }).click();
-  await page.getByLabel('キャプチャ方式').selectOption('none'); await page.getByRole('button', { name: '保存', exact: true }).click();
+  await enableWidgetOption(page, 'data-needmark-submit');
+  await page.goto('/'); await configureReview(page, { method: 'none' });
 }
 async function headers(page: Page) { return { 'x-needmark-token': (await page.locator('script[data-needmark-token]').getAttribute('data-needmark-token'))! }; }
 // References can no longer be created in the widget, so earlier files are reproduced through the local API.

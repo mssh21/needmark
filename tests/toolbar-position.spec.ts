@@ -1,5 +1,5 @@
-import { test, expect, type Page } from '@playwright/test';
-import { rm } from 'node:fs/promises';
+import { type Page } from '@playwright/test';
+import { test, expect } from './support/review.js';
 
 const key = 'needmark-toolbar-position';
 const dock = (page: Page) => page.locator('[data-needmark] .dock');
@@ -39,7 +39,6 @@ async function withinViewport(page: Page) {
   }).toEqual({ left: true, top: true, right: true, bottom: true });
 }
 
-test.beforeEach(async () => { await rm('/private/tmp/needmark-e2e-feedback', { recursive: true, force: true }); });
 test.afterEach(async ({ page }, info) => {
   if (info.status === info.expectedStatus) return;
   const events = await page.evaluate(() => ({ focus: document.hasFocus(), active: document.activeElement?.tagName, events: (window as unknown as { toolbarEvents: unknown[] }).toolbarEvents }));

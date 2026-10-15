@@ -1,10 +1,9 @@
-import { test, expect, type Page, type TestInfo } from '@playwright/test';
-import { readFile, readdir, rm } from 'node:fs/promises';
+import { type Page, type TestInfo } from '@playwright/test';
+import { test, expect, saveAndList, searchList, output } from './support/review.js';
+import { readFile, readdir } from 'node:fs/promises';
 import type { Feedback } from '../src/shared/types.js';
 import { input } from './fixtures.js';
-import { saveAndList, searchList } from './save.js';
 
-const output = '/private/tmp/needmark-e2e-feedback';
 const positionKey = 'needmark-toolbar-position';
 const panel = (page: Page) => page.getByRole('region', { name: 'NeedMark', exact: true });
 const dock = (page: Page) => page.locator('[data-needmark] .dock');
@@ -69,7 +68,6 @@ async function selection(field: ReturnType<Page['getByLabel']>) {
   return field.evaluate((element) => ({ start: (element as HTMLTextAreaElement).selectionStart, end: (element as HTMLTextAreaElement).selectionEnd, scroll: (element as HTMLTextAreaElement).scrollTop }));
 }
 
-test.beforeEach(async () => { await rm(output, { recursive: true, force: true }); });
 test.afterEach(async ({ page }, info) => {
   if (info.status === info.expectedStatus) return;
   await screenshot(page, info, 'actual-panel-failure');

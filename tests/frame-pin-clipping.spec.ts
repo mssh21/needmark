@@ -1,11 +1,11 @@
-import { test, expect, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { test, expect, saveAndList, output, tempRoot, configureReview } from './support/review.js';
 import { build } from 'esbuild';
 import { createServer, type Server } from 'node:http';
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { resolve, join } from 'node:path';
 import { startReviewProxy, type ReviewProxy } from '../dist/proxy.js';
 import type { Feedback } from '../src/shared/types.js';
-import { saveAndList } from './save.js';
 
 const fixturePath = resolve('tests/fixtures/frame-route.jsx');
 const sourceFile = 'src/frame-route.jsx';
@@ -24,7 +24,7 @@ async function close(server: Server) {
 
 /** Reuse the actual C17 React fixture and protected public proxy, with no /source or DOM identity mocks. */
 async function withReview(page: Page, run: (review: { origin: string; output: string }) => Promise<void>) {
-  const root = await mkdtemp('/private/tmp/needmark-frame-pin-');
+  const root = await mkdtemp(join(tempRoot, 'needmark-frame-pin-'));
   let upstream: Server | undefined, proxy: ReviewProxy | undefined;
   try {
     await mkdir(root + '/src'); await writeFile(root + '/' + sourceFile, await readFile(fixturePath, 'utf8'));
@@ -65,9 +65,7 @@ test('a saved iframe element pin hides when its unchanged original is wholly cli
       await frame.evaluate(() => { document.body.style.minHeight = '1800px'; });
       const parentUrl = page.url(), childUrl = frame.url(), before = await target.boundingBox();
       if (!before) throw new Error('Original target has no rectangle');
-      await page.getByRole('button', { name: '設定', exact: true }).click();
-      await page.getByLabel('キャプチャ方式').selectOption('none');
-      await page.getByRole('button', { name: '保存', exact: true }).click();
+      await configureReview(page, { method: 'none' });
       const response = page.waitForResponse((item) => item.url() === origin + '/__needmark/source' && item.request().method() === 'POST');
       await page.getByRole('button', { name: 'コメント', exact: true }).click();
       await expect(page.locator('[data-needmark] .cover')).toBeVisible();
@@ -125,9 +123,7 @@ test('a saved iframe element pin hides when its unchanged original is wholly cli
 });
 
 async function configureNoImage(page: Page) {
-  await page.getByRole('button', { name: '設定', exact: true }).click();
-  await page.getByLabel('キャプチャ方式').selectOption('none');
-  await page.getByRole('button', { name: '保存', exact: true }).click();
+  await configureReview(page, { method: 'none' });
 }
 
 async function saveReview(page: Page, frame: import('@playwright/test').Frame, origin: string, output: string, comment: string) {

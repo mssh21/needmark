@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './support/review.js';
 import { resolve } from 'node:path';
 import type { FeedbackInput, Rectangle } from '../src/shared/types.js';
 

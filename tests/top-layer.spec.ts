@@ -1,16 +1,11 @@
-import { test, expect } from '@playwright/test';
-import { readFile, readdir, rm } from 'node:fs/promises';
+import { test, expect, saveAndList, output, configureReview } from './support/review.js';
+import { readFile, readdir } from 'node:fs/promises';
 import type { Feedback } from '../src/shared/types.js';
-import { saveAndList } from './save.js';
 
-const output = '/private/tmp/needmark-e2e-feedback';
-test.beforeEach(async () => { await rm(output, { recursive: true, force: true }); });
 
 test('native modal keeps page controls usable and review drafts through nested modal changes', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: '設定', exact: true }).click();
-  await page.getByLabel('キャプチャ方式').selectOption('none');
-  await page.getByRole('button', { name: '保存', exact: true }).click();
+  await configureReview(page, { method: 'none' });
   await page.getByRole('button', { name:'コメント', exact:true }).click(); const target = await page.locator('#purchase-button').boundingBox(); await page.mouse.click(target!.x + target!.width / 2, target!.y + target!.height / 2); await page.getByLabel('コメント本文').fill('モーダルの外のコメント'); await saveAndList(page); await page.getByRole('button', { name:'パネルを閉じる' }).click();
   await page.evaluate(() => {
     const outer = document.createElement('dialog'); outer.id = 'outer-modal';
@@ -54,9 +49,7 @@ test('native modal keeps page controls usable and review drafts through nested m
 
 test('DOM capture preserves a native modal target and redaction while excluding review controls', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: '設定', exact: true }).click();
-  await page.getByLabel('キャプチャ方式').selectOption('dom');
-  await page.getByRole('button', { name: '保存', exact: true }).click();
+  await configureReview(page, { method: 'dom' });
   await page.evaluate(() => {
     const dialog = document.createElement('dialog'); dialog.id = 'capture-modal';
     dialog.style.cssText = 'padding:28px;width:440px;border:3px solid rgb(80,90,100);background:rgb(245,242,235)';

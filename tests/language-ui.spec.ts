@@ -1,16 +1,14 @@
-import { test, expect, type Page } from '@playwright/test';
-import { readFile, readdir, rm } from 'node:fs/promises';
+import { type Page } from '@playwright/test';
+import { test, expect, saveAndList, output } from './support/review.js';
+import { readFile, readdir } from 'node:fs/promises';
 import type { Feedback } from '../src/shared/types.js';
 import { localizeClientError, resolveClientLanguage } from '../src/client/messages.js';
-import { saveAndList } from './save.js';
 
-const output = '/private/tmp/needmark-e2e-feedback';
 const widget = (page: Page) => page.locator('[data-needmark]');
 const comment = 'コメントを保存しました。という表示を変えてください。';
 const author = '投稿者名：日本語';
 const reason = '削除せず、この文言を維持するため';
 
-test.beforeEach(async () => { await rm(output, { recursive: true, force: true }); });
 
 async function saved(): Promise<Feedback> {
   const ids = (await readdir(output)).filter((id) => !id.startsWith('.'));

@@ -1,10 +1,10 @@
-import { test, expect, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { test, expect, output, configureReview } from './support/review.js';
 import { resolve } from 'node:path';
-import { readFile, readdir, rm } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import type { Feedback } from '../src/shared/types.js';
 import type { CaptureSnapshot } from '../src/client/capture/identity.js';
 
-const output = '/private/tmp/needmark-e2e-feedback';
 const urls = { capture: `/@fs/${resolve('src/client/capture/screenshot.ts')}`, identity: `/@fs/${resolve('src/client/capture/identity.ts')}`, context: `/@fs/${resolve('src/client/context/code-context.ts')}` };
 const background = [217, 223, 199, 255], shade = [250, 244, 221, 255], mask = [46, 49, 52, 255];
 const shapes = [
@@ -60,7 +60,6 @@ async function domCapture(page: Page) {
     } finally { capture.stop(); host.remove(); }
   }, urls);
 }
-test.beforeEach(async () => { await rm(output, { recursive: true, force: true }); });
 
 test('full viewport DOM PNG preserves the consumer trapezoid, inset, circle, ellipse and clipped descendants outside the selected target', async ({ page }) => {
   await fixture(page); const native = await page.screenshot();
@@ -98,8 +97,7 @@ test('the real widget saves a full viewport shape-correct PNG and selected code 
       void (window as unknown as { recordUnexpectedSharing(): Promise<void> }).recordUnexpectedSharing(); return Promise.reject(new Error('DOM capture must not request tab permission'));
     } });
   });
-  await fixture(page, true); await page.getByRole('button', { name: '設定', exact: true }).click();
-  await page.getByLabel('キャプチャ方式').selectOption('dom'); await page.getByRole('button', { name: '保存', exact: true }).click();
+  await fixture(page, true); await configureReview(page, { method: 'dom' });
   await page.getByRole('button', { name: 'コメント', exact: true }).click(); const bounds = (await page.locator('#review-target').boundingBox())!;
   await page.mouse.click(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
   await page.getByLabel('コメント本文').fill('台形と丸の形を維持して余白を調整する');

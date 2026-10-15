@@ -1,13 +1,13 @@
-import { test, expect, type ElementHandle, type Page, type TestInfo } from '@playwright/test';
+import { type ElementHandle, type Page, type TestInfo } from '@playwright/test';
+import { test, expect, saveAndList, output, tempRoot, configureReview } from './support/review.js';
 import { build } from 'esbuild';
 import { createServer, type Server } from 'node:http';
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { resolve, join } from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { startReviewProxy, type ReviewProxy } from '../dist/proxy.js';
 import type { Feedback, Rectangle, RuntimeSourceRequest, RuntimeSourceResult, SourceLocation } from '../src/shared/types.js';
-import { saveAndList } from './save.js';
 
 const ids = Array.from({ length: 20 }, (_, index) => `multi-${String(index + 1).padStart(2, '0')}`);
 const sourceFile = 'src/multi-complete.jsx', fixturePath = resolve('tests/fixtures/multi-complete.jsx');
@@ -31,7 +31,7 @@ async function close(server: Server) {
 }
 /** Real current JSX, React dev allocation frames, source maps and the protected public proxy. */
 async function withReview(page: Page, method: 'dom' | 'none', run: (review: Review) => Promise<void>) {
-  const root = await mkdtemp('/private/tmp/needmark-multi-complete-');
+  const root = await mkdtemp(join(tempRoot, 'needmark-multi-complete-'));
   let upstream: Server | undefined, proxy: ReviewProxy | undefined;
   const calls: Promise<SourceCall>[] = [];
   const observe = (response: import('@playwright/test').Response) => {
@@ -65,8 +65,7 @@ async function withReview(page: Page, method: 'dom' | 'none', run: (review: Revi
     } } }));
     page.on('response', observe); await page.goto(origin);
     await expect(page.locator('#target-grid button')).toHaveCount(20);
-    await page.getByRole('button', { name: '設定', exact: true }).click();
-    await page.getByLabel('キャプチャ方式').selectOption(method); await page.getByRole('button', { name: '保存', exact: true }).click();
+    await configureReview(page, { method });
     await run({ origin, output: `${root}/.needmark/feedback`, source, calls });
   } finally {
     page.off('response', observe); await proxy?.close(); if (upstream?.listening) await close(upstream); await rm(root, { recursive: true, force: true });
