@@ -74,11 +74,12 @@
    Use --share=git instead only if I asked to share feedback through Git.
 5. Load NeedMark in the development server:
    - Vite (vite.config.*): add `import { needmark } from 'needmark';` and put `needmark()` in `plugins`, before any plugin that compiles JSX, such as @vitejs/plugin-react.
-   - Anything else, such as Next.js or Astro: change no files. NeedMark runs as a review proxy next to the app instead.
+   - Astro (astro.config.*): add the same import and put `needmark()` in `vite.plugins`, adding `vite: { plugins: [needmark()] }` if there is no `vite` option yet.
+   - Anything else, such as Next.js: change no files. NeedMark runs as a review proxy next to the app instead.
    Make no other changes. NeedMark never enters production builds.
 6. Run `&lt;needmark&gt; list` and check that it prints `[]`.
 7. If you can use MCP servers, ask me whether to register NeedMark so you can read feedback and its screenshots directly. Only if I agree, register it from this folder, for example `claude mcp add needmark -- &lt;needmark&gt; mcp` or `codex mcp add needmark -- &lt;needmark&gt; mcp`.
-8. Finish by telling me how to start reviewing. Vite: the usual dev command and URL. Anything else: start the app, run `&lt;needmark&gt; dev --target=http://localhost:&lt;app port&gt;`, then open http://localhost:4190. If port 4190 is already in use, add `--origin=http://localhost:&lt;free port&gt;` and open that URL instead.</pre>
+8. Finish by telling me how to start reviewing. Vite or Astro: the usual dev command and URL. Anything else: start the app, run `&lt;needmark&gt; dev --target=http://localhost:&lt;app port&gt;`, then open http://localhost:4190. If port 4190 is already in use, add `--origin=http://localhost:&lt;free port&gt;` and open that URL instead.</pre>
       </div>
     </section>
 
@@ -99,7 +100,7 @@ npx needmark init</pre></div>
 yarn needmark init</pre></div>
         <button class="copy" type="button" aria-label="Copy"><svg class="idle" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="5" y="5" width="8.5" height="8.5" rx="1.5"/><path d="M10.5 5V3.5A1 1 0 0 0 9.5 2.5h-6a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1H5"/></svg><svg class="done" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8.5l3 3 7-7"/></svg></button>
       </div>
-      <p><code>init</code> asks for the review language, where to keep feedback and how to take screenshots, then writes <code>needmark.config.ts</code> and targeted Git ignore rules.</p>
+      <p><code>init</code> first offers recommended settings: the review screen in your terminal's language, feedback kept on this computer and screenshots redrawn from the page. Press Enter to accept them, or answer <code>n</code> to choose each one from a list that explains it. It then writes <code>needmark.config.ts</code> and targeted Git ignore rules.</p>
 
       <h3>Vite</h3>
       <p>Add the plugin to your existing configuration. It runs only in the development server and is absent from production builds.</p>
