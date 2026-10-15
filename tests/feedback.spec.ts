@@ -1,5 +1,5 @@
 import { type Page } from '@playwright/test';
-import { test, expect, saveAndList, output, configureReview } from './support/review.js';
+import { test, expect, saveAndList, output, configureReview, tabColorTolerance } from './support/review.js';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { relative, resolve } from 'node:path';
@@ -131,8 +131,7 @@ test('native tab capture records the selected element and actual browser frame',
   }, { png: image.toString('base64'), rect: saved.target.rect, viewport: saved.viewport });
   const expected = await page.locator('#purchase-button').evaluate((element) =>
     getComputedStyle(element).backgroundColor.match(/\d+/g)!.slice(0, 3).map(Number));
-  // Tab video can introduce small YUV/RGB rounding differences.
-  expected.forEach((channel, index) => expect(Math.abs(color[index]! - channel)).toBeLessThanOrEqual(2));
+  expected.forEach((channel, index) => expect(Math.abs(color[index]! - channel)).toBeLessThanOrEqual(tabColorTolerance));
 });
 
 test('React comments retain source locations, runtime ownership and distinguish repeated component instances', async ({ page, browserName }) => {

@@ -11,6 +11,10 @@ export const test = base.extend<{ cleanOutput: void }>({
   cleanOutput: [async ({}, use) => { await rm(output, { recursive: true, force: true }); await use(); }, { auto: true }],
 });
 
+// Native tab capture arrives as video, whose YUV to RGB conversion moves each channel by at most 2 on macOS but by up to 16 in Linux Chromium under Xvfb.
+// ネイティブのタブ撮影は動画として届き、YUVからRGBへの変換で各チャンネルはmacOSでは最大2、XvfbのLinux Chromiumでは最大16ずれる。
+export const tabColorTolerance = process.platform === 'darwin' ? 2 : 20;
+
 // Settings are changed the way a reviewer does, so specs also exercise the panel that stores these preferences.
 // レビュアーと同じ操作で設定を変え、設定を保存するパネル自体も通す。
 export async function configureReview(page: Page, options: { method?: 'none' | 'dom' | 'tab'; author?: string } = {}) {
