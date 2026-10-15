@@ -67,9 +67,6 @@ importers:
         specifier: ^5.18.2
         version: 5.18.2(@types/node@24.19.1)(jiti@2.7.0)(lightningcss@1.33.0)(rollup@4.64.0)(supports-color@10.2.2)(typescript@6.0.3)
     devDependencies:
-      concurrently:
-        specifier: ^10.0.6
-        version: 10.0.6
       needmark:
         specifier: workspace:*
         version: link:../..
