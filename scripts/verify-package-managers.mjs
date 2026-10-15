@@ -18,6 +18,8 @@ const runners = {
   yarn1: { bin: yarn1, install: (spec) => [...yarn1, 'add', '--dev', spec, 'vite@7'], exec: [...yarn1, '--silent', 'needmark'], node: ['node'], hint: 'yarn needmark',
     files: { 'yarn.lock': '' } },
 };
+// Yarn 4 quarantines recently published versions, which would block checking a release right after publishing it.
+process.env.YARN_NPM_MINIMAL_AGE_GATE ??= '0';
 const selected = (args.only ?? Object.keys(runners).join(',')).split(',');
 
 function run(command, options = {}) {

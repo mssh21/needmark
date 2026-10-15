@@ -20,5 +20,6 @@ The project rules for contributors and coding agents are in [AGENTS.md](AGENTS.m
 - Add or update tests as described in [docs/testing.md](docs/testing.md).
 - Before opening it, make sure `pnpm build`, `pnpm typecheck`, `pnpm test` and `pnpm test:e2e` pass. For changes to packaging, the CLI or dependencies, also run `pnpm test:package-managers`.
 - Check user-facing changes in the demo.
+- Leave `version` in `package.json` unchanged; maintainers bump it when releasing ([docs/releasing.md](docs/releasing.md)).
 
 By contributing you agree that your contributions are licensed under the [MIT License](LICENSE).

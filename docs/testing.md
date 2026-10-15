@@ -31,7 +31,7 @@ Run it before a release and after changes to packaging, the CLI, the build or de
 | --- | --- |
 | `--only=npm,yarn` | Run selected runners (`npm`, `pnpm`, `yarn`, `yarn1`) |
 | `--pnpm=10`, `--yarn=4.9` | Use another pnpm or Yarn version; pnpm 11 itself needs Node 22.13, so use `--pnpm=10` on Node 22.12 |
-| `--spec=needmark@1.0.0` | Install a published version from the registry instead of the local tarball, to check a release after publishing |
+| `--spec=needmark@1.0.0` | Install a published version from the registry instead of the local tarball, to check a release after publishing. Yarn's quarantine of newly published versions is turned off for the check |
 | `--keep` | Keep the temporary projects after a successful run (they are always kept after a failure) |
 
 Pass options after `--`, for example `pnpm test:package-managers -- --only=yarn`. To check another Node version, run the script with it, for example `mise exec node@22.12 -- node scripts/verify-package-managers.mjs`.
