@@ -98,7 +98,7 @@ async function save(page: Page, review: Review, comment: string): Promise<Feedba
 async function closePanel(page: Page) { await page.getByRole('button', { name: 'パネルを閉じる', exact: true }).click(); }
 const copied = (page: Page) => page.evaluate(() => (window as unknown as { copied: string }).copied);
 
-test('real proxy verifies cy, component and configured custom identifiers through saved source, editor, prompt and reordered pins', async ({ page }) => {
+test('real proxy verifies cy, component and configured custom identifiers through saved source, editor, prompt and reordered pins', { tag: '@cross-engine' }, async ({ page }) => {
   await withReview(page, 'static', async (review) => {
     const targets = [
       { attribute: 'data-cy', value: 'cy-checkout', component: 'CypressTarget', text: 'Cypress source review' },
@@ -191,7 +191,7 @@ for (const scenario of ['duplicate', 'dynamic', 'unconfigured'] as const) {
   });
 }
 
-test('real shadow and iframe React targets keep per-root unique identifiers and source evidence after reload', async ({ page }, testInfo) => {
+test('real shadow and iframe React targets keep per-root unique identifiers and source evidence after reload', { tag: '@cross-engine' }, async ({ page }, testInfo) => {
   await withReview(page, 'roots', async (review) => {
     const source = expectedSource(review, 'data-cy="cy-checkout"', 'CypressTarget');
     const targets = [

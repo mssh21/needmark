@@ -61,7 +61,7 @@ async function domCapture(page: Page) {
   }, urls);
 }
 
-test('full viewport DOM PNG preserves the consumer trapezoid, inset, circle, ellipse and clipped descendants outside the selected target', async ({ page }) => {
+test('full viewport DOM PNG preserves the consumer trapezoid, inset, circle, ellipse and clipped descendants outside the selected target', { tag: '@cross-engine' }, async ({ page }) => {
   await fixture(page); const native = await page.screenshot();
   expect(await pixels(page, native.toString('base64'), shapes)).toEqual(expected(shapes));
   const captured = await domCapture(page);
@@ -73,7 +73,7 @@ test('full viewport DOM PNG preserves the consumer trapezoid, inset, circle, ell
   expect(await pixels(page, captured.png, [{ name: 'excluded-kit', x: 1090, y: 40 }])).toEqual([{ name: 'excluded-kit', color: background }]);
 });
 
-test('DOM shape rendering handles pseudo-elements, open shadow and same-origin frame content while keeping all privacy masks', async ({ page }) => {
+test('DOM shape rendering handles pseudo-elements, open shadow and same-origin frame content while keeping all privacy masks', { tag: '@cross-engine' }, async ({ page }) => {
   await fixture(page); expect(await pixels(page, (await page.screenshot()).toString('base64'), nested)).toEqual(expected(nested));
   const before = await page.evaluate(() => ({
     password: (document.querySelector('#private-password') as HTMLInputElement).value,
@@ -90,7 +90,7 @@ test('DOM shape rendering handles pseudo-elements, open shadow and same-origin f
   expect(before).toEqual({ password: 'private-password', shadow: 'shadow-private', frame: 'frame-private' });
 });
 
-test('the real widget saves a full viewport shape-correct PNG and selected code geometry without requesting tab permission', async ({ page }) => {
+test('the real widget saves a full viewport shape-correct PNG and selected code geometry without requesting tab permission', { tag: '@cross-engine' }, async ({ page }) => {
   let sharingRequests = 0; await page.exposeFunction('recordUnexpectedSharing', () => { sharingRequests++; });
   await page.addInitScript(() => {
     if (navigator.mediaDevices) Object.defineProperty(navigator.mediaDevices, 'getDisplayMedia', { configurable: true, value: () => {

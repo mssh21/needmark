@@ -21,7 +21,7 @@ async function state(page: Page) {
 }
 
 
-test('pause freezes CSS, page loops and WAAPI, keeps the widget/capture/poll live, and resumes cancelable work', async ({ page }) => {
+test('pause freezes CSS, page loops and WAAPI, keeps the widget/capture/poll live, and resumes cancelable work', { tag: '@cross-engine' }, async ({ page }) => {
   await page.goto('/');
   await configureReview(page, { method: 'dom' });
   await page.evaluate(() => {
@@ -92,7 +92,7 @@ test('pause freezes CSS, page loops and WAAPI, keeps the widget/capture/poll liv
   expect(await page.locator('[data-needmark-freeze]').count()).toBe(0);
 });
 
-test('pagehide releases page animations and queued loops without resuming a video or animation that was already paused', async ({ page }) => {
+test('pagehide releases page animations and queued loops without resuming a video or animation that was already paused', { tag: '@cross-engine' }, async ({ page }) => {
   await page.goto('/');
   await page.evaluate(() => {
     const video = document.createElement('video'); video.id = 'pause-empty-video'; document.body.append(video);

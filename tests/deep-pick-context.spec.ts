@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 
 const moduleUrl = `/@fs/${resolve('src/client/context/code-context.ts')}`;
 
-test('deep picking skips an overlay label and its ancestors while excluding the widget', async ({ page }) => {
+test('deep picking skips an overlay label and its ancestors while excluding the widget', { tag: '@cross-engine' }, async ({ page }) => {
   await page.goto('/');
   await page.setContent(`<main style="position:fixed;inset:0">
     <button id="underlay" style="position:absolute;left:20px;top:20px;width:160px;height:60px">Covered button</button>
@@ -20,7 +20,7 @@ test('deep picking skips an overlay label and its ancestors while excluding the 
   expect(hits).toEqual({ normal: 'overlay-label', deep: 'underlay', styleUnchanged: true });
 });
 
-test('skipping an outer overlay retains meaningful front content in the lower open shadow host', async ({ page }) => {
+test('skipping an outer overlay retains meaningful front content in the lower open shadow host', { tag: '@cross-engine' }, async ({ page }) => {
   await page.goto('/');
   await page.setContent(`<div id="shadow-host" style="position:fixed;left:20px;top:20px;width:160px;height:60px"></div>
     <div id="outer-overlay" style="position:fixed;left:20px;top:20px;width:160px;height:60px;z-index:2">Outer overlay</div>`);
@@ -35,7 +35,7 @@ test('skipping an outer overlay retains meaningful front content in the lower op
   expect(hits).toEqual({ normal: 'outer-overlay', deep: 'shadow-front', rootPath: ['shadow: #shadow-host'] });
 });
 
-test('deep picking prefers a lower branch inside the frontmost open shadow root', async ({ page }) => {
+test('deep picking prefers a lower branch inside the frontmost open shadow root', { tag: '@cross-engine' }, async ({ page }) => {
   await page.goto('/');
   await page.setContent(`<button id="page-underlay" style="position:fixed;left:20px;top:20px;width:160px;height:60px">Page underlay</button>
     <div id="shadow-host" style="position:fixed;left:20px;top:20px;width:160px;height:60px;z-index:1"></div>`);
@@ -49,7 +49,7 @@ test('deep picking prefers a lower branch inside the frontmost open shadow root'
   expect(hits).toEqual({ normal: 'shadow-overlay-label', deep: 'shadow-underlay' });
 });
 
-test('skipping an outer overlay preserves slotted light DOM targets within the lower shadow host', async ({ page }) => {
+test('skipping an outer overlay preserves slotted light DOM targets within the lower shadow host', { tag: '@cross-engine' }, async ({ page }) => {
   await page.goto('/');
   await page.setContent('<div id="shadow-host" style="position:fixed;left:20px;top:20px;width:160px;height:60px"><button id="slotted" style="position:absolute;inset:0">Slotted button</button></div><div id="outer-overlay" style="position:fixed;left:20px;top:20px;width:160px;height:60px;z-index:2">Outer overlay</div>');
   const hits = await page.evaluate(async (url) => {
@@ -60,7 +60,7 @@ test('skipping an outer overlay preserves slotted light DOM targets within the l
   expect(hits).toEqual({ normal: 'outer-overlay', deep: 'slotted' });
 });
 
-test('deep frame picking preserves padded scaled coordinates and retains a meaningful inner overlay', async ({ page }) => {
+test('deep frame picking preserves padded scaled coordinates and retains a meaningful inner overlay', { tag: '@cross-engine' }, async ({ page }) => {
   await page.goto('/');
   await page.setContent('<button id="page-underlay" style="position:fixed;left:300px;top:100px;width:300px;height:200px">Page underlay</button>');
   const hits = await page.evaluate(async (url) => {
@@ -86,7 +86,7 @@ test('deep frame picking preserves padded scaled coordinates and retains a meani
   expect(hits.outer).toEqual({ normal: 'outer-overlay', deep: 'frame-overlay-label' });
 });
 
-test('deep picking retains the normal hit when only its ancestors lie underneath', async ({ page }) => {
+test('deep picking retains the normal hit when only its ancestors lie underneath', { tag: '@cross-engine' }, async ({ page }) => {
   await page.goto('/');
   await page.setContent('<main style="position:fixed;inset:0"><button id="only-hit" style="position:absolute;left:20px;top:20px;width:160px;height:60px">Only hit</button></main>');
   const hits = await page.evaluate(async (url) => {
@@ -96,7 +96,7 @@ test('deep picking retains the normal hit when only its ancestors lie underneath
   expect(hits).toEqual({ normal: 'only-hit', deep: 'only-hit' });
 });
 
-test('deep picking reaches meaningful content beneath two independent empty overlays', async ({ page }) => {
+test('deep picking reaches meaningful content beneath two independent empty overlays', { tag: '@cross-engine' }, async ({ page }) => {
   await page.goto('/');
   await page.setContent(`<button id="underlay" style="position:fixed;left:20px;top:20px;width:160px;height:60px">Covered button</button>
     <div id="lower-cover" style="position:fixed;left:20px;top:20px;width:160px;height:60px;z-index:1"></div>
@@ -108,7 +108,7 @@ test('deep picking reaches meaningful content beneath two independent empty over
   expect(hits).toEqual({ normal: 'upper-cover', deep: 'underlay' });
 });
 
-test('deep picking searches through empty outer and inner shadow covers', async ({ page }) => {
+test('deep picking searches through empty outer and inner shadow covers', { tag: '@cross-engine' }, async ({ page }) => {
   await page.goto('/');
   await page.setContent(`<button id="page-underlay" style="position:fixed;left:20px;top:20px;width:160px;height:60px">Page underlay</button>
     <div id="shadow-host" style="position:fixed;left:20px;top:20px;width:160px;height:60px;z-index:1"></div>
@@ -123,7 +123,7 @@ test('deep picking searches through empty outer and inner shadow covers', async 
   expect(hits).toEqual({ normal: 'outer-cover', deep: 'shadow-underlay', rootPath: ['shadow: #shadow-host'] });
 });
 
-test('deep picking searches through empty outer and padded scaled frame covers', async ({ page }) => {
+test('deep picking searches through empty outer and padded scaled frame covers', { tag: '@cross-engine' }, async ({ page }) => {
   await page.goto('/');
   await page.setContent('<button id="page-underlay" style="position:fixed;left:300px;top:100px;width:300px;height:200px">Page underlay</button>');
   const hits = await page.evaluate(async (url) => {
@@ -144,7 +144,7 @@ test('deep picking searches through empty outer and padded scaled frame covers',
     context: { rootPath: ['iframe: #embed'], rect: { x: 335, y: 131.25, width: 100, height: 50 } } });
 });
 
-test('deep picking ignores an opacity-zero intermediate hit and retains normal fallback when all lower hits are invisible', async ({ page }) => {
+test('deep picking ignores an opacity-zero intermediate hit and retains normal fallback when all lower hits are invisible', { tag: '@cross-engine' }, async ({ page }) => {
   await page.goto('/');
   await page.setContent(`<button id="visible" style="position:fixed;left:20px;top:20px;width:160px;height:60px">Visible button</button>
     <button id="invisible" style="position:fixed;left:20px;top:20px;width:160px;height:60px;opacity:0;z-index:1">Invisible button</button>
@@ -158,7 +158,7 @@ test('deep picking ignores an opacity-zero intermediate hit and retains normal f
   expect(hits).toEqual({ normal: 'cover', deep: 'visible', fallback: 'cover' });
 });
 
-test('deep picking uses the smallest visible rectangle when lower branches contain no meaningful content', async ({ page }) => {
+test('deep picking uses the smallest visible rectangle when lower branches contain no meaningful content', { tag: '@cross-engine' }, async ({ page }) => {
   await page.goto('/');
   await page.setContent(`<div id="swatch" style="position:fixed;left:70px;top:35px;width:60px;height:30px;background:blue"></div>
     <div id="large-visual" style="position:fixed;left:20px;top:20px;width:160px;height:60px;background:green;z-index:1"></div>
@@ -170,7 +170,7 @@ test('deep picking uses the smallest visible rectangle when lower branches conta
   expect(hits).toEqual({ normal: 'cover', deep: 'swatch' });
 });
 
-test('deep picking ranks an empty accessible control above a smaller decorative visual', async ({ page }) => {
+test('deep picking ranks an empty accessible control above a smaller decorative visual', { tag: '@cross-engine' }, async ({ page }) => {
   await page.goto('/');
   await page.setContent(`<div id="swatch" style="position:fixed;left:70px;top:35px;width:60px;height:30px;background:blue"></div>
     <div id="accessible-control" role="button" aria-label="Confirm" style="position:fixed;left:20px;top:20px;width:160px;height:60px;z-index:1"></div>
@@ -182,7 +182,7 @@ test('deep picking ranks an empty accessible control above a smaller decorative 
   expect(hits).toEqual({ normal: 'cover', deep: 'accessible-control' });
 });
 
-test('a frontmost slotted button retains normal fallback rather than selecting its rendered slot ancestor', async ({ page }) => {
+test('a frontmost slotted button retains normal fallback rather than selecting its rendered slot ancestor', { tag: '@cross-engine' }, async ({ page }) => {
   await page.goto('/');
   await page.setContent('<div id="shadow-host" style="position:fixed;left:20px;top:20px;width:160px;height:60px"><button id="slotted" style="position:absolute;inset:0">Slotted button</button></div>');
   const hits = await page.evaluate(async (url) => {
@@ -193,7 +193,7 @@ test('a frontmost slotted button retains normal fallback rather than selecting i
   expect(hits).toEqual({ normal: 'slotted', deep: 'slotted' });
 });
 
-test('deep root search keeps the existing eight-level descent bound', async ({ page }) => {
+test('deep root search keeps the existing eight-level descent bound', { tag: '@cross-engine' }, async ({ page }) => {
   await page.goto('/');
   await page.setContent('<div id="root-0" style="position:fixed;left:20px;top:20px;width:160px;height:60px"></div><div id="cover" style="position:fixed;left:20px;top:20px;width:160px;height:60px;z-index:2"></div>');
   const hits = await page.evaluate(async (url) => {
@@ -211,7 +211,7 @@ test('deep root search keeps the existing eight-level descent bound', async ({ p
   expect(hits).toEqual({ normal: 'cover', deep: 'root-7', roots: 7 });
 });
 
-test('closed shadow roots and inaccessible frames remain opaque targets in deep mode', async ({ page }) => {
+test('closed shadow roots and inaccessible frames remain opaque targets in deep mode', { tag: '@cross-engine' }, async ({ page }) => {
   await page.goto('/');
   await page.setContent('<div id="closed-host" style="position:fixed;left:20px;top:20px;width:160px;height:60px"></div>');
   const hits = await page.evaluate(async (url) => {
@@ -228,7 +228,7 @@ test('closed shadow roots and inaccessible frames remain opaque targets in deep 
   expect(hits).toEqual({ closedNormal: 'closed-host', closedDeep: 'closed-host', frameNormal: 'opaque-frame', frameDeep: 'opaque-frame', inaccessible: true });
 });
 
-test('a hidden lower shadow host can still supply an explicitly visible child', async ({ page }) => {
+test('a hidden lower shadow host can still supply an explicitly visible child', { tag: '@cross-engine' }, async ({ page }) => {
   await page.goto('/');
   await page.setContent('<div id="shadow-host" style="position:fixed;left:20px;top:20px;width:160px;height:60px;visibility:hidden"></div><div id="cover" style="position:fixed;left:20px;top:20px;width:160px;height:60px;z-index:2"></div>');
   const hits = await page.evaluate(async (url) => {

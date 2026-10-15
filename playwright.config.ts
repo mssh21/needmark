@@ -10,7 +10,9 @@ export default defineConfig({
   projects: [
     { name: 'chromium', use: { browserName: 'chromium', channel: 'chromium',
       launchOptions: { args: ['--auto-select-tab-capture-source-by-title=NeedMark', '--allow-http-screen-capture'] } } },
-    { name: 'webkit', use: { browserName: 'webkit', headless: true } },
+    // Chromium runs every spec. WebKit repeats only tests tagged @cross-engine, whose outcome depends on engine behaviour (rendering and capture, hit testing, carets and ranges, frames, stacks, pointer and keyboard events); see docs/testing.md.
+    // Chromiumはすべてのspecを実行する。WebKitでは、結果がエンジンの挙動（描画と撮影、ヒットテスト、キャレットと範囲、フレーム、スタック、ポインターとキーボード）に左右される@cross-engineのテストだけを繰り返す。docs/testing.mdを参照。
+    { name: 'webkit', grep: /@cross-engine/, use: { browserName: 'webkit', headless: true } },
   ],
   webServer: {
     command: 'pnpm demo', port: 4192, reuseExistingServer: false,

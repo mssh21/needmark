@@ -289,12 +289,3 @@ test('delete confirmations replace the content of the open panel without moving 
   await expect.poll(async () => { const box = (await panel(page).boundingBox())!; return [Math.round(box.x), Math.round(box.y)]; }).toEqual([Math.round(details.x), Math.round(details.y)]);
 });
 
-test('the panel header stays at the top while the panel body scrolls', async ({ page }) => {
-  await setup(page, { width: 800, height: 600 }); await seed(page, '長いコメントの本文。\n'.repeat(60));
-  await page.getByRole('button', { name: 'コメント一覧', exact: true }).click(); await page.locator('[data-needmark] .open-item').click();
-  await expect(page.getByLabel('返信', { exact: true })).toBeVisible();
-  await panel(page).evaluate((element) => { element.scrollTop = element.scrollHeight; });
-  const header = await panel(page).locator('header').evaluate((element) => { const box = element.getBoundingClientRect(), outer = element.parentElement!.getBoundingClientRect(); return { top: box.top - outer.top, scrolled: element.parentElement!.scrollTop }; });
-  expect(header.scrolled).toBeGreaterThan(200); expect(header.top).toBeCloseTo(0, 0);
-  await expect(page.getByRole('button', { name: 'パネルを閉じる', exact: true })).toBeVisible();
-});

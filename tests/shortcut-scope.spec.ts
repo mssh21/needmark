@@ -38,7 +38,7 @@ async function hostState(page: Page) {
   return page.evaluate(() => (window as unknown as { shortcutHost: { submitted: number; keys: { key: string; prevented: boolean }[] } }).shortcutHost);
 }
 
-test('enabled shortcuts never submit or intercept a host input, textarea or inherited editable region', async ({ page }) => {
+test('enabled shortcuts never submit or intercept a host input, textarea or inherited editable region', { tag: '@cross-engine' }, async ({ page }) => {
   await page.goto('/'); await configure(page); await hostEvents(page);
   for (const name of ['Host input', 'Host textarea', 'Host editable', 'Host shadow textarea']) {
     await page.getByRole('textbox', { name, exact: true }).focus();

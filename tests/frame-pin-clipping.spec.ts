@@ -54,7 +54,7 @@ async function withReview(page: Page, run: (review: { origin: string; output: st
 }
 
 // Saved pins follow current painted bounds without changing stored target evidence.
-test('a saved iframe element pin hides when its unchanged original is wholly clipped by child scrolling and recovers on scrollback', async ({ page }, testInfo) => {
+test('a saved iframe element pin hides when its unchanged original is wholly clipped by child scrolling and recovers on scrollback', { tag: '@cross-engine' }, async ({ page }, testInfo) => {
   await withReview(page, async ({ origin, output }) => {
     const frameHandle = await page.locator('#outer-review-frame').elementHandle(), frame = await frameHandle?.contentFrame();
     await frameHandle?.dispose(); if (!frame) throw new Error('Child frame is unavailable');
@@ -163,7 +163,7 @@ async function reviewFrame(page: Page) {
 }
 
 // Both collision-adjusted centers must describe the remaining painted pixels, even when narrower than a marker.
-test('two saved pins stay inside a narrow positive child viewport intersection and recover their full positions', async ({ page }, testInfo) => {
+test('two saved pins stay inside a narrow positive child viewport intersection and recover their full positions', { tag: '@cross-engine' }, async ({ page }, testInfo) => {
   await withReview(page, async ({ origin, output }) => {
     const { frame, original } = await reviewFrame(page), parentUrl = page.url(), childUrl = frame.url();
     try {
@@ -211,7 +211,7 @@ test('two saved pins stay inside a narrow positive child viewport intersection a
 });
 
 // Browser hit testing establishes that ordinary overflow can be escaped; containing blocks then clip that same original.
-test('saved child pins follow painted absolute and fixed escapes but hide at real containing block clips', async ({ page }, testInfo) => {
+test('saved child pins follow painted absolute and fixed escapes but hide at real containing block clips', { tag: '@cross-engine' }, async ({ page }, testInfo) => {
   await withReview(page, async ({ origin, output }) => {
     const { frame, original } = await reviewFrame(page), parentUrl = page.url(), childUrl = frame.url();
     try {
@@ -260,7 +260,7 @@ test('saved child pins follow painted absolute and fixed escapes but hide at rea
   });
 });
 
-test('saved child pins respect iframe ancestor opacity and visibility while allowing an explicitly visible descendant', async ({ page }, testInfo) => {
+test('saved child pins respect iframe ancestor opacity and visibility while allowing an explicitly visible descendant', { tag: '@cross-engine' }, async ({ page }, testInfo) => {
   await withReview(page, async ({ origin, output }) => {
     // Wrap before capturing any identity: reparenting a live iframe itself creates a fresh child document.
     await page.locator('#outer-review-frame').evaluate((frame) => { const wrapper = document.createElement('div'); wrapper.id = 'saved-frame-owner'; frame.before(wrapper); wrapper.append(frame); });
@@ -298,7 +298,7 @@ test('saved child pins respect iframe ancestor opacity and visibility while allo
   });
 });
 
-test('unconfirmed pins suppress only a unique invisible candidate on the recorded child route and preserve other fallbacks', async ({ page }, testInfo) => {
+test('unconfirmed pins suppress only a unique invisible candidate on the recorded child route and preserve other fallbacks', { tag: '@cross-engine' }, async ({ page }, testInfo) => {
   await withReview(page, async ({ origin, output }) => {
     const { frame, original } = await reviewFrame(page), parentUrl = page.url(), childUrl = frame.url();
     try {

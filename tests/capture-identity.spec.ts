@@ -56,7 +56,7 @@ test('identical clones remain valid saved targets but cannot replace original ca
   expect(result).toEqual({ savedAcceptsClone: true, beforeRejects: true, duringRejects: true, missingRejects: true });
 });
 
-test('reversed text selections retain partial geometry and reject endpoint or full selected text drift beyond saved excerpts', async ({ page }) => {
+test('reversed text selections retain partial geometry and reject endpoint or full selected text drift beyond saved excerpts', { tag: '@cross-engine' }, async ({ page }) => {
   const result = await page.evaluate(async (urls) => {
     const { createCaptureGuard, applyCaptureSnapshot } = await import(urls.identity);
     const { contextForRange, rangeBetween, viewportRectForRange, viewportRectOf, resolveContextElement } = await import(urls.context);

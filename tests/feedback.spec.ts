@@ -37,7 +37,7 @@ async function exportedPrompt(page: Page, browserName: string): Promise<string> 
   return prompt.inputValue();
 }
 
-test('area selection saves image and feedback, survives reload, and shares status with the CLI files', async ({ page, browserName }) => {
+test('area selection saves image and feedback, survives reload, and shares status with the CLI files', { tag: '@cross-engine' }, async ({ page, browserName }) => {
   await preparePromptExport(page, browserName);
   await page.goto('/');
   await page.getByRole('button', { name: '設定', exact: true }).click();
@@ -100,7 +100,6 @@ test('the list shows lost polling connections and clears the notice once polling
 });
 
 test('native tab capture records the selected element and actual browser frame', async ({ page, browserName }) => {
-  test.skip(browserName !== 'chromium', 'The automated native tab picker is supported by the Chromium launch configuration.');
   await page.goto('/');
   await configureReview(page, { method: 'tab' });
   await page.getByRole('button', { name: 'コメント', exact: true }).click();

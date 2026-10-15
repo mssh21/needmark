@@ -177,7 +177,7 @@ test('secondary pointers and Enter cannot commit a primary marquee and every can
   }
 });
 
-test('marquee traverses open roots, selects only visible frame content and excludes the NeedMark while retaining full target geometry', async ({ page }) => {
+test('marquee traverses open roots, selects only visible frame content and excludes the NeedMark while retaining full target geometry', { tag: '@cross-engine' }, async ({ page }) => {
   await fixture(page);
   await page.evaluate(() => { for (const id of ['basic', 'semantic', 'caps', 'host-controls']) document.getElementById(id)!.hidden = true; });
   await begin(page); await drag(page, [830, 160], [1190, 835]); await expect(outlines(page)).toHaveCount(3);
@@ -217,7 +217,7 @@ test('marquee traverses open roots, selects only visible frame content and exclu
 });
 
 
-test('marquee follows native rendering for positioned overflow escapes, visible overrides and genuine clipping without shrinking stored geometry', async ({ page }, info) => {
+test('marquee follows native rendering for positioned overflow escapes, visible overrides and genuine clipping without shrinking stored geometry', { tag: '@cross-engine' }, async ({ page }, info) => {
   await fixture(page);
   await page.evaluate(() => {
     for (const id of ['basic', 'semantic', 'caps', 'roots', 'host-controls']) document.getElementById(id)!.hidden = true;

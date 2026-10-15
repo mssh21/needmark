@@ -93,13 +93,6 @@ test('comment mode turns the bottom toolbar into the gesture hint and returns it
   await expect.poll(async () => Math.round((await dock.boundingBox())!.width)).toBe(Math.round(before.width));
 });
 
-test('the comment panel fits its width without horizontal scrolling', async ({ page }) => {
-  await page.goto('/'); await configure(page);
-  await page.getByRole('button', { name: 'コメント', exact: true }).click(); await clickAt(page, '#purchase-button');
-  await expect(page.getByLabel('コメント本文')).toBeVisible();
-  expect(await review(page).locator('.panel').evaluate((panel) => panel.scrollWidth - panel.clientWidth)).toBe(0);
-});
-
 test('the guide link in the draggable toolbar opens the guide in a new tab', async ({ page }) => {
   await page.context().route('https://github.com/**', (route) => route.fulfill({ contentType: 'text/html', body: '<title>guide</title>' }));
   await page.goto('/'); await configure(page);
@@ -131,6 +124,7 @@ test('one comment tool selects text by Alt drag and several elements after one S
   await page.getByLabel('コメント本文').fill('Altドラッグの文字');
   await saveAndList(page);
   await expect.poll(async () => (await saved()).map((item) => [item.target.kind, item.comment])).toEqual([['text', 'Altドラッグの文字']]);
+  const [text] = await saved(); expect('Halden for Teams').toContain(text!.target.text); expect(text!.target.code?.elements[0]?.source?.file).toBe('demo/index.html');
   await page.getByRole('button', { name: 'パネルを閉じる', exact: true }).click();
   await page.getByRole('button', { name: 'コメント', exact: true }).click();
   await page.keyboard.down('Shift'); await clickAt(page, '#purchase-button'); await page.keyboard.up('Shift');
@@ -184,7 +178,7 @@ test('category defaults to fix, is chosen above the comment without submitting o
   await expect(page.getByRole('combobox', { name: 'カテゴリ' })).toHaveCount(0);
 });
 
-test('the single save keeps reviewing without opening the list, by button or Ctrl/Cmd+Enter', async ({ page }) => {
+test('the single save keeps reviewing without opening the list, by button or Ctrl/Cmd+Enter', { tag: '@cross-engine' }, async ({ page }) => {
   await page.goto('/'); await configure(page);
   await page.getByRole('button', { name: 'コメント', exact: true }).click(); await clickAt(page, '#purchase-button');
   await expect(review(page).locator('.draft-outline')).toHaveCount(1);

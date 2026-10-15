@@ -81,7 +81,7 @@ async function pixels(page: Page, png: Buffer, rect: Rectangle, privateRects: Re
 }
 
 // One actual saved review: native rendered geometry is the independent oracle, not NeedMark's mapping.
-test('a padded bordered iframe saves its original target geometry and DOM PNG outline at the native rendered position', async ({ page }, testInfo) => {
+test('a padded bordered iframe saves its original target geometry and DOM PNG outline at the native rendered position', { tag: '@cross-engine' }, async ({ page }, testInfo) => {
   await withReview(page, async ({ origin, output, source }) => {
     const frameLocator = page.locator('#outer-capture-frame');
     await frameLocator.evaluate((element) => {
@@ -200,7 +200,7 @@ function expectPrivacy(actual: Record<string, number[][]>, color: number[]) {
   for (const corners of Object.values(actual)) for (const corner of corners) expect(corner).toEqual(color);
 }
 
-test('padded scaled frames select a thin original at its native center and retain exact native text-range geometry', async ({ page }, testInfo) => {
+test('padded scaled frames select a thin original at its native center and retain exact native text-range geometry', { tag: '@cross-engine' }, async ({ page }, testInfo) => {
   await withReview(page, async ({ origin, output, source }) => {
     const frame = await paddedFrame(page, true), target = frame.locator('[data-cy="frame-live-button"]');
     await target.click(); await expect(target).toHaveText('Current child 1');
@@ -245,7 +245,6 @@ test('padded scaled frames select a thin original at its native center and retai
 });
 
 test('native tab capture masks every padded scaled child corner at its actual rendered position', async ({ page, browserName }, testInfo) => {
-  test.skip(browserName !== 'chromium', 'The automated native tab picker is supported by the Chromium launch configuration.');
   await withReview(page, async ({ origin, output, source }) => {
     const frame = await paddedFrame(page, true), target = frame.locator('[data-cy="frame-live-button"]');
     await target.click(); await expect(target).toHaveText('Current child 1');
@@ -275,7 +274,7 @@ test('native tab capture masks every padded scaled child corner at its actual re
   });
 });
 
-test('multi marquee excludes an unpainted child control whose geometry falls entirely in padded iframe space', async ({ page }, testInfo) => {
+test('multi marquee excludes an unpainted child control whose geometry falls entirely in padded iframe space', { tag: '@cross-engine' }, async ({ page }, testInfo) => {
   await withReview(page, async () => {
     const frame = await paddedFrame(page, true), target = frame.locator('[data-cy="frame-live-button"]');
     await target.click(); await expect(target).toHaveText('Current child 1');
@@ -316,7 +315,7 @@ test('multi marquee excludes an unpainted child control whose geometry falls ent
 
 
 // Normal Area sampling must describe painted evidence, independently of exact JSX verification.
-test('a normal area review over iframe padding never attributes a wholly unpainted child target to its image or AI prompt', async ({ page }, testInfo) => {
+test('a normal area review over iframe padding never attributes a wholly unpainted child target to its image or AI prompt', { tag: '@cross-engine' }, async ({ page }, testInfo) => {
   await page.addInitScript(() => Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async (value: string) => {
     (window as unknown as { copied: string }).copied = value;
   } } }));
