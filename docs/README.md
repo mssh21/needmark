@@ -14,6 +14,7 @@ Start with the overview in your preferred language, then use the getting-started
 | Benchmark and product evaluation / ベンチマークと評価 | [Japanese only](agentation-comparison.ja.md) | [Agentationとの比較](agentation-comparison.ja.md) |
 | Contributor and agent rules / 開発・AIエージェントの共通ルール | [AGENTS.md](../AGENTS.md) | [AGENTS.md](../AGENTS.md) |
 | Testing and manual checks / テストと手動確認 | [Testing](testing.md) | [Testing（英語）](testing.md) |
+| Releasing to npm / npmへのリリース | [Releasing](releasing.md) | [Releasing（英語）](releasing.md) |
 
 Detailed reference sections / 詳細リファレンス:
 

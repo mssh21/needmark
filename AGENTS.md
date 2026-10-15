@@ -8,7 +8,7 @@ Common rules for developing and maintaining NeedMark. They apply to every agent 
 
 - Use `pnpm` for dependencies and scripts, `pnpm dlx` instead of `npx`. Do not use `npm`.
 - `.mise.toml` and `package.json#packageManager` are the version source of truth.
-- Do not push, publish or create releases unless explicitly asked.
+- Do not push, publish or create releases unless explicitly asked. Changing `package.json#version` on `main` publishes to npm ([`docs/releasing.md`](./docs/releasing.md)), so bump it only when a release is requested.
 
 ## Product boundaries
 
