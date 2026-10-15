@@ -17,13 +17,15 @@ Install the browser engines once with `pnpm exec playwright install chromium web
 
 ## Package managers
 
-`pnpm test:package-managers` packs the package and installs the tarball into a fresh temporary project for each runner: npm (the one bundled with Node), pnpm 11, Yarn 4 with Plug'n'Play and Yarn 1. pnpm and Yarn are fetched through `npx` at those versions, so global installs and Corepack do not affect the result. In each project it checks:
+`pnpm test:package-managers` packs the package and, for each runner, copies [`examples/vite-react`](#examples) (without its `needmark.config.ts`) into a temporary project, points its `needmark` dependency at the tarball and installs it. The runners are npm (the one bundled with Node), pnpm 11, Yarn 4 with Plug'n'Play and Yarn 1. pnpm and Yarn are fetched through `npx` at those versions, so global installs and Corepack do not affect the result. In each project it checks:
 
 - `needmark --help`, `init` (config, Git ignore rule and the runner's own command in the output) and `list` through the runner;
 - an MCP `initialize` handshake over `needmark mcp`;
-- that the Vite plugin, loaded from `needmark.config.ts`, injects and serves the review client in development;
+- that the example's `dev` script, started through the runner, serves the page with the review client injected, the Vite plugin reading the `needmark.config.ts` that `init` wrote;
 - that the `needmark/proxy` review proxy injects and serves the client;
 - that a production Vite build contains no NeedMark code.
+
+Each runner uses one example only; the other frameworks are checked by hand with the [examples](#examples).
 
 Run it before a release and after changes to packaging, the CLI, the build or dependencies. It needs network access to the npm registry.
 
@@ -35,6 +37,22 @@ Run it before a release and after changes to packaging, the CLI, the build or de
 | `--keep` | Keep the temporary projects after a successful run (they are always kept after a failure) |
 
 Pass options after `--`, for example `pnpm test:package-managers -- --only=yarn`. To check another Node version, run the script with it, for example `mise exec node@22.12 -- node scripts/verify-package-managers.mjs`.
+
+## Examples
+
+`examples/` holds small applications for checking NeedMark by hand in different frameworks. They are pnpm workspace packages that link `needmark` with `workspace:*`, so they load this repository's `dist/`; they are not part of the published package. Each page has the same review targets: a sticky header, buttons (including a disabled one), a form, an SVG image, a same-origin iframe (`/embed.html`), a cross-origin Google Maps iframe and ten articles that make the page long.
+
+| Command | Example | NeedMark through | Open |
+| --- | --- | --- | --- |
+| `pnpm examples:react` | `examples/vite-react` (Vite 8, React) | Vite plugin | `http://127.0.0.1:4310` |
+| `pnpm examples:vue` | `examples/vite-vue` (Vite 8, Vue) | Vite plugin | `http://127.0.0.1:4320` |
+| `pnpm examples:astro` | `examples/astro` (Astro 5) | `needmark dev` proxy, app on 4331 | `http://127.0.0.1:4330` |
+| `pnpm examples:next` | `examples/next` (Next.js 16 App Router, Turbopack) | `needmark dev` proxy, app on 4341 | `http://127.0.0.1:4340` |
+| `pnpm examples:html` | `examples/html` (static files served by `sirv`) | `needmark dev` proxy, app on 4351 | `http://127.0.0.1:4350` |
+
+Each command runs `pnpm build` first and then the example's `dev` script, which starts the application and, for proxy examples, `needmark dev` together through `concurrently`; Ctrl+C stops both. Every example has its own `needmark.config.ts` (Japanese UI, DOM capture) and saves feedback to its own `.needmark/feedback`, which Git ignores. Rebuild after changing `src/` by restarting the command.
+
+`examples/next/proxy.ts` is a pass-through Next.js proxy: without it, Turbopack takes the workspace root as the project root and loads this repository's `src/proxy.ts` as the app's proxy.
 
 ## Layers
 
