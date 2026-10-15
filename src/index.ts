@@ -7,6 +7,7 @@ import { defaultFeedbackDirectory } from './server/storage.js';
 import type { NeedMarkOptions } from './shared/types.js';
 import { instrumentHtml, instrumentJsx } from './server/code-source.js';
 import { isAllowedOrigin } from './shared/origin.js';
+import { appendReviewScript } from './server/review-script.js';
 
 export { formatFeedbackPrompt } from './shared/prompt.js';
 export type { PromptDetail } from './shared/prompt.js';
@@ -15,9 +16,11 @@ export type { NeedMarkLanguage, NeedMarkOptions, Feedback, FeedbackInput, Feedba
 export function needmark(options?: NeedMarkOptions): Plugin {
   let settings = options ?? {};
   let { origins } = validateReviewOptions(settings);
-  // transformIndexHtml receives no request, so the origin checked in the middleware travels with the request's async context.
-  // transformIndexHtmlはリクエストを受け取らないため、ミドルウェアで確認したオリジンを非同期コンテキストで受け渡す。
-  const requestOrigin = new AsyncLocalStorage<string>();
+  // transformIndexHtml receives no request, so the origin checked in the middleware travels with the request's async context,
+  // and the hook marks the page so the appended fallback script is not added twice.
+  // transformIndexHtmlはリクエストを受け取らないため、ミドルウェアで確認したオリジンを非同期コンテキストで受け渡し、
+  // 追記用の代替scriptを二重に入れないようフック側で印を付ける。
+  const requestPage = new AsyncLocalStorage<{ origin: string; injected: boolean }>();
   let endpoint = '/__needmark';
   let api: ReturnType<typeof createReviewApi>;
   let root = '';
@@ -60,7 +63,9 @@ export function needmark(options?: NeedMarkOptions): Plugin {
         if (api.handle(request, response)) return;
         const origin = `${server.config.server.https ? 'https' : 'http'}://${request.headers.host ?? ''}`;
         const sameOrigin = !request.headers.origin || request.headers.origin === origin;
-        requestOrigin.run(sameOrigin ? origin : '', next);
+        const page = { origin: sameOrigin ? origin : '', injected: false };
+        if (request.method === 'GET' && isAllowedOrigin(page.origin, origins)) appendReviewScript(response, api.scriptAttrs, () => page.injected);
+        requestPage.run(page, next);
       });
     },
     transform: {
@@ -77,7 +82,9 @@ export function needmark(options?: NeedMarkOptions): Plugin {
     transformIndexHtml: {
       order: 'pre',
       handler(html, context) {
-        if (!isAllowedOrigin(requestOrigin.getStore() ?? '', origins)) return;
+        const page = requestPage.getStore();
+        if (!page || !isAllowedOrigin(page.origin, origins)) return;
+        page.injected = true;
         return { html: instrumentHtml(html, relative(process.cwd(), context.filename).replaceAll('\\', '/')), tags: [{ tag: 'script', attrs: api.scriptAttrs, injectTo: 'body' }] };
       },
     },

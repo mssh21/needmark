@@ -145,7 +145,7 @@ test('native pixel acquisition rejects privacy identity, geometry, URL and DPR d
 });
 
 for (const change of ['move', 'replace'] as const) {
-  test(`widget preserves typed feedback after original ${change} during DOM rendering and requires explicit image-free saving`, async ({ page }) => {
+  test(`widget preserves typed feedback after original ${change} during DOM rendering and falls back to image-free saving`, async ({ page }) => {
     await page.goto('/'); await page.getByRole('button', { name: '設定', exact: true }).click();
     await page.getByLabel('キャプチャ方式').selectOption('dom'); await page.getByRole('button', { name: '設定を保存', exact: true }).click();
     await page.evaluate(() => {
@@ -169,11 +169,10 @@ for (const change of ['move', 'replace'] as const) {
       if (change === 'move') original.style.transform = 'translateX(30px)'; else original.replaceWith(original.cloneNode(true));
       (window as unknown as { releaseCaptureGate: () => void }).releaseCaptureGate();
     }, change);
-    await expect(page.getByRole('button', { name: '画像なしで保存する', exact: true })).toBeVisible();
+    await expect(page.getByText('画像を撮影できなかったため、画像なしで保存します。', { exact: true })).toBeVisible();
     await expect(page.getByLabel('コメント本文')).toHaveValue(`撮影待ちに入力した ${change} のコメント`);
-    await expect(page.getByRole('button', { name: '保存', exact: true })).toBeDisabled();
     await expect(page.getByRole('img', { name: 'コメントした場所のキャプチャ', exact: true })).toBeHidden();
-    await page.getByRole('button', { name: '画像なしで保存する', exact: true }).click(); await page.getByRole('button', { name: '保存', exact: true }).click();
+    await page.getByRole('button', { name: '保存', exact: true }).click();
     await expect(page.getByText('コメントを保存しました。', { exact: true })).toBeVisible();
     const ids = (await readdir(output)).filter((id) => !id.startsWith('.')); expect(ids).toHaveLength(1);
     const saved = JSON.parse(await readFile(`${output}/${ids[0]}/context.json`, 'utf8')) as Feedback;

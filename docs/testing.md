@@ -70,7 +70,7 @@ The demo is a fictional product, Halden Analytics, used as a realistic review ta
 | --- | --- | --- |
 | Sticky header with navigation | Landing | Pins and selection on sticky/fixed elements while scrolling |
 | Headline and body copy with inline emphasis | Landing | Text ranges, semantic owners, accessible names |
-| Trial card (plan name, price, call to action, status message) | Landing | Element/multiple selection, exact HTML source positions, page operation while selected |
+| Trial card (plan name, price, call to action, status message) | Landing | Element/multiple selection, exact HTML source positions |
 | Product screenshot built from CSS and SVG | Landing | Area selection and DOM capture of gradients, shadows and radii |
 | Scrolling logo strip and live indicator | Landing | Animation pause and resume |
 | Feature cards | Landing | Marquee selection across repeated cards |

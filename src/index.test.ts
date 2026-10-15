@@ -138,6 +138,32 @@ describe('Vite integration boundaries', () => {
     expect(await direct.text()).not.toContain('private feedback');
   });
 
+  it('appends the client once to HTML that a framework renders without transformIndexHtml, as Astro does', async () => {
+    const directory = await root();
+    // Astro renders pages in its own middleware, streams them with writeHead headers and never calls transformIndexHtml.
+    const framework = { name: 'framework-pages', configureServer(server: ViteDevServer) {
+      server.middlewares.use((request, response, next) => {
+        if (request.url === '/page') {
+          const head = '<!doctype html><html><body><h1>Rendered</h1>', tail = '</body></html>';
+          response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Content-Length': String(head.length + tail.length) });
+          response.write(head); response.end(tail); return;
+        }
+        if (request.url === '/data') { response.setHeader('Content-Type', 'application/json'); response.end('{"ok":true}'); return; }
+        next();
+      });
+    } };
+    const server = await createServer({ configFile: false, root: directory, plugins: [needmark(), framework],
+      server: { host: '127.0.0.1', port: 0 }, logLevel: 'silent' });
+    servers.push(server); await server.listen();
+    const origin = `http://127.0.0.1:${(server.httpServer!.address() as AddressInfo).port}`;
+    const page = await (await fetch(`${origin}/page`)).text();
+    expect(page.startsWith('<!doctype html><html><body><h1>Rendered</h1></body></html>')).toBe(true);
+    expect(page.match(/\/__needmark\/client\.js/g)).toHaveLength(1);
+    expect(await (await fetch(`${origin}/data`)).text()).toBe('{"ok":true}');
+    expect((await (await fetch(origin)).text()).match(/\/__needmark\/client\.js/g)).toHaveLength(1);
+    expect(await (await fetch(`${origin}/page`, { headers: { origin: 'http://evil.example' } })).text()).not.toContain('needmark');
+  });
+
   it('allows only loopback hostnames on whatever port Vite chose when origins are omitted', async () => {
     const directory = await root();
     const server = await createServer({ configFile: false, root: directory, plugins: [needmark()],

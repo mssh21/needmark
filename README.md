@@ -27,7 +27,7 @@ pnpm exec needmark init --language=en
 
 Examples use pnpm. With npm run the CLI as `npx needmark`, with Yarn as `yarn needmark`. Initialization output and agent prompts use the command that matches your project's lockfile.
 
-Initialization creates `needmark.config.ts` and targeted Git ignore rules. In a terminal, choose local/Git sharing and capture method. Use `--language=ja` for Japanese; [all noninteractive flags](docs/getting-started.md#install-and-initialize) are documented in the guide.
+Initialization creates `needmark.config.ts` and targeted Git ignore rules. In a terminal, accept the recommended settings or choose each one from an explained list. Use `--language=ja` for Japanese; [all noninteractive flags](docs/getting-started.md#install-and-initialize) are documented in the guide.
 
 ### Vite
 
@@ -43,6 +43,20 @@ export default defineConfig({
 ```
 
 The plugin runs during development only and is absent from production builds and `vite preview`. Called without arguments, it loads `needmark.config.ts` from the directory where Vite runs. It works on `localhost`, `127.0.0.1` and `[::1]` without configuration; set `origins` only to review through another hostname, such as a LAN address or a tunnel.
+
+### Astro
+
+Astro runs on Vite, so add the plugin to the `vite` option and start `astro dev` as usual:
+
+```js
+// astro.config.mjs
+import { defineConfig } from 'astro/config';
+import { needmark } from 'needmark';
+
+export default defineConfig({
+  vite: { plugins: [needmark()] },
+});
+```
 
 ### Next.js and other development servers
 

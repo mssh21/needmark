@@ -49,11 +49,11 @@ export function installToolbarPosition(dock: HTMLElement, storage: Pick<Storage,
   const resize = (): void => { if (!visible()) { cancel(); return; } if (!drag && preferred) place(clamp(preferred)); };
   const down = (event: PointerEvent): void => {
     if (drag || !event.isPrimary || event.button !== 0 || !visible()) return;
-    // The whole toolbar is a grip, not only the narrow handle. Capturing on the pressed button keeps its click when the pointer
+    // The whole toolbar is a grip, not only the narrow handle. Capturing on the pressed button or link keeps its click when the pointer
     // does not travel; elsewhere the default is prevented so the press does not start a page text selection.
-    // 細い持ち手だけでなくツールバー全体を掴めるようにする。押したボタン自身でキャプチャすれば動かさなかったときのクリックが残り、
+    // 細い持ち手だけでなくツールバー全体を掴めるようにする。押したボタンやリンク自身でキャプチャすれば動かさなかったときのクリックが残り、
     // それ以外の場所では既定動作を止めてページの文字選択が始まらないようにする。
-    const button = (event.target as Element).closest('button'), target = button ?? dock, rect = dock.getBoundingClientRect();
+    const button = (event.target as Element).closest('button, a'), target = button ?? dock, rect = dock.getBoundingClientRect();
     drag = { pointer: event.pointerId, x: event.clientX, y: event.clientY, origin: { x: rect.left, y: rect.top }, target, viewport: `${view.innerWidth}x${view.innerHeight}`,
       styles: ['left', 'top', 'right', 'bottom', 'transform', '--nm-shift'].map((property) => [property, dock.style.getPropertyValue(property), dock.style.getPropertyPriority(property)]) };
     try { target.setPointerCapture(event.pointerId); } catch { drag = undefined; return; }

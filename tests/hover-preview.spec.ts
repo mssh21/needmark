@@ -129,7 +129,7 @@ test('new frame and shadow targets clear their preview on local mutations and sc
   await expect(preview(page)).toBeHidden(); await expect(outline(page)).toBeHidden();
 });
 
-test('hint, page changes, cancellation and page operation clear the preview without losing selected targets', async ({ page }) => {
+test('hint, page changes and cancellation clear the preview without losing selected targets', async ({ page }) => {
   await start(page);
   await page.evaluate(() => {
     document.body.style.minHeight = '2000px';
@@ -160,9 +160,6 @@ test('hint, page changes, cancellation and page operation clear the preview with
   await page.keyboard.down('Shift'); await page.mouse.click(170, 195); await page.keyboard.up('Shift'); await expect(preview(page)).toBeHidden();
   await expect(page.locator('[data-needmark] .selected-outline')).toHaveCount(1);
   await page.mouse.move(171, 195); await expect(preview(page)).toBeVisible();
-  await page.getByRole('button', { name: 'ページを操作', exact: true }).click(); await expect(preview(page)).toBeHidden();
-  await page.keyboard.down('Control'); await page.keyboard.up('Control'); await expect(preview(page)).toBeHidden();
-  await page.getByRole('button', { name: '選択を再開', exact: true }).click();
   await expect(page.locator('[data-needmark] .selected-outline')).toHaveCount(1);
   await page.getByRole('button', { name: '選択を完了', exact: true }).click();
   await expect(page.locator('[data-needmark] .draft-outline')).toHaveCount(1);

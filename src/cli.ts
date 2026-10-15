@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import { setTimeout } from 'node:timers/promises';
 import { initialize, type InitOptions } from './server/init.js';
+import { askInitChoices, describeInit } from './server/init-questions.js';
 import { loadProjectConfig } from './server/config.js';
 import { startReviewProxy } from './proxy.js';
 import { defaultFeedbackDirectory, FeedbackStore } from './server/storage.js';
@@ -92,36 +93,36 @@ try {
     try { await new Promise<void>((done) => proxy.server.once('close', () => done())); }
     finally { process.removeListener('SIGINT', stop); process.removeListener('SIGTERM', stop); }
   } else if (command === 'init') {
-    const choices: Partial<InitOptions> = {};
+    // Setup runs before the project has a language, and its output is often pasted into issues or chats, so it is always English.
+    // 初期設定はプロジェクトの言語が決まる前に動き、出力をissueやチャットに貼ることも多いため、常に英語で表示する。
+    language = 'en';
+    let choices: Partial<InitOptions> = {};
     for (let index = 0; index < args.length; index++) {
       const match = args[index]!.match(/^--(share|capture|language)(?:=(.*))?$/);
-      if (!match) throw new Error(message(`Unknown argument: ${args[index]}`, `不明な引数: ${args[index]}`));
+      if (!match) throw new Error(`Unknown argument: ${args[index]}`);
       const key = match[1] as keyof InitOptions;
       const value = match[2] ?? args[++index];
-      if (!value || choices[key] !== undefined) throw new Error(message(`Missing or duplicate ${key} option`, `${key}の値がないか、重複しています。`));
-      if (key === 'language') {
-        if (!isNeedMarkLanguage(value)) throw new Error(invalidLanguage);
-        language = value;
-      }
+      if (!value || choices[key] !== undefined) throw new Error(`Missing or duplicate ${key} option`);
+      if (key === 'language' && !isNeedMarkLanguage(value)) throw new Error('Invalid NeedMark language. Use en or ja.');
       Object.assign(choices, { [key]: value });
     }
-    language = choices.language ?? 'ja';
     if (process.stdin.isTTY && process.stdout.isTTY) {
       const terminal = createInterface({ input: process.stdin, output: process.stdout });
-      try {
-        const selected = choices.language ?? ((await terminal.question('Language / 言語: en (English) or ja (日本語) [ja]: ')).trim() || 'ja');
-        if (!isNeedMarkLanguage(selected)) throw new Error(invalidLanguage);
-        language = choices.language = selected;
-        choices.share ??= ((await terminal.question(message('Feedback storage: local or git [local]: ', 'コメントの保存先: local（ローカル）またはgit（共有） [local]: '))).trim() || 'local') as InitOptions['share'];
-        choices.capture ??= ((await terminal.question(message('Screenshots: dom, tab or none [dom]: ', 'スクリーンショット: dom、tab、none [dom]: '))).trim() || 'dom') as InitOptions['capture'];
-      } finally { terminal.close(); }
+      try { choices = await askInitChoices((text) => terminal.question(text), choices); }
+      finally { terminal.close(); }
     }
-    const options: InitOptions = { share: 'local', capture: 'dom', language, ...choices };
+    const options: InitOptions = { share: 'local', capture: 'dom', language: 'ja', ...choices };
     await initialize(process.cwd(), options);
-    console.log(message(`Created needmark.config.ts; language: ${language}; feedback storage: ${options.share}; capture: ${options.capture}.`, `needmark.config.tsを作成しました。言語: ${language}、コメントの保存先: ${options.share}、キャプチャ: ${options.capture}。`));
-    console.log(message("In vite.config.ts, import { needmark } from 'needmark' and add needmark() to plugins; it loads needmark.config.ts.", "vite.config.tsでimport { needmark } from 'needmark'を追加し、pluginsにneedmark()を設定してください。needmark.config.tsを読み込みます。"));
     const command = needmarkCommand(process.cwd());
-    console.log(message(`For a development server at http://localhost:3000, run ${command} dev --target=http://localhost:3000; open http://localhost:4190 for review. Shared settings are loaded from needmark.config.ts.`, `開発サーバーがhttp://localhost:3000の場合、${command} dev --target=http://localhost:3000を実行し、http://localhost:4190を開いてレビューします。共通設定はneedmark.config.tsから読み込みます。`));
+    console.log(`\nCreated needmark.config.ts\n${describeInit(options)}\n
+Next step: load NeedMark in your development server
+  Vite     Add needmark() to plugins in vite.config.ts:
+             import { needmark } from 'needmark';
+  Astro    Add needmark() to vite.plugins in astro.config.mjs.
+  Others   Start your app (for example on http://localhost:3000), then run
+             ${command} dev --target=http://localhost:3000
+           and open http://localhost:4190 to review.
+All of them read needmark.config.ts.`);
   } else if (command === 'list'  || command === 'watch') {
     if (args.length > 1) throw new Error(message('Expected an optional feedback directory', '引数はコメントの保存先のみ指定できます。'));
     const store = storeAt(await feedbackDirectory(args[0]));
@@ -176,10 +177,6 @@ try {
   }
 } catch (error) {
   const text = (error as Error).message;
-  const initErrors: Record<string, string> = {
-    'Invalid initialization choice.': '初期化の選択が不正です。shareにはlocalまたはgit、captureにはdom、tab、noneを指定してください。',
-    'Existing needback.config.ts is still supported. Rename it to needmark.config.ts before initializing again.': '既存のneedback.config.tsは引き続き利用できます。再初期化する前にneedmark.config.tsへ名前を変更してください。',
-  };
-  console.error(language === 'ja' ? initErrors[text] ?? text : text);
+  console.error(text);
   process.exitCode = 1;
 }
