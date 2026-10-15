@@ -1,0 +1,15 @@
+{
+  "name": "needmark-example-astro",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently --kill-others --names app,needmark \"astro dev --host 127.0.0.1 --port 4331\" \"needmark dev --target=http://127.0.0.1:4331 --origin=http://127.0.0.1:4330\""
+  },
+  "dependencies": {
+    "astro": "^5.18.2"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.6",
+    "needmark": "workspace:*"
+  }
+}
