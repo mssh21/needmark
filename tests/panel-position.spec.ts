@@ -91,7 +91,7 @@ test('stored toolbar at y90 leaves mobile settings and a tall searchable review 
   await page.getByLabel('投稿者名', { exact: true }).fill('狭い画面のレビュアー');
   await accessiblePanel(page);
   await page.getByLabel('AIへの情報量').selectOption('compact');
-  await page.getByRole('button', { name: '設定を保存', exact: true }).click();
+  await page.getByRole('button', { name: '保存', exact: true }).click();
   await expect(panel(page)).toBeHidden();
   for (let index = 0; index < 12; index++) await seed(page, `一覧のコメント ${index}: ${'レビュー内容と修正理由。'.repeat(12)}`);
   await page.getByRole('button', { name: 'コメント一覧', exact: true }).click();
@@ -193,12 +193,12 @@ test('an extremely short viewport temporarily hides the toolbar while settings s
   await page.getByLabel('投稿者名', { exact: true }).fill('高さが足りなくても保存できる');
   await page.setViewportSize({ width: 410, height: 220 });
   await expect(dock(page)).toBeHidden(); await accessiblePanel(page);
-  await page.getByRole('button', { name: '設定を保存', exact: true }).click();
+  await page.getByRole('button', { name: '保存', exact: true }).click();
   await expect(panel(page)).toBeHidden(); await expect(dock(page)).toBeVisible(); expect(await storedPosition(page)).toBe(raw);
   await page.setViewportSize({ width: 410, height: 814 });
   await page.getByRole('button', { name: '設定', exact: true }).click();
   await expect(page.getByLabel('投稿者名', { exact: true })).toHaveValue('高さが足りなくても保存できる');
-  await accessiblePanel(page); await page.getByRole('button', { name: 'パネルを閉じる', exact: true }).click();
+  await accessiblePanel(page); await page.getByRole('button', { name: 'キャンセル', exact: true }).click();
   await expect(dock(page)).toBeVisible(); expect(await storedPosition(page)).toBe(raw);
 });
 

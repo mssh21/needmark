@@ -74,7 +74,7 @@ test('fresh CLI init settings govern proxy capture and one shared review directo
     // C23 flags-only behavior ignores this generated config and initializes the fresh browser to DOM.
     await expect(page.getByLabel('キャプチャ方式')).toHaveValue('none');
     expect(setup.script.capture).toBe('none'); expect(setup.feedback).toEqual({ directory: 'reviews', command: 'npx needmark', feedback: [] });
-    await page.getByRole('button', { name: '設定を保存', exact: true }).click();
+    await page.getByRole('button', { name: '保存', exact: true }).click();
     const targetButton = page.locator('#onboarding-target'); await targetButton.click(); await expect(page.getByLabel('Native click count')).toHaveText('1');
     const original = await targetButton.elementHandle(), originalDocument = await page.evaluateHandle(() => document);
     if (!original) throw new Error('The original reviewed control is missing');
@@ -200,11 +200,11 @@ test('explicit CLI flags override shared defaults while a saved browser capture 
     const initial = await configuredEvidence(page);
     expect(initial).toMatchObject({ capture: 'dom', preference: null, status: 200, feedback: { directory: 'overrides', feedback: [] } });
     await page.getByRole('button', { name: '設定', exact: true }).click(); await expect(page.getByLabel('キャプチャ方式')).toHaveValue('dom');
-    await page.getByLabel('キャプチャ方式').selectOption('none'); await page.getByRole('button', { name: '設定を保存', exact: true }).click();
+    await page.getByLabel('キャプチャ方式').selectOption('none'); await page.getByRole('button', { name: '保存', exact: true }).click();
     await page.reload(); const afterReload = await configuredEvidence(page);
     expect(afterReload).toMatchObject({ capture: 'dom', preference: 'none', feedback: { directory: 'overrides', feedback: [] } });
     await page.getByRole('button', { name: '設定', exact: true }).click(); await expect(page.getByLabel('キャプチャ方式')).toHaveValue('none');
-    await page.getByRole('button', { name: '設定を保存', exact: true }).click();
+    await page.getByRole('button', { name: '保存', exact: true }).click();
     const saved = await saveConfiguredTarget(page, origin, 'CLIの明示した保存先と、ブラウザで選んだ画像なし設定を優先する');
     const directory = root + '/overrides/' + saved.id;
     expect(JSON.parse(await readFile(directory + '/context.json', 'utf8'))).toEqual(saved);
@@ -224,7 +224,7 @@ test('shared CLI configuration enables custom target evidence, a validated local
     const initial = await configuredEvidence(page);
     expect(initial).toMatchObject({ capture: 'none', editor: 'cursor', submit: 'true', contextAttributes: ['data-review-key'], status: 200, feedback: { directory: 'reviews', feedback: [] } });
     await page.getByRole('button', { name: '設定', exact: true }).click(); await expect(page.getByLabel('キャプチャ方式')).toHaveValue('none');
-    await page.getByRole('button', { name: '設定を保存', exact: true }).click();
+    await page.getByRole('button', { name: '保存', exact: true }).click();
     const original = await page.locator('#configured-target').elementHandle(); if (!original) throw new Error('The original configured control is missing');
     try {
       const saved = await saveConfiguredTarget(page, origin, '開発者が指定した識別子を保存し、設定したローカル処理へコメントを渡す');

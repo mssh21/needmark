@@ -67,7 +67,7 @@ test('a saved iframe element pin hides when its unchanged original is wholly cli
       if (!before) throw new Error('Original target has no rectangle');
       await page.getByRole('button', { name: '設定', exact: true }).click();
       await page.getByLabel('キャプチャ方式').selectOption('none');
-      await page.getByRole('button', { name: '設定を保存', exact: true }).click();
+      await page.getByRole('button', { name: '保存', exact: true }).click();
       const response = page.waitForResponse((item) => item.url() === origin + '/__needmark/source' && item.request().method() === 'POST');
       await page.getByRole('button', { name: 'コメント', exact: true }).click();
       await expect(page.locator('[data-needmark] .cover')).toBeVisible();
@@ -127,7 +127,7 @@ test('a saved iframe element pin hides when its unchanged original is wholly cli
 async function configureNoImage(page: Page) {
   await page.getByRole('button', { name: '設定', exact: true }).click();
   await page.getByLabel('キャプチャ方式').selectOption('none');
-  await page.getByRole('button', { name: '設定を保存', exact: true }).click();
+  await page.getByRole('button', { name: '保存', exact: true }).click();
 }
 
 async function saveReview(page: Page, frame: import('@playwright/test').Frame, origin: string, output: string, comment: string) {

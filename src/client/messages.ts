@@ -63,7 +63,6 @@ const english = {
   "ライト": "Light",
   "ダーク": "Dark",
   "撮影を停止": "Stop capture",
-  "設定を保存": "Save settings",
   "ページのURLが変わったため、保持していた選択を終了しました。": "The page URL changed, so the retained selection was cleared.",
   "入力中のコメントを保存またはキャンセルしてください。": "Save or cancel the feedback you are editing.",
   "このタブの撮影を開始": "Start capturing this tab",

@@ -23,7 +23,7 @@ async function setup(page: Page, send = false, denied = false) {
     await route.fulfill({ response, body: (await response.text()).replace('data-needmark-capture=', 'data-needmark-submit="true" data-needmark-capture=') });
   });
   await page.goto('/'); await page.getByRole('button', { name: '設定', exact: true }).click();
-  await page.getByLabel('キャプチャ方式').selectOption('none'); await page.getByRole('button', { name: '設定を保存', exact: true }).click();
+  await page.getByLabel('キャプチャ方式').selectOption('none'); await page.getByRole('button', { name: '保存', exact: true }).click();
 }
 async function headers(page: Page) { return { 'x-needmark-token': (await page.locator('script[data-needmark-token]').getAttribute('data-needmark-token'))! }; }
 async function seed(page: Page, comment: string, selected: FeedbackInput['target'], status: FeedbackStatus = 'open', url = page.url()): Promise<Feedback> {

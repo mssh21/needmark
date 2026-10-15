@@ -147,7 +147,7 @@ test('native pixel acquisition rejects privacy identity, geometry, URL and DPR d
 for (const change of ['move', 'replace'] as const) {
   test(`widget preserves typed feedback after original ${change} during DOM rendering and falls back to image-free saving`, async ({ page }) => {
     await page.goto('/'); await page.getByRole('button', { name: '設定', exact: true }).click();
-    await page.getByLabel('キャプチャ方式').selectOption('dom'); await page.getByRole('button', { name: '設定を保存', exact: true }).click();
+    await page.getByLabel('キャプチャ方式').selectOption('dom'); await page.getByRole('button', { name: '保存', exact: true }).click();
     await page.evaluate(() => {
       const state = window as unknown as { captureGateReached: boolean; releaseCaptureGate: () => void; captureGateObserver: MutationObserver };
       state.captureGateReached = false; const pending = new Promise<void>((resolve) => { state.releaseCaptureGate = resolve; });

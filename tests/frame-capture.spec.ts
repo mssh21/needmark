@@ -82,7 +82,7 @@ function sourceOf(review: Review): SourceLocation {
 }
 async function method(page: Page, value: 'dom' | 'none' | 'tab') {
   await page.getByRole('button', { name: '設定', exact: true }).click();
-  await page.getByLabel('キャプチャ方式').selectOption(value); await page.getByRole('button', { name: '設定を保存', exact: true }).click();
+  await page.getByLabel('キャプチャ方式').selectOption(value); await page.getByRole('button', { name: '保存', exact: true }).click();
 }
 async function select(page: Page, review: Review, nested = false) {
   const response = page.waitForResponse((response) => response.url() === review.origin + '/__needmark/source' && response.request().method() === 'POST');

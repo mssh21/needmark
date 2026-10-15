@@ -10,7 +10,7 @@ async function setup(page: Page) {
   await page.goto('/');
   await page.getByRole('button', { name: '設定', exact: true }).click();
   await page.getByLabel('キャプチャ方式').selectOption('none');
-  await page.getByRole('button', { name: '設定を保存' }).click();
+  await page.getByRole('button', { name: '保存', exact: true }).click();
 }
 async function select(page: Page) {
   await page.getByRole('button', { name: 'コメント', exact: true }).click();

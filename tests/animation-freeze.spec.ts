@@ -27,7 +27,7 @@ test('pause freezes CSS, page loops and WAAPI, keeps the widget/capture/poll liv
   await page.goto('/');
   await page.getByRole('button', { name: '設定', exact: true }).click();
   await page.getByLabel('キャプチャ方式').selectOption('dom');
-  await page.getByRole('button', { name: '設定を保存' }).click();
+  await page.getByRole('button', { name: '保存', exact: true }).click();
   await page.evaluate(() => {
     const style = document.createElement('style');
     style.textContent = '@keyframes pause-fixture-spin{from{opacity:.2}to{opacity:1}}.pause-fixture-spin{animation:pause-fixture-spin .3s linear infinite}.pause-fixture-prior{animation-play-state:paused}.pause-fixture-transition{transition:opacity 2s linear}';

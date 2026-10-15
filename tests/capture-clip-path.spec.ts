@@ -99,7 +99,7 @@ test('the real widget saves a full viewport shape-correct PNG and selected code 
     } });
   });
   await fixture(page, true); await page.getByRole('button', { name: '設定', exact: true }).click();
-  await page.getByLabel('キャプチャ方式').selectOption('dom'); await page.getByRole('button', { name: '設定を保存', exact: true }).click();
+  await page.getByLabel('キャプチャ方式').selectOption('dom'); await page.getByRole('button', { name: '保存', exact: true }).click();
   await page.getByRole('button', { name: 'コメント', exact: true }).click(); const bounds = (await page.locator('#review-target').boundingBox())!;
   await page.mouse.click(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
   await page.getByLabel('コメント本文').fill('台形と丸の形を維持して余白を調整する');

@@ -104,7 +104,7 @@ test('restored toolbar positions clamp after hide, viewport and width changes wi
   await page.keyboard.press('Shift+H'); await expect(dock(page)).toBeVisible(); await withinViewport(page);
   const shown = await bounds(page); expect(shown.x + shown.width).toBeCloseTo(696, 1);
   // Simulate a wider localized control while retaining the real widget and observer.
-  await dock(page).locator('[data-action="list"] .badge').evaluate((element) => { element.textContent = '1234567890 · 複数の対象を選択中'; });
+  await dock(page).locator('[data-action="list"]').evaluate((element) => { (element as HTMLElement).style.width = '200px'; });
   await expect.poll(async () => (await bounds(page)).width).toBeGreaterThan(shown.width);
   await withinViewport(page); const wider = await bounds(page);
   expect(wider.x).toBeLessThan(shown.x); expect(wider.x + wider.width).toBeCloseTo(696, 1); expect(await stored(page)).toBe(raw);

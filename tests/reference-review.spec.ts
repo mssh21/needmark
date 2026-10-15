@@ -15,7 +15,7 @@ async function setup(page: Page) {
     await route.fulfill({ response, body: (await response.text()).replace('data-needmark-capture=', 'data-needmark-submit="true" data-needmark-capture=') });
   });
   await page.goto('/'); await page.getByRole('button', { name: '設定', exact: true }).click();
-  await page.getByLabel('キャプチャ方式').selectOption('none'); await page.getByRole('button', { name: '設定を保存', exact: true }).click();
+  await page.getByLabel('キャプチャ方式').selectOption('none'); await page.getByRole('button', { name: '保存', exact: true }).click();
 }
 async function headers(page: Page) { return { 'x-needmark-token': (await page.locator('script[data-needmark-token]').getAttribute('data-needmark-token'))! }; }
 // References can no longer be created in the widget, so earlier files are reproduced through the local API.

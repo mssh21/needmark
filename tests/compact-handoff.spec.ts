@@ -33,7 +33,7 @@ async function setup(page: Page, submit = false, compact = true) {
   await expect(page.getByLabel('AIへの情報量')).toHaveValue('standard');
   await page.getByLabel('キャプチャ方式').selectOption('none');
   if (compact) await page.getByLabel('AIへの情報量').selectOption({ label: '簡潔：コメントと場所・画像パス' });
-  await page.getByRole('button', { name: '設定を保存', exact: true }).click();
+  await page.getByRole('button', { name: '保存', exact: true }).click();
 }
 async function headers(page: Page) { return { 'x-needmark-token': (await page.locator('script[data-needmark-token]').getAttribute('data-needmark-token'))! }; }
 async function seed(page: Page, comment: string, selected = target(), status: FeedbackStatus = 'open', url = page.url(), image = false): Promise<Feedback> {
@@ -60,18 +60,18 @@ test('compact preference survives saving and reload, changes actual output, and 
   expect(await page.evaluate(() => localStorage.getItem('needmark-detail'))).toBe('compact');
   await page.reload(); await page.getByRole('button', { name: '設定', exact: true }).click();
   await expect(page.getByLabel('AIへの情報量')).toHaveValue('compact');
-  await page.getByRole('button', { name: '設定を保存', exact: true }).click(); await list(page);
+  await page.getByRole('button', { name: '保存', exact: true }).click(); await list(page);
   const compact = await copyList(page);
   for (const value of [item.id, item.comment, item.url, `${item.id}/context.json`, 'src/CompactButton.tsx:17:3']) expect(compact).toContain(value);
   await page.getByRole('button', { name: '設定', exact: true }).click();
   await page.getByLabel('AIへの情報量').selectOption('standard');
-  await page.getByRole('button', { name: '設定を保存', exact: true }).click(); await list(page);
+  await page.getByRole('button', { name: '保存', exact: true }).click(); await list(page);
   const standard = await copyList(page); expect(standard).not.toEqual(compact);
   expect(standard).toContain(item.comment);
   await page.evaluate(() => localStorage.setItem('needmark-detail', 'unsupported-format'));
   await page.reload(); await page.getByRole('button', { name: '設定', exact: true }).click();
   await expect(page.getByLabel('AIへの情報量')).toHaveValue('standard');
-  await page.getByRole('button', { name: '設定を保存', exact: true }).click();
+  await page.getByRole('button', { name: '保存', exact: true }).click();
   expect(await page.evaluate(() => localStorage.getItem('needmark-detail'))).toBe('standard');
 });
 

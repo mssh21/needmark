@@ -66,7 +66,7 @@ async function withReview(page: Page, method: 'dom' | 'none', run: (review: Revi
     page.on('response', observe); await page.goto(origin);
     await expect(page.locator('#target-grid button')).toHaveCount(20);
     await page.getByRole('button', { name: '設定', exact: true }).click();
-    await page.getByLabel('キャプチャ方式').selectOption(method); await page.getByRole('button', { name: '設定を保存', exact: true }).click();
+    await page.getByLabel('キャプチャ方式').selectOption(method); await page.getByRole('button', { name: '保存', exact: true }).click();
     await run({ origin, output: `${root}/.needmark/feedback`, source, calls });
   } finally {
     page.off('response', observe); await proxy?.close(); if (upstream?.listening) await close(upstream); await rm(root, { recursive: true, force: true });
@@ -184,7 +184,7 @@ test('forward marquee retains all twenty original targets through real DOM captu
     await page.getByRole('button', { name: 'プロンプトをコピー', exact: true }).click(); assertPrompt(await copied(page), item);
     for (const detail of ['compact', 'standard', 'detailed', 'forensic']) {
       await page.getByRole('button', { name: '設定', exact: true }).click(); await page.getByLabel('AIへの情報量').selectOption(detail);
-      await page.getByRole('button', { name: '設定を保存', exact: true }).click(); await page.getByRole('button', { name: 'コメント一覧', exact: true }).click();
+      await page.getByRole('button', { name: '保存', exact: true }).click(); await page.getByRole('button', { name: 'コメント一覧', exact: true }).click();
       await page.getByRole('button', { name: 'プロンプトをコピー', exact: true }).click(); assertPrompt(await copied(page), item); expect(await copied(page)).toContain('screenshot.png');
     }
     const cli = await execute(process.execPath, [resolve('dist/cli.js'), 'export', review.output, '--detail', 'forensic']); assertPrompt(cli.stdout, item); expect(cli.stdout).toContain('screenshot.png');

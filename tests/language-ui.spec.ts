@@ -39,7 +39,7 @@ test('switching settings to English switches all feedback operations while saved
   await page.getByLabel('表示言語').selectOption('en');
   await page.getByLabel('投稿者名').fill(author);
   await page.getByLabel('キャプチャ方式').selectOption('none');
-  await page.getByRole('button', { name: '設定を保存', exact: true }).click();
+  await page.getByRole('button', { name: '保存', exact: true }).click();
   await expect(widget(page)).toHaveAttribute('lang', 'en');
   await page.getByRole('button', { name: 'Comment', exact: true }).click();
   await expect(widget(page).locator('.cover')).toBeVisible();
@@ -75,7 +75,7 @@ test('switching settings to English switches all feedback operations while saved
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
   await expect(page.getByLabel('Language')).toHaveValue('en');
   await page.getByLabel('Language').selectOption('ja');
-  await page.getByRole('button', { name: 'Save settings', exact: true }).click();
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.getByRole('button', { name: 'コメント', exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toHaveCount(0);
   expect(await page.evaluate(() => localStorage.getItem('needmark-language'))).toBe('ja');
@@ -84,7 +84,7 @@ test('switching settings to English switches all feedback operations while saved
   await page.getByRole('button', { name: '設定', exact: true }).click();
   await expect(page.getByLabel('表示言語')).toHaveValue('ja');
   await expect(page.getByLabel('投稿者名')).toHaveValue(author);
-  await page.getByRole('button', { name: '設定を保存', exact: true }).click();
+  await page.getByRole('button', { name: '保存', exact: true }).click();
   await page.getByRole('button', { name: 'コメント一覧', exact: true }).click();
   await page.getByText(comment, { exact: true }).click();
   await expect(page.getByRole('heading', { name: 'コメント', exact: true })).toBeVisible();
