@@ -492,7 +492,10 @@ function mount(endpoint: string, token: string) {
     targetPreview.style.left = `${Math.max(margin, Math.min(x + 12, innerWidth - width - margin))}px`;
     targetPreview.style.top = `${Math.max(margin, Math.min(top, innerHeight - height - margin))}px`;
   }
+  // Leaving details must also hide a single target's outline: it shares the selection outline element, so only locatedTarget tells a located outline apart from a drag preview that must stay.
+  // 詳細を離れるときは単一対象の枠も消す。選択の枠と同じ要素を使うため、残すべきドラッグ中のプレビューと区別できるのはlocatedTargetだけになる。
   function clearLocated() {
+    if (locatedTarget) { locatedTarget = null; outline.hidden = true; }
     if (!locatedId) return;
     locatedId = null; locateNotice = ''; shadow.querySelectorAll('.located-outline').forEach((node) => node.remove());
     renderPins();
