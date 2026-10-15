@@ -44,7 +44,13 @@ jobs:
         run: pnpm typecheck
       - if: steps.version.outputs.publish == 'true'
         run: pnpm test
+      # setup-node's .npmrc reads ${NODE_AUTH_TOKEN}, which trusted publishing never sets, and Yarn 1 aborts on an unset
+      # reference; an empty value only satisfies it here, so npm publish still authenticates through OIDC.
+      # setup-nodeの.npmrcは信頼された公開では設定されない${NODE_AUTH_TOKEN}を参照し、Yarn 1は未設定の参照で中断する。
+      # 空の値はこの手順だけで満たすため、npm publishは引き続きOIDCで認証する。
       - if: steps.version.outputs.publish == 'true'
+        env:
+          NODE_AUTH_TOKEN: ''
         run: pnpm test:package-managers
       - if: steps.version.outputs.publish == 'true'
         run: npm publish
