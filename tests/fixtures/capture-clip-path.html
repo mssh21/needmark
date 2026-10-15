@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>NeedMark — Clip-path pixel fixture</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#d9dfc7;font:16px sans-serif;min-height:1400px}.shape{position:absolute;background:#faf4dd}#review-target{position:absolute;left:40px;top:40px;width:210px;height:44px;border:0;background:#0cae5d;color:#fff}#lamp{left:60px;top:140px;width:170px;height:130px;clip-path:polygon(22% 0,78% 0,100% 100%,0 100%)}#inset{left:280px;top:140px;width:140px;height:100px;clip-path:inset(20px 10px)}#circle{left:480px;top:140px;width:100px;height:100px;clip-path:circle(40% at 50% 50%)}#ellipse{left:650px;top:140px;width:160px;height:100px;clip-path:ellipse(45% 35% at 50% 50%)}#descendant{position:absolute;left:60px;top:340px;width:140px;height:100px;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);background:#dc1e3c}#descendant>div{position:absolute;inset:-20px;background:#1984d1}#pseudo{position:absolute;left:300px;top:340px;width:180px;height:170px}#pseudo:before{content:"";position:absolute;left:20px;top:20px;width:140px;height:100px;background:#b5422b;clip-path:ellipse(45% 35% at 50% 50%)}#pseudo:after{content:"";position:absolute;left:81px;top:120px;width:18px;height:40px;background:#655a44}capture-shadow{position:absolute;left:650px;top:340px;width:220px;height:170px}#same-origin-frame{position:absolute;left:900px;top:340px;width:260px;height:170px;border:0}#private-password{position:absolute;left:60px;top:600px;width:160px;height:36px;border:0;background:#dc1e3c}#private-region{position:absolute;left:280px;top:600px;width:140px;height:36px;background:#dc1e3c;color:#fff}
+  </style>
+</head>
+<body>
+  <button id="review-target" type="button">配置を確認する</button>
+  <!-- The lamp repeats the real Next consumer's 170x130 trapezoid declaration. -->
+  <div id="lamp" class="shape"></div><div id="inset" class="shape"></div><div id="circle" class="shape"></div><div id="ellipse" class="shape"></div>
+  <div id="descendant"><div></div></div><div id="pseudo"></div><capture-shadow id="open-shadow"></capture-shadow>
+  <iframe id="same-origin-frame" width="260" height="170" srcdoc="<!doctype html><style>html,body{margin:0;background:#d9dfc7}#frame-shape{position:absolute;left:20px;top:20px;width:120px;height:100px;background:#b5422b;clip-path:polygon(22% 0,78% 0,100% 100%,0 100%)}input{position:absolute;left:20px;top:130px;width:160px;height:24px;border:0;padding:0;background:#dc1e3c;box-sizing:border-box}</style><div id='frame-shape'></div><input type='password' value='frame-private'>"></iframe>
+  <input id="private-password" type="password" value="private-password"><div id="private-region" data-needmark-redact>顧客の秘密</div>
+  <script>
+    const shadow=document.querySelector('capture-shadow').attachShadow({mode:'open'});
+    shadow.innerHTML='<style>:host{display:block}.shape{position:absolute;left:20px;top:20px;width:100px;height:100px;background:#b5422b;clip-path:circle(40% at 50% 50%)}input{position:absolute;left:20px;top:130px;width:160px;height:24px;border:0;padding:0;background:#dc1e3c;box-sizing:border-box}</style><div class="shape"></div><input type="password" value="shadow-private">';
+  </script>
+</body>
+</html>

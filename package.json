@@ -1,0 +1,79 @@
+{
+  "name": "needmark",
+  "version": "0.1.0",
+  "description": "Point at your UI, leave a comment, and hand it to any coding agent. Local-first visual feedback with context and screenshots. No account, no MCP, no AI lock-in.",
+  "type": "module",
+  "license": "MIT",
+  "author": "mssh21",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mssh21/needmark.git"
+  },
+  "homepage": "https://github.com/mssh21/needmark#readme",
+  "bugs": {
+    "url": "https://github.com/mssh21/needmark/issues"
+  },
+  "engines": {
+    "node": ">=22.12"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./proxy": {
+      "types": "./dist/proxy.d.ts",
+      "import": "./dist/proxy.js"
+    }
+  },
+  "peerDependenciesMeta": {
+    "vite": {
+      "optional": true
+    }
+  },
+  "bin": {
+    "needmark": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "docs",
+    "README.md",
+    "README.ja.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs && tsc -p tsconfig.build.json",
+    "demo": "vite --config demo/vite.config.ts",
+    "demo:build": "vite build --config demo/vite.config.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "test:package-managers": "node scripts/verify-package-managers.mjs",
+    "prepack": "pnpm build"
+  },
+  "dependencies": {
+    "@babel/parser": "^7.29.9",
+    "html2canvas-pro": "2.5.0",
+    "jiti": "2.7.0",
+    "magic-string": "^1.4.2",
+    "parse5": "^8.0.1"
+  },
+  "peerDependencies": {
+    "vite": "^7.3.2 || ^8.0.0"
+  },
+  "devDependencies": {
+    "@babel/types": "^7.29.8",
+    "@playwright/test": "^1.61.1",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^5.2.0",
+    "esbuild": "^0.28.1",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "typescript": "^6.0.3",
+    "vite": "^7.3.2",
+    "vitest": "^4.0.0"
+  },
+  "packageManager": "pnpm@11.15.1"
+}
