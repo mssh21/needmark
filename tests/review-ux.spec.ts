@@ -1,3 +1,4 @@
+import type { Page } from '@playwright/test';
 import { test, expect, saveAndList, searchList, toggleFilter, output } from './support/review.js';
 import { readFile, readdir, rm, mkdir } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
@@ -328,6 +329,26 @@ test('the target outline shown when details open stays on the commented element 
   await page.evaluate(() => window.scrollBy(0, 240));
   await expect.poll(matches).toEqual([0, 0, 0, 0]);
 });
+
+const leaveDetails = {
+  'going back to the list': async (page: Page) => { await page.getByRole('button', { name: '一覧へ', exact: true }).click(); },
+  'closing the panel': async (page: Page) => { await page.getByRole('button', { name: 'パネルを閉じる', exact: true }).click(); },
+  'deleting the comment': async (page: Page) => {
+    await page.getByRole('button', { name: 'コメントの操作', exact: true }).click(); await page.getByRole('menuitem', { name: '削除', exact: true }).click();
+    await page.getByRole('button', { name: '削除する', exact: true }).click(); await expect(page.locator('[data-needmark] .open-item')).toHaveCount(0);
+  },
+};
+for (const [exit, leave] of Object.entries(leaveDetails)) {
+  test(`${exit} hides the target outline that details showed`, async ({ page }) => {
+    await page.goto('/'); await configure(page); await clickTarget(page);
+    await page.getByLabel('コメント本文').fill('枠を消す'); await saveAndList(page);
+    await page.locator('[data-needmark] .open-item').click();
+    const outline = page.locator('[data-needmark] > .outline');
+    await expect(outline).toBeVisible();
+    await leave(page);
+    await expect(outline).toBeHidden();
+  });
+}
 
 test('opening a comment from another page in the list goes to that page and shows its details there', async ({ page }) => {
   await page.goto('/?variant=a'); await configure(page); await clickTarget(page);
