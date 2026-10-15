@@ -1,6 +1,6 @@
 {
   "name": "needmark",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Point at your UI, leave a comment, and hand it to any coding agent. Local-first visual feedback with context and screenshots. No account, no MCP, no AI lock-in.",
   "type": "module",
   "license": "MIT",
@@ -52,18 +52,18 @@
     "prepack": "pnpm build"
   },
   "dependencies": {
-    "@babel/parser": "^7.29.9",
-    "html2canvas-pro": "2.5.0",
+    "@babel/parser": "^8.0.7",
+    "html2canvas-pro": "2.5.2",
     "jiti": "2.7.0",
-    "magic-string": "^1.4.2",
+    "magic-string": "^1.4.3",
     "parse5": "^8.0.1"
   },
   "peerDependencies": {
     "vite": "^7.3.2 || ^8.0.0"
   },
   "devDependencies": {
-    "@babel/types": "^7.29.8",
-    "@playwright/test": "^1.61.1",
+    "@babel/types": "^8.0.6",
+    "@playwright/test": "^1.64.0",
     "@types/node": "^24.0.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
