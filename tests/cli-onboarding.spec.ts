@@ -1,11 +1,10 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, saveAndList, output, tempRoot } from './support/review.js';
 import { execFile, spawn, type ChildProcess } from 'node:child_process';
 import { promisify } from 'node:util';
 import { createServer, type Server } from 'node:http';
 import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { resolve, join } from 'node:path';
 import type { Feedback } from '../src/shared/types.js';
-import { saveAndList } from './save.js';
 
 const cli = resolve('dist/cli.js'), execute = promisify(execFile);
 test.setTimeout(45_000);
@@ -25,7 +24,7 @@ async function exists(path: string) {
 
 // Intentional onboarding contract: init's shared settings also govern CLI proxy and local-agent commands.
 test('fresh CLI init settings govern proxy capture and one shared review directory through UI and agent commands', async ({ page }, info) => {
-  const root = await mkdtemp('/private/tmp/needmark-cli-onboarding-');
+  const root = await mkdtemp(join(tempRoot, 'needmark-cli-onboarding-'));
   let upstream: Server | undefined, dev: ChildProcess | undefined, exited: Promise<void> | undefined;
   let stdout = '', stderr = '';
   const commands: { args: string[]; stdout: string; stderr: string }[] = [];
@@ -132,7 +131,7 @@ test('fresh CLI init settings govern proxy capture and one shared review directo
 type CliReview = { root: string; origin: string; run: (...args: string[]) => Promise<{ stdout: string; stderr: string }> };
 async function withConfiguredCli(page: import('@playwright/test').Page, info: import('@playwright/test').TestInfo,
   options: { flags?: string[]; serverSettings?: string }, work: (review: CliReview) => Promise<void>) {
-  const root = await mkdtemp('/private/tmp/needmark-configured-cli-');
+  const root = await mkdtemp(join(tempRoot, 'needmark-configured-cli-'));
   let upstream: Server | undefined, dev: ChildProcess | undefined, exited: Promise<void> | undefined;
   let stdout = '', stderr = '';
   const commands: { args: string[]; stdout: string; stderr: string }[] = [];

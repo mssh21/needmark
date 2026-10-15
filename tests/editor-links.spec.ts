@@ -1,16 +1,12 @@
-import { test, expect, type Page } from '@playwright/test';
-import { readFile, readdir, rm } from 'node:fs/promises';
+import { type Page } from '@playwright/test';
+import { test, expect, saveAndList, output, configureReview } from './support/review.js';
+import { readFile, readdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import type { Feedback } from '../src/shared/types.js';
-import { saveAndList } from './save.js';
 
-const output = '/private/tmp/needmark-e2e-feedback';
-test.beforeEach(async () => { await rm(output, { recursive: true, force: true }); });
 async function setup(page: Page) {
   await page.goto('/');
-  await page.getByRole('button', { name: '設定', exact: true }).click();
-  await page.getByLabel('キャプチャ方式').selectOption('none');
-  await page.getByRole('button', { name: '保存', exact: true }).click();
+  await configureReview(page, { method: 'none' });
 }
 async function select(page: Page) {
   await page.getByRole('button', { name: 'コメント', exact: true }).click();

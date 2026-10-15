@@ -1,4 +1,5 @@
-import { test, expect, type Locator, type Page } from '@playwright/test';
+import { type Locator, type Page } from '@playwright/test';
+import { test, expect } from './support/review.js';
 
 const dock = (page: Page) => page.locator('[data-needmark] .dock');
 async function bounds(locator: Locator) { const rect = await locator.boundingBox(); expect(rect).not.toBeNull(); return rect!; }

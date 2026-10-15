@@ -1,9 +1,9 @@
-import { test, expect, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { test, expect, output } from './support/review.js';
 import { readFile, readdir, rm } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import type { Feedback } from '../src/shared/types.js';
 
-const output = '/private/tmp/needmark-e2e-feedback';
 const moduleUrl = `/@fs/${resolve('src/client/context/code-context.ts')}`;
 const preview = (page: Page) => page.locator('[data-needmark] .target-preview');
 const outline = (page: Page) => page.locator('[data-needmark] .outline');

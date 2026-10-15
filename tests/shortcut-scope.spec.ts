@@ -1,9 +1,8 @@
-import { test, expect, type Page } from '@playwright/test';
-import { readFile, readdir, rm } from 'node:fs/promises';
+import { type Page } from '@playwright/test';
+import { test, expect, output } from './support/review.js';
+import { readFile, readdir } from 'node:fs/promises';
 import type { Feedback } from '../src/shared/types.js';
 
-const output = '/private/tmp/needmark-e2e-feedback';
-test.beforeEach(async () => { await rm(output, { recursive: true, force: true }); });
 async function configure(page: Page, shortcuts = true) {
   await page.getByRole('button', { name: '設定', exact: true }).click();
   await expect(page.getByLabel('キーボードショートカット')).toHaveValue('true');

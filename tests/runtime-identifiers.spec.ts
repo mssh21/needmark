@@ -1,11 +1,11 @@
-import { test, expect, type Locator, type Page } from '@playwright/test';
+import { type Locator, type Page } from '@playwright/test';
+import { test, expect, saveAndList, output, tempRoot, configureReview } from './support/review.js';
 import { build } from 'esbuild';
 import { createServer, type Server } from 'node:http';
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { resolve, join } from 'node:path';
 import { startReviewProxy, type ReviewProxy } from '../dist/proxy.js';
 import type { ElementContext, Feedback, RuntimeSourceRequest, RuntimeSourceResult, SourceLocation } from '../src/shared/types.js';
-import { saveAndList } from './save.js';
 
 type Scenario = 'static' | 'duplicate' | 'dynamic' | 'unconfigured' | 'roots';
 type Review = { root: string; output: string; source: string; origin: string; mapRequests: () => number };
@@ -26,7 +26,7 @@ async function close(server: Server) {
 
 /** Real React dev frames, HTTP assets/maps, current JSX files, and the public review proxy. No /source responses are stubbed. */
 async function withReview(page: Page, scenario: Scenario, run: (review: Review) => Promise<void>) {
-  const root = await mkdtemp('/private/tmp/needmark-runtime-identifiers-');
+  const root = await mkdtemp(join(tempRoot, 'needmark-runtime-identifiers-'));
   let upstream: Server | undefined, proxy: ReviewProxy | undefined;
   try {
     let source = await readFile(fixturePath, 'utf8');
@@ -60,9 +60,7 @@ async function withReview(page: Page, scenario: Scenario, run: (review: Review) 
     });
     await page.goto(`${origin}/${scenario === 'roots' ? '?roots' : ''}`);
     await expect(page.locator('.targets [data-cy]')).toBeVisible();
-    await page.getByRole('button', { name: '設定', exact: true }).click();
-    await page.getByLabel('キャプチャ方式').selectOption('none');
-    await page.getByRole('button', { name: '保存', exact: true }).click();
+    await configureReview(page, { method: 'none' });
     await run({ root, output: `${root}/.needmark/feedback`, source, origin, mapRequests: () => maps });
   } finally {
     await proxy?.close(); if (upstream?.listening) await close(upstream); await rm(root, { recursive: true, force: true });

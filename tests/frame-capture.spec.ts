@@ -1,8 +1,9 @@
-import { test, expect, type Frame, type Locator, type Page, type TestInfo } from '@playwright/test';
+import { type Frame, type Locator, type Page, type TestInfo } from '@playwright/test';
+import { test, expect, output, tempRoot, configureReview } from './support/review.js';
 import { build } from 'esbuild';
 import { createServer, type Server } from 'node:http';
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { resolve, join } from 'node:path';
 import { startReviewProxy, type ReviewProxy } from '../dist/proxy.js';
 import type { Feedback, Rectangle, RuntimeSourceRequest, RuntimeSourceResult, SourceLocation } from '../src/shared/types.js';
 
@@ -24,7 +25,7 @@ async function close(server: Server) {
 
 /** Actual React dev allocation frames, current local JSX, source maps and public protected proxy. */
 async function withReview(page: Page, nested: boolean, run: (review: Review) => Promise<void>, inline = false) {
-  const root = await mkdtemp('/private/tmp/needmark-frame-capture-');
+  const root = await mkdtemp(join(tempRoot, 'needmark-frame-capture-'));
   let upstream: Server | undefined, proxy: ReviewProxy | undefined;
   try {
     const source = await readFile(fixturePath, 'utf8'); await mkdir(root + '/src'); await writeFile(root + '/' + sourceFile, source);
@@ -81,8 +82,7 @@ function sourceOf(review: Review): SourceLocation {
   return { file: sourceFile, line: line + 1, column: lines[line]!.indexOf('<button') + 1, component: 'CaptureTarget' };
 }
 async function method(page: Page, value: 'dom' | 'none' | 'tab') {
-  await page.getByRole('button', { name: '設定', exact: true }).click();
-  await page.getByLabel('キャプチャ方式').selectOption(value); await page.getByRole('button', { name: '保存', exact: true }).click();
+  await configureReview(page, { method: value });
 }
 async function select(page: Page, review: Review, nested = false) {
   const response = page.waitForResponse((response) => response.url() === review.origin + '/__needmark/source' && response.request().method() === 'POST');

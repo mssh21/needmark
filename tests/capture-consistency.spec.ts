@@ -1,11 +1,11 @@
-import { test, expect, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { test, expect, output, configureReview } from './support/review.js';
 import { resolve } from 'node:path';
-import { readFile, readdir, rm } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import type { CaptureGuard } from '../src/client/capture/identity.js';
 import type { ScreenshotCapture } from '../src/client/capture/screenshot.js';
 import type { Feedback, FeedbackInput, Rectangle } from '../src/shared/types.js';
 
-const output = '/private/tmp/needmark-e2e-feedback';
 const urls = { capture: `/@fs/${resolve('src/client/capture/screenshot.ts')}`, identity: `/@fs/${resolve('src/client/capture/identity.ts')}`, context: `/@fs/${resolve('src/client/context/code-context.ts')}` };
 interface NativeHarness {
   capture: ScreenshotCapture; canvas: HTMLCanvasElement; host: HTMLElement; requested: Promise<void>; closed: number;
@@ -50,7 +50,6 @@ async function nativeFixture(page: Page) {
   }, urls.capture);
 }
 
-test.beforeEach(async () => { await rm(output, { recursive: true, force: true }); });
 
 test('DOM pixels, selection outline and committed code geometry agree after the same original element moves before prepare', async ({ page }) => {
   await modulePage(page);
@@ -146,8 +145,7 @@ test('native pixel acquisition rejects privacy identity, geometry, URL and DPR d
 
 for (const change of ['move', 'replace'] as const) {
   test(`widget preserves typed feedback after original ${change} during DOM rendering and falls back to image-free saving`, async ({ page }) => {
-    await page.goto('/'); await page.getByRole('button', { name: '設定', exact: true }).click();
-    await page.getByLabel('キャプチャ方式').selectOption('dom'); await page.getByRole('button', { name: '保存', exact: true }).click();
+    await page.goto('/'); await configureReview(page, { method: 'dom' });
     await page.evaluate(() => {
       const state = window as unknown as { captureGateReached: boolean; releaseCaptureGate: () => void; captureGateObserver: MutationObserver };
       state.captureGateReached = false; const pending = new Promise<void>((resolve) => { state.releaseCaptureGate = resolve; });

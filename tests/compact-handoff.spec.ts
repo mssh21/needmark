@@ -1,11 +1,9 @@
-import { test, expect, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { test, expect, searchList, toggleFilter, output, enableWidgetOption } from './support/review.js';
 import { randomUUID } from 'node:crypto';
-import { rm } from 'node:fs/promises';
 import type { ElementContext, Feedback, FeedbackInput, FeedbackStatus } from '../src/shared/types.js';
 import { input } from './fixtures.js';
-import { searchList, toggleFilter } from './save.js';
 
-const output = '/private/tmp/needmark-e2e-feedback';
 type ClipboardState = { compactCopied?: string; compactCopyPending?: boolean; rejectCompactCopy?: (error: Error) => void };
 const copied = (page: Page) => page.evaluate(() => (window as unknown as ClipboardState).compactCopied ?? '');
 function element(selector = '#compact-target', file = 'src/CompactButton.tsx'): ElementContext {
@@ -25,10 +23,7 @@ async function setup(page: Page, submit = false, compact = true) {
     } } });
   });
   // Control the optional UI transport; the actual Node callback is covered by review-api tests.
-  if (submit) await page.route('http://127.0.0.1:4192/', async (route) => {
-    const response = await route.fetch();
-    await route.fulfill({ response, body: (await response.text()).replace('data-needmark-capture=', 'data-needmark-submit="true" data-needmark-capture=') });
-  });
+  if (submit) await enableWidgetOption(page, 'data-needmark-submit');
   await page.goto('/'); await page.getByRole('button', { name: '設定', exact: true }).click();
   await expect(page.getByLabel('AIへの情報量')).toHaveValue('standard');
   await page.getByLabel('キャプチャ方式').selectOption('none');
@@ -53,7 +48,6 @@ async function list(page: Page) {
 }
 async function copyList(page: Page) { await page.getByRole('button', { name: 'プロンプトをコピー', exact: true }).click(); return copied(page); }
 
-test.beforeEach(async () => { await rm(output, { recursive: true, force: true }); });
 
 test('compact preference survives saving and reload, changes actual output, and invalid saved values fall back to standard', async ({ page }) => {
   await setup(page); const item = await seed(page, '保存した簡潔設定でこのボタンを修正する');

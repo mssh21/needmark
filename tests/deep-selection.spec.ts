@@ -1,9 +1,8 @@
-import { test, expect, type Page } from '@playwright/test';
-import { readFile, readdir, rm } from 'node:fs/promises';
+import { type Page } from '@playwright/test';
+import { test, expect, saveAndList, output } from './support/review.js';
+import { readFile, readdir } from 'node:fs/promises';
 import type { Feedback } from '../src/shared/types.js';
-import { saveAndList } from './save.js';
 
-const output = '/private/tmp/needmark-e2e-feedback';
 const cover = (page: Page) => page.locator('[data-needmark] .cover');
 const field = (page: Page) => page.getByLabel('コメント本文');
 
@@ -31,7 +30,6 @@ async function saved(): Promise<Feedback> {
   return JSON.parse(await readFile(`${output}/${ids[0]}/context.json`, 'utf8')) as Feedback;
 }
 
-test.beforeEach(async () => { await rm(output, { recursive: true, force: true }); });
 
 test('ordinary clicks still select the frontmost overlay and do not activate the application', async ({ page }) => {
   await fixture(page); await page.mouse.click(200, 210); await field(page).fill('Review the overlay');

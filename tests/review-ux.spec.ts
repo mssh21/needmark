@@ -1,12 +1,9 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, saveAndList, searchList, toggleFilter, output } from './support/review.js';
 import { readFile, readdir, rm, mkdir } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { resolve } from 'node:path';
 import type { Feedback } from '../src/shared/types.js';
-import { saveAndList, searchList, toggleFilter } from './save.js';
-const output = '/private/tmp/needmark-e2e-feedback';
-test.beforeEach(async () => { await rm(output, { recursive: true, force: true }); });
 async function storedAll(): Promise<Feedback[]> { const ids = (await readdir(output)).filter((id) => !id.startsWith('.')); return Promise.all(ids.map(async (id) => JSON.parse(await readFile(`${output}/${id}/context.json`, 'utf8')) as Feedback)); }
 async function stored(): Promise<Feedback> { const [id] = (await readdir(output)).filter((id) => !id.startsWith('.')); return JSON.parse(await readFile(`${output}/${id}/context.json`, 'utf8')); }
 async function configure(page: import('@playwright/test').Page, method = 'none') {

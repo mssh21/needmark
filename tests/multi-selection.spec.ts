@@ -1,10 +1,9 @@
-import { test, expect, type Page, type TestInfo } from '@playwright/test';
-import { readFile, readdir, rm } from 'node:fs/promises';
+import { type Page, type TestInfo } from '@playwright/test';
+import { test, expect, saveAndList, output } from './support/review.js';
+import { readFile, readdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import type { Feedback, Rectangle } from '../src/shared/types.js';
-import { saveAndList } from './save.js';
 
-const output = '/private/tmp/needmark-e2e-feedback';
 const outlines = (page: Page) => page.locator('[data-needmark] .selected-outline');
 const cover = (page: Page) => page.locator('[data-needmark] .cover');
 const field = (page: Page) => page.getByLabel('コメント本文');
@@ -67,7 +66,6 @@ function union(rects: Rectangle[]): Rectangle {
   return { x, y, width: Math.max(...rects.map((r) => r.x + r.width)) - x, height: Math.max(...rects.map((r) => r.y + r.height)) - y };
 }
 async function screenshot(page: Page, info: TestInfo, name: string) { await info.attach(name, { body: await page.screenshot(), contentType: 'image/png' }); }
-test.beforeEach(async () => { await rm(output, { recursive: true, force: true }); });
 test.afterEach(async ({ page }, info) => {
   if (info.status === info.expectedStatus) return;
   await screenshot(page, info, 'actual-multi-selection');

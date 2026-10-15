@@ -1,4 +1,5 @@
 import { defineConfig } from '@playwright/test';
+import { output } from './tests/support/paths.js';
 
 export default defineConfig({
   testDir: './tests', fullyParallel: false, workers: 1,
@@ -13,6 +14,6 @@ export default defineConfig({
   ],
   webServer: {
     command: 'pnpm demo', port: 4192, reuseExistingServer: false,
-    env: { NEEDMARK_DEMO_PORT: '4192', NEEDMARK_OUTPUT_DIR: '/private/tmp/needmark-e2e-feedback', NEEDMARK_DEMO_LANGUAGE: 'ja' },
+    env: { NEEDMARK_DEMO_PORT: '4192', NEEDMARK_OUTPUT_DIR: output, NEEDMARK_DEMO_LANGUAGE: 'ja' },
   },
 });

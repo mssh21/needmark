@@ -1,11 +1,11 @@
-import { test, expect, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { test, expect, saveAndList, output, tempRoot, configureReview } from './support/review.js';
 import { build } from 'esbuild';
 import { createServer, type Server } from 'node:http';
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { resolve, join } from 'node:path';
 import { startReviewProxy, type ReviewProxy } from '../dist/proxy.js';
 import type { Feedback, Rectangle, RuntimeSourceRequest, RuntimeSourceResult, SourceLocation } from '../src/shared/types.js';
-import { saveAndList } from './save.js';
 
 const fixturePath = resolve('tests/fixtures/frame-capture.jsx'), sourceFile = 'src/frame-capture.jsx';
 const currentColor = [217, 91, 36, 255], outlineColor = [25, 101, 227, 255];
@@ -23,7 +23,7 @@ async function close(server: Server) {
 
 /** Real unmodified CaptureTarget, live React state, source maps and protected public proxy. */
 async function withReview(page: Page, run: (review: { origin: string; output: string; source: string }) => Promise<void>) {
-  const root = await mkdtemp('/private/tmp/needmark-frame-padding-');
+  const root = await mkdtemp(join(tempRoot, 'needmark-frame-padding-'));
   let upstream: Server | undefined, proxy: ReviewProxy | undefined;
   try {
     const source = await readFile(fixturePath, 'utf8'); await mkdir(root + '/src'); await writeFile(root + '/' + sourceFile, source);
@@ -109,8 +109,7 @@ test('a padded bordered iframe saves its original target geometry and DOM PNG ou
       const native = await page.screenshot({ caret: 'initial' }), nativePixels = await pixels(page, native, rect, privateRects);
       await testInfo.attach('padded-frame-native.png', { body: native, contentType: 'image/png' });
       expect(nativePixels.inside).toEqual(currentColor); expectPrivacy(nativePixels.privacy, [153, 34, 169, 255]);
-      await page.getByRole('button', { name: '設定', exact: true }).click();
-      await page.getByLabel('キャプチャ方式').selectOption('dom'); await page.getByRole('button', { name: '保存', exact: true }).click();
+      await configureReview(page, { method: 'dom' });
       const response = page.waitForResponse((item) => item.url() === origin + '/__needmark/source' && item.request().method() === 'POST');
       await page.getByRole('button', { name: 'コメント', exact: true }).click();
       await expect(page.locator('[data-needmark] .cover')).toBeVisible();
@@ -171,9 +170,7 @@ async function privacyRects(frame: import('@playwright/test').Frame): Promise<Re
   return Object.fromEntries(entries);
 }
 async function configureMethod(page: Page, method: 'none' | 'tab') {
-  await page.getByRole('button', { name: '設定', exact: true }).click();
-  await page.getByLabel('キャプチャ方式').selectOption(method);
-  await page.getByRole('button', { name: '保存', exact: true }).click();
+  await configureReview(page, { method });
 }
 async function storedComment(output: string, comment: string) {
   const ids = (await readdir(output, { withFileTypes: true })).filter((entry) => entry.isDirectory() && !entry.name.startsWith('.'));
@@ -361,8 +358,7 @@ test('a normal area review over iframe padding never attributes a wholly unpaint
       expect(area.x).toBeGreaterThan(frameBounds.innerBorder); expect(area.x + area.width).toBeLessThan(frameBounds.contentLeft);
       expect(originalIdentity).toEqual({ sameDocument: true, sameNode: true });
       expect(rect.width).toBeCloseTo(15); expect(rect.height).toBeCloseTo(9.6, 1); expect(area.width).toBeGreaterThan(5); expect(area.height).toBeGreaterThan(5);
-      await page.getByRole('button', { name: '設定', exact: true }).click();
-      await page.getByLabel('キャプチャ方式').selectOption('dom'); await page.getByRole('button', { name: '保存', exact: true }).click();
+      await configureReview(page, { method: 'dom' });
       const frameBefore = await page.locator('#outer-capture-frame').evaluate((element) => element.outerHTML);
       const childBefore = await frame.evaluate(() => ({ html: document.body.innerHTML, url: location.href, scrollX, scrollY }));
       const native = await page.screenshot({ caret: 'initial' });

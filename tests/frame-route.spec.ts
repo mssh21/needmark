@@ -1,11 +1,11 @@
-import { test, expect, type Frame, type Locator, type Page, type TestInfo } from '@playwright/test';
+import { type Frame, type Locator, type Page, type TestInfo } from '@playwright/test';
+import { test, expect, saveAndList, output, tempRoot, configureReview } from './support/review.js';
 import { build } from 'esbuild';
 import { createServer, type Server } from 'node:http';
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { resolve, join } from 'node:path';
 import { startReviewProxy, type ReviewProxy } from '../dist/proxy.js';
 import type { ElementContext, Feedback, RuntimeSourceRequest, RuntimeSourceResult, SourceLocation } from '../src/shared/types.js';
-import { saveAndList } from './save.js';
 
 type FrameContext = ElementContext & { frameUrls?: string[] };
 type Review = { root: string; output: string; source: string; origin: string };
@@ -28,7 +28,7 @@ async function close(server: Server) {
 
 /** Real React frames, current JSX, HTTP source maps and protected public proxy; no /source response mocks. */
 async function withReview(page: Page, nested: boolean, run: (review: Review) => Promise<void>) {
-  const root = await mkdtemp('/private/tmp/needmark-frame-route-');
+  const root = await mkdtemp(join(tempRoot, 'needmark-frame-route-'));
   let upstream: Server | undefined, proxy: ReviewProxy | undefined;
   try {
     const source = await readFile(fixturePath, 'utf8');
@@ -83,9 +83,7 @@ function sourceOf(review: Review): SourceLocation {
   return { file: sourceFile, line: line + 1, column: lines[line]!.indexOf('<button') + 1, component: 'RouteTarget' };
 }
 async function method(page: Page, value: 'dom' | 'none') {
-  await page.getByRole('button', { name: '設定', exact: true }).click();
-  await page.getByLabel('キャプチャ方式').selectOption(value);
-  await page.getByRole('button', { name: '保存', exact: true }).click();
+  await configureReview(page, { method: value });
 }
 async function select(page: Page, review: Review, nested = false) {
   const response = page.waitForResponse((response) => response.url() === review.origin + '/__needmark/source' && response.request().method() === 'POST');

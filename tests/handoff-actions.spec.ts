@@ -1,22 +1,15 @@
-import { test, expect, type Page } from '@playwright/test';
-import { readFile, readdir, rm } from 'node:fs/promises';
+import { type Page } from '@playwright/test';
+import { test, expect, saveAndList, searchList, output, configureReview, enableWidgetOption } from './support/review.js';
+import { readFile, readdir } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { resolve } from 'node:path';
 import type { Feedback } from '../src/shared/types.js';
-import { saveAndList, searchList } from './save.js';
-const output = '/private/tmp/needmark-e2e-feedback';
-test.beforeEach(async () => { await rm(output, { recursive: true, force: true }); });
-async function setup(page: Page, submit = false, method = 'none') {
+async function setup(page: Page, submit = false, method: 'none' | 'dom' | 'tab' = 'none') {
   // The transport is controlled to exercise UI races. Server hook delivery is verified by API tests.
-  if (submit) await page.route('http://127.0.0.1:4192/', async (route) => {
-    const response = await route.fetch();
-    await route.fulfill({ response, body: (await response.text()).replace('data-needmark-capture=', 'data-needmark-submit="true" data-needmark-capture=') });
-  });
+  if (submit) await enableWidgetOption(page, 'data-needmark-submit');
   await page.goto('/');
-  await page.getByRole('button', { name: '設定', exact: true }).click();
-  await page.getByLabel('キャプチャ方式').selectOption(method);
-  await page.getByRole('button', { name: '保存', exact: true }).click();
+  await configureReview(page, { method });
 }
 async function select(page: Page, selector = '#purchase-button') {
   await page.getByRole('button', { name: 'コメント', exact: true }).click();
