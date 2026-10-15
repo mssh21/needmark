@@ -1,0 +1,9 @@
+node_modules/
+dist/
+demo/.needmark/
+demo/.needback/
+demo/dist/
+test-results/
+playwright-report/
+*.tgz
+.DS_Store

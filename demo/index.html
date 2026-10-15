@@ -1,0 +1,1605 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Halden Analytics — NeedMark demo</title>
+  <style>
+    :root {
+      --ink: #14171c;
+      --ink-2: #353b45;
+      --muted: #5d6672;
+      --line: #e4e6ea;
+      --soft: #f5f6f4;
+      --paper: #fff;
+      --accent: #1f6f5c;
+      --accent-ink: #0f4436;
+      --accent-soft: #e3f1ec;
+      --amber: #c9821f;
+      --radius: 14px
+    }
+
+    * {
+      box-sizing: border-box
+    }
+
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font: 16px/1.6 ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      -webkit-font-smoothing: antialiased
+    }
+
+    [hidden] {
+      display: none !important
+    }
+
+    a {
+      color: inherit
+    }
+
+    button,
+    input,
+    select {
+      font: inherit
+    }
+
+    button {
+      cursor: pointer
+    }
+
+    .wrap {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 0 32px
+    }
+
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: rgba(255, 255, 255, .88);
+      backdrop-filter: saturate(1.4) blur(10px);
+      border-bottom: 1px solid var(--line)
+    }
+
+    .site-header .wrap {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      height: 64px
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      letter-spacing: -.2px;
+      text-decoration: none
+    }
+
+    .brand svg {
+      width: 26px;
+      height: 26px
+    }
+
+    .site-nav {
+      display: flex;
+      gap: 24px;
+      font-size: 14px;
+      color: var(--ink-2)
+    }
+
+    .site-nav a {
+      text-decoration: none
+    }
+
+    .site-nav a:hover {
+      color: var(--ink)
+    }
+
+    .header-actions {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 10px
+    }
+
+    .link-button {
+      background: none;
+      border: 0;
+      padding: 8px 10px;
+      font-size: 14px;
+      color: var(--ink-2)
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      height: 42px;
+      padding: 0 18px;
+      border-radius: 10px;
+      border: 1px solid transparent;
+      font-size: 15px;
+      font-weight: 600;
+      text-decoration: none;
+      white-space: nowrap
+    }
+
+    .button-primary {
+      background: var(--ink);
+      color: #fff
+    }
+
+    .button-primary:hover {
+      background: #2a2f37
+    }
+
+    .button-secondary {
+      background: #fff;
+      border-color: #cfd3d9;
+      color: var(--ink)
+    }
+
+    .button-secondary:hover {
+      background: var(--soft)
+    }
+
+    .button-small {
+      height: 36px;
+      padding: 0 14px;
+      font-size: 14px
+    }
+
+    main {
+      display: block
+    }
+
+    .hero {
+      padding: 56px 0 40px
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(320px, .8fr);
+      gap: 56px;
+      align-items: start
+    }
+
+    .announce {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 12px 4px 4px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      font-size: 13px;
+      color: var(--ink-2);
+      text-decoration: none
+    }
+
+    .announce b {
+      background: var(--accent-soft);
+      color: var(--accent-ink);
+      border-radius: 999px;
+      padding: 2px 9px;
+      font-size: 12px
+    }
+
+    h1 {
+      font-size: clamp(40px, 5.2vw, 64px);
+      line-height: 1.04;
+      letter-spacing: -2.2px;
+      margin: 22px 0 20px;
+      font-weight: 700
+    }
+
+    .lede {
+      font-size: 19px;
+      color: var(--muted);
+      max-width: 560px;
+      margin: 0 0 30px
+    }
+
+    .lede strong {
+      color: var(--ink);
+      font-weight: 600
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center
+    }
+
+    .trust {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-top: 28px;
+      font-size: 13px;
+      color: var(--muted)
+    }
+
+    .trial {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 28px;
+      box-shadow: 0 1px 0 rgba(20, 23, 28, .04), 0 24px 48px -28px rgba(20, 23, 28, .28);
+      background: linear-gradient(180deg, #fff 0%, #fbfcfb 100%)
+    }
+
+    .trial .plan {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      color: var(--muted)
+    }
+
+    .trial .plan span:last-child {
+      color: var(--accent-ink);
+      background: var(--accent-soft);
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-weight: 600
+    }
+
+    .trial h2 {
+      font-size: 28px;
+      letter-spacing: -.6px;
+      line-height: 1.15;
+      margin: 14px 0 6px
+    }
+
+    .trial .price {
+      font-size: 15px;
+      color: var(--muted);
+      margin: 0 0 18px
+    }
+
+    .trial .price strong {
+      font-size: 34px;
+      color: var(--ink);
+      letter-spacing: -1px;
+      margin-right: 4px
+    }
+
+    .trial ul {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 22px;
+      display: grid;
+      gap: 9px;
+      font-size: 14px;
+      color: var(--ink-2)
+    }
+
+    .trial li {
+      display: flex;
+      gap: 10px
+    }
+
+    .trial li svg {
+      flex: none;
+      width: 18px;
+      height: 18px;
+      margin-top: 3px;
+      color: var(--accent)
+    }
+
+    .buy {
+      width: 100%;
+      height: 48px;
+      border: 0;
+      border-radius: 11px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 16px;
+      font-weight: 600
+    }
+
+    #purchase-status {
+      min-height: 22px;
+      margin: 12px 0 0;
+      font-size: 13px;
+      color: var(--accent-ink)
+    }
+
+    .trial .fine {
+      font-size: 12px;
+      color: var(--muted);
+      margin: 6px 0 0
+    }
+
+    .shot {
+      margin-top: 24px
+    }
+
+    .shot .frame {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 40px 80px -48px rgba(20, 23, 28, .45);
+      background: #f8f9f8
+    }
+
+    .shot .bar {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      height: 38px;
+      padding: 0 14px;
+      border-bottom: 1px solid var(--line);
+      background: #fff
+    }
+
+    .shot .bar i {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #dfe2e6
+    }
+
+    .shot .bar span {
+      margin-left: 12px;
+      font-size: 12px;
+      color: var(--muted)
+    }
+
+    .mock {
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      min-height: 330px
+    }
+
+    .mock aside {
+      border-right: 1px solid var(--line);
+      padding: 18px 14px;
+      display: grid;
+      align-content: start;
+      gap: 8px;
+      background: #fff
+    }
+
+    .mock aside span {
+      height: 10px;
+      border-radius: 5px;
+      background: #e9ecef
+    }
+
+    .mock aside span.on {
+      background: var(--accent-soft)
+    }
+
+    .mock .canvas {
+      padding: 22px;
+      display: grid;
+      gap: 16px
+    }
+
+    .mock .kpis {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px
+    }
+
+    .mock .kpi {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px
+    }
+
+    .mock .kpi small {
+      display: block;
+      font-size: 11px;
+      color: var(--muted)
+    }
+
+    .mock .kpi b {
+      font-size: 22px;
+      letter-spacing: -.6px
+    }
+
+    .mock .kpi em {
+      font-style: normal;
+      font-size: 12px;
+      color: var(--accent);
+      margin-left: 6px
+    }
+
+    .mock .chart {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px;
+      height: 170px
+    }
+
+    .mock .chart svg {
+      width: 100%;
+      height: 100%
+    }
+
+    .logos {
+      padding: 36px 0 8px;
+      border-top: 1px solid var(--line);
+      margin-top: 56px
+    }
+
+    .logos p {
+      text-align: center;
+      font-size: 13px;
+      color: var(--muted);
+      margin: 0 0 18px
+    }
+
+    .marquee {
+      overflow: hidden;
+      -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+      mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent)
+    }
+
+    .marquee ul {
+      display: flex;
+      gap: 64px;
+      width: max-content;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      animation: scroll-logos 38s linear infinite
+    }
+
+    .marquee li {
+      font-weight: 700;
+      font-size: 20px;
+      letter-spacing: -.4px;
+      color: #9aa1aa;
+      white-space: nowrap
+    }
+
+    @keyframes scroll-logos {
+      to {
+        transform: translateX(-50%)
+      }
+    }
+
+    section.block {
+      padding: 88px 0
+    }
+
+    .section-head {
+      margin-bottom: 40px
+    }
+
+    .section-head p.kicker {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent);
+      margin: 0 0 10px;
+      letter-spacing: .2px
+    }
+
+    .section-head h2 {
+      font-size: clamp(30px, 3.4vw, 42px);
+      letter-spacing: -1.2px;
+      line-height: 1.1;
+      margin: 0 0 14px
+    }
+
+    .section-head p {
+      color: var(--muted);
+      margin: 0;
+      font-size: 17px
+    }
+
+    .features {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px
+    }
+
+    .feature {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 24px;
+      background: #fff
+    }
+
+    .feature .icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      background: var(--soft);
+      color: var(--ink);
+      margin-bottom: 18px
+    }
+
+    .feature .icon svg {
+      width: 20px;
+      height: 20px
+    }
+
+    .feature h3 {
+      font-size: 17px;
+      margin: 0 0 8px;
+      letter-spacing: -.2px
+    }
+
+    .feature p {
+      margin: 0;
+      font-size: 15px;
+      color: var(--muted)
+    }
+
+    .usecases {
+      background: var(--soft)
+    }
+
+    .tablist {
+      display: inline-flex;
+      gap: 4px;
+      padding: 4px;
+      border-radius: 12px;
+      background: #e9ebe8;
+      margin-bottom: 28px
+    }
+
+    .tablist button {
+      border: 0;
+      background: transparent;
+      border-radius: 9px;
+      padding: 8px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--ink-2)
+    }
+
+    .tablist button[aria-selected="true"] {
+      background: #fff;
+      color: var(--ink);
+      box-shadow: 0 1px 2px rgba(20, 23, 28, .12)
+    }
+
+    .tabpanel {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      align-items: center
+    }
+
+    .tabpanel h3 {
+      font-size: 26px;
+      letter-spacing: -.6px;
+      margin: 0 0 12px
+    }
+
+    .tabpanel p {
+      color: var(--muted);
+      margin: 0 0 18px
+    }
+
+    .tabpanel ul {
+      margin: 0;
+      padding-left: 20px;
+      color: var(--ink-2);
+      display: grid;
+      gap: 6px
+    }
+
+    .tabpanel figure {
+      margin: 0;
+      border-radius: var(--radius);
+      background: #fff;
+      border: 1px solid var(--line);
+      padding: 22px
+    }
+
+    .bars {
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      height: 180px
+    }
+
+    .bars span {
+      flex: 1;
+      border-radius: 6px 6px 0 0;
+      background: #cfe3db
+    }
+
+    .bars span:nth-child(5),
+    .bars span:nth-child(6) {
+      background: var(--accent)
+    }
+
+    .tabpanel figcaption {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 12px
+    }
+
+    .quote {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 28px;
+      align-items: center;
+      max-width: 860px
+    }
+
+    .quote img {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%
+    }
+
+    .quote blockquote {
+      margin: 0;
+      font-size: 24px;
+      line-height: 1.4;
+      letter-spacing: -.4px
+    }
+
+    .quote cite {
+      display: block;
+      margin-top: 14px;
+      font-style: normal;
+      font-size: 14px;
+      color: var(--muted)
+    }
+
+    .voices {
+      background: linear-gradient(180deg, #fff 0%, #f5f6f4 100%)
+    }
+
+    .carousel {
+      position: relative
+    }
+
+    .viewport {
+      overflow: hidden;
+      border-radius: 20px
+    }
+
+    .track {
+      display: flex;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      transition: transform .6s cubic-bezier(.2, .7, .2, 1)
+    }
+
+    .slide {
+      flex: 0 0 100%;
+      padding: 44px 48px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 20px
+    }
+
+    .slide blockquote {
+      margin: 0 0 32px;
+      font-size: clamp(22px, 2.4vw, 30px);
+      line-height: 1.35;
+      letter-spacing: -.6px;
+      max-width: 880px
+    }
+
+    .person {
+      display: flex;
+      align-items: center;
+      gap: 16px
+    }
+
+    .person img {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%
+    }
+
+    .person strong {
+      display: block
+    }
+
+    .person span {
+      font-size: 14px;
+      color: var(--muted)
+    }
+
+    .person .result {
+      margin-left: auto;
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent-ink);
+      font-size: 14px
+    }
+
+    .carousel-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 20px
+    }
+
+    .round {
+      display: grid;
+      place-items: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 1px solid #cfd3d9;
+      background: #fff
+    }
+
+    .round svg {
+      width: 18px;
+      height: 18px
+    }
+
+    .round:hover {
+      background: var(--soft)
+    }
+
+    .dots {
+      display: flex;
+      gap: 8px
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      padding: 0;
+      border-radius: 50%;
+      border: 0;
+      background: #c9cdd3
+    }
+
+    .dot[aria-current="true"] {
+      width: 26px;
+      border-radius: 5px;
+      background: var(--ink)
+    }
+
+    .autoplay {
+      margin-left: auto;
+      border: 0;
+      background: none;
+      font-size: 14px;
+      color: var(--ink-2);
+      text-decoration: underline;
+      text-underline-offset: 3px
+    }
+
+    .progress {
+      height: 3px;
+      border-radius: 2px;
+      background: #e4e6ea;
+      margin-top: 16px;
+      overflow: hidden
+    }
+
+    .progress span {
+      display: block;
+      height: 100%;
+      width: 100%;
+      background: var(--accent);
+      transform-origin: left;
+      transform: scaleX(0)
+    }
+
+    .carousel.running .progress span {
+      animation: slide-progress 6s linear
+    }
+
+    @keyframes slide-progress {
+      from {
+        transform: scaleX(0)
+      }
+
+      to {
+        transform: scaleX(1)
+      }
+    }
+
+    .pricing-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 24px;
+      flex-wrap: wrap;
+      margin-bottom: 32px
+    }
+
+    .billing {
+      display: inline-flex;
+      gap: 4px;
+      padding: 4px;
+      border-radius: 999px;
+      border: 1px solid var(--line)
+    }
+
+    .billing button {
+      border: 0;
+      background: transparent;
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-size: 14px;
+      color: var(--ink-2)
+    }
+
+    .billing button[aria-pressed="true"] {
+      background: var(--ink);
+      color: #fff
+    }
+
+    .plans {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px
+    }
+
+    .plan-card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 26px;
+      display: flex;
+      flex-direction: column
+    }
+
+    .plan-card.featured {
+      border-color: var(--ink);
+      box-shadow: 0 24px 48px -32px rgba(20, 23, 28, .4)
+    }
+
+    .plan-card h3 {
+      margin: 0;
+      font-size: 18px
+    }
+
+    .plan-card .desc {
+      color: var(--muted);
+      font-size: 14px;
+      min-height: 44px
+    }
+
+    .plan-card .amount {
+      font-size: 40px;
+      font-weight: 700;
+      letter-spacing: -1.4px
+    }
+
+    .plan-card .amount small {
+      font-size: 14px;
+      font-weight: 400;
+      color: var(--muted);
+      letter-spacing: 0
+    }
+
+    .plan-card ul {
+      list-style: none;
+      padding: 0;
+      margin: 18px 0 24px;
+      display: grid;
+      gap: 8px;
+      font-size: 14px;
+      color: var(--ink-2)
+    }
+
+    .plan-card .button {
+      margin-top: auto
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+      align-items: start
+    }
+
+    .faq details {
+      border-bottom: 1px solid var(--line);
+      padding: 18px 0
+    }
+
+    .faq summary {
+      cursor: pointer;
+      font-weight: 600;
+      list-style: none;
+      display: flex;
+      justify-content: space-between;
+      gap: 16px
+    }
+
+    .faq summary::after {
+      content: "+";
+      color: var(--muted);
+      font-weight: 400
+    }
+
+    .faq details[open] summary::after {
+      content: "−"
+    }
+
+    .faq details p {
+      color: var(--muted);
+      margin: 10px 0 0
+    }
+
+    .changelog iframe {
+      width: 100%;
+      height: 360px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff
+    }
+
+    .signup {
+      background: var(--ink);
+      color: #fff;
+      border-radius: 22px;
+      padding: 48px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px
+    }
+
+    .signup h2 {
+      font-size: 36px;
+      letter-spacing: -1px;
+      line-height: 1.1;
+      margin: 0 0 14px
+    }
+
+    .signup p {
+      color: #b9c0c9;
+      margin: 0 0 20px
+    }
+
+    .signup form {
+      display: grid;
+      gap: 14px
+    }
+
+    .signup label {
+      display: grid;
+      gap: 6px;
+      font-size: 13px;
+      color: #d3d8de
+    }
+
+    .signup input,
+    .signup select {
+      height: 44px;
+      border-radius: 10px;
+      border: 1px solid #3a414b;
+      background: #1d2128;
+      color: #fff;
+      padding: 0 12px
+    }
+
+    .signup .check {
+      display: flex;
+      align-items: center;
+      gap: 10px
+    }
+
+    .signup .check input {
+      width: 18px;
+      height: 18px
+    }
+
+    .signup .button-primary {
+      background: #fff;
+      color: var(--ink)
+    }
+
+    .api-key {
+      font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+      background: #1d2128;
+      border: 1px solid #3a414b;
+      border-radius: 10px;
+      padding: 12px 14px;
+      color: #e4e7eb;
+      margin-top: 8px;
+      overflow-wrap: anywhere
+    }
+
+    footer {
+      border-top: 1px solid var(--line);
+      margin-top: 96px;
+      padding: 40px 0 64px;
+      font-size: 14px;
+      color: var(--muted)
+    }
+
+    footer .wrap {
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      flex-wrap: wrap
+    }
+
+    footer nav {
+      display: flex;
+      gap: 20px
+    }
+
+    footer a {
+      text-decoration: none
+    }
+
+    dialog {
+      border: 0;
+      border-radius: 18px;
+      padding: 0;
+      width: min(460px, calc(100vw - 32px));
+      box-shadow: 0 40px 80px -24px rgba(0, 0, 0, .45)
+    }
+
+    dialog::backdrop {
+      background: rgba(20, 23, 28, .45)
+    }
+
+    dialog form {
+      padding: 28px;
+      display: grid;
+      gap: 14px
+    }
+
+    dialog h2 {
+      margin: 0;
+      font-size: 22px;
+      letter-spacing: -.4px
+    }
+
+    dialog p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px
+    }
+
+    dialog label {
+      display: grid;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--ink-2)
+    }
+
+    dialog input,
+    dialog select {
+      height: 42px;
+      border: 1px solid #cfd3d9;
+      border-radius: 10px;
+      padding: 0 12px
+    }
+
+    dialog .row {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 6px
+    }
+
+    @media (prefers-reduced-motion:reduce) {
+      .marquee ul {
+        animation: none
+      }
+
+      .track {
+        transition: none
+      }
+    }
+
+    @media (max-width:900px) {
+
+      .hero-grid,
+      .tabpanel,
+      .split,
+      .signup {
+        grid-template-columns: 1fr
+      }
+
+      .features,
+      .plans {
+        grid-template-columns: 1fr
+      }
+
+      .site-nav {
+        display: none
+      }
+
+      .mock {
+        grid-template-columns: 1fr
+      }
+
+      .mock aside {
+        display: none
+      }
+
+      .signup {
+        padding: 32px
+      }
+    }
+
+    @media (max-width:520px) {
+      .slide {
+        padding: 28px 22px
+      }
+
+      .person {
+        flex-wrap: wrap
+      }
+
+      .person .result {
+        margin-left: 0
+      }
+
+      .wrap {
+        padding: 0 18px
+      }
+
+      .header-actions .link-button {
+        display: none
+      }
+
+      .mock .kpis {
+        grid-template-columns: 1fr
+      }
+
+      h1 {
+        letter-spacing: -1.4px
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="/" aria-label="Halden Analytics home">
+        <svg viewBox="0 0 32 32" aria-hidden="true">
+          <rect width="32" height="32" rx="8" fill="#14171c" />
+          <path d="M9 22V10m14 12V10M9 16h14" stroke="#7fd1b5" stroke-width="3" stroke-linecap="round" />
+        </svg>
+        Halden
+      </a>
+      <nav class="site-nav" aria-label="Primary">
+        <a href="#features">Product</a><a href="#use-cases">Use cases</a><a href="#pricing">Pricing</a><a href="#changelog">Changelog</a><a href="/react.html">Live demo</a>
+      </nav>
+      <div class="header-actions">
+        <button class="link-button" type="button">Sign in</button>
+        <button class="button button-primary button-small" type="button" data-open-demo>Book a demo</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="wrap hero-grid">
+        <div>
+          <a class="announce" href="#changelog"><b>New</b> Forecasts are now available on every plan</a>
+          <h1>Know which numbers matter before Monday.</h1>
+          <p class="lede">Halden connects billing, product and support data, then tells your team <strong>what changed, why it changed and who should act</strong> — without another spreadsheet.</p>
+          <div class="hero-actions">
+            <button class="button button-primary" type="button" data-open-demo>Book a demo</button>
+            <a class="button button-secondary" href="/react.html">Explore the dashboard</a>
+          </div>
+          <div class="trust"><halden-status></halden-status><span>SOC 2 Type II · EU and US data residency</span></div>
+        </div>
+
+        <aside class="trial" aria-label="Free trial">
+          <div class="plan"><span>Team plan</span><span>14 days free</span></div>
+          <h2 id="product-title">Halden for Teams</h2>
+          <p class="price"><strong>$24</strong>per seat / month, billed annually</p>
+          <ul>
+            <li><svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path d="M4 10.5l4 4 8-9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>Unlimited dashboards and alerts</li>
+            <li><svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path d="M4 10.5l4 4 8-9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>Stripe, HubSpot and Zendesk connectors</li>
+            <li><svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path d="M4 10.5l4 4 8-9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>Weekly forecast digest for every team</li>
+          </ul>
+          <button class="buy" id="purchase-button" type="button" onclick="document.getElementById('purchase-status').textContent='Trial reserved. Check your inbox for the setup link.'">Start free trial</button>
+          <p id="purchase-status" role="status"></p>
+          <p class="fine">No credit card required. Cancel anytime.</p>
+        </aside>
+      </div>
+
+      <div class="wrap shot">
+        <div class="frame">
+          <div class="bar"><i></i><i></i><i></i><span>app.halden.example/overview</span></div>
+          <div class="mock">
+            <aside aria-hidden="true"><span class="on"></span><span></span><span></span><span></span><span style="width:70%"></span></aside>
+            <div class="canvas">
+              <div class="kpis">
+                <div class="kpi"><small>Monthly recurring revenue</small><b>$184,920</b><em>+6.4%</em></div>
+                <div class="kpi"><small>Net revenue retention</small><b>112%</b><em>+2.1 pt</em></div>
+                <div class="kpi"><small>Accounts at risk</small><b>17</b><em style="color:#c9821f">3 new</em></div>
+              </div>
+              <div class="chart">
+                <svg viewBox="0 0 600 150" preserveAspectRatio="none" role="img" aria-label="Revenue trend for the last twelve weeks">
+                  <defs>
+                    <linearGradient id="area" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0" stop-color="#1f6f5c" stop-opacity=".22" />
+                      <stop offset="1" stop-color="#1f6f5c" stop-opacity="0" />
+                    </linearGradient>
+                  </defs>
+                  <path d="M0 120 L50 112 L100 116 L150 98 L200 102 L250 86 L300 90 L350 72 L400 76 L450 58 L500 52 L550 40 L600 34 L600 150 L0 150Z" fill="url(#area)" />
+                  <path d="M0 120 L50 112 L100 116 L150 98 L200 102 L250 86 L300 90 L350 72 L400 76 L450 58 L500 52 L550 40 L600 34" fill="none" stroke="#1f6f5c" stroke-width="3" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="wrap logos" aria-label="Customers">
+        <p>Trusted by finance and product teams at 1,200+ companies</p>
+        <div class="marquee">
+          <ul>
+            <li>Northfield</li>
+            <li>Copperline</li>
+            <li>Ostrava Labs</li>
+            <li>Brightwater</li>
+            <li>Kestrel Bank</li>
+            <li>Marlow &amp; Finch</li>
+            <li>Tidewell</li>
+            <li>Arcadia Freight</li>
+            <li aria-hidden="true">Northfield</li>
+            <li aria-hidden="true">Copperline</li>
+            <li aria-hidden="true">Ostrava Labs</li>
+            <li aria-hidden="true">Brightwater</li>
+            <li aria-hidden="true">Kestrel Bank</li>
+            <li aria-hidden="true">Marlow &amp; Finch</li>
+            <li aria-hidden="true">Tidewell</li>
+            <li aria-hidden="true">Arcadia Freight</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="features">
+      <div class="wrap">
+        <div class="section-head">
+          <p class="kicker">Product</p>
+          <h2>One place for the numbers your team argues about.</h2>
+          <p>Halden keeps definitions consistent across teams, so the revenue on the board slide matches the revenue in the forecast.</p>
+        </div>
+        <div class="features">
+          <article class="feature" data-feature="metrics">
+            <div class="icon"><svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path d="M3 16V9m5 7V4m5 12v-5m4 5V7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+              </svg></div>
+            <h3>Shared metric definitions</h3>
+            <p>Define MRR, churn and activation once. Every chart, alert and export uses the same logic.</p>
+          </article>
+          <article class="feature" data-feature="alerts">
+            <div class="icon"><svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path d="M10 3a5 5 0 0 0-5 5v3l-1.5 3h13L15 11V8a5 5 0 0 0-5-5zm-2 13a2 2 0 0 0 4 0" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
+              </svg></div>
+            <h3>Alerts with context</h3>
+            <p>When a number moves, Halden shows the accounts and events behind it and routes it to the owner.</p>
+          </article>
+          <article class="feature" data-feature="forecasts">
+            <div class="icon"><svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path d="M3 15l4-4 3 3 7-8m0 0h-4m4 0v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+              </svg></div>
+            <h3>Forecasts you can explain</h3>
+            <p>Scenario forecasts show the drivers behind each projection, not just a line on a chart.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="block usecases" id="use-cases">
+      <div class="wrap">
+        <div class="section-head">
+          <p class="kicker">Use cases</p>
+          <h2>Built for the teams that close the loop.</h2>
+        </div>
+        <div class="tablist" role="tablist" aria-label="Teams">
+          <button role="tab" id="tab-finance" aria-controls="panel-finance" aria-selected="true">Finance</button>
+          <button role="tab" id="tab-product" aria-controls="panel-product" aria-selected="false" tabindex="-1">Product</button>
+          <button role="tab" id="tab-success" aria-controls="panel-success" aria-selected="false" tabindex="-1">Customer success</button>
+        </div>
+        <div class="tabpanel" role="tabpanel" id="panel-finance" aria-labelledby="tab-finance">
+          <div>
+            <h3>Close the month in hours, not days</h3>
+            <p>Reconcile billing and CRM automatically and see revenue movements before the board asks.</p>
+            <ul>
+              <li>Automatic revenue waterfalls</li>
+              <li>Deferred revenue schedules</li>
+              <li>Board-ready exports</li>
+            </ul>
+          </div>
+          <figure>
+            <div class="bars" aria-hidden="true"><span style="height:38%"></span><span style="height:52%"></span><span style="height:47%"></span><span style="height:63%"></span><span style="height:78%"></span><span style="height:92%"></span></div>
+            <figcaption>Closing time per month, hours</figcaption>
+          </figure>
+        </div>
+        <div class="tabpanel" role="tabpanel" id="panel-product" aria-labelledby="tab-product" hidden>
+          <div>
+            <h3>See which features keep customers</h3>
+            <p>Connect product events to revenue and find the habits that predict expansion.</p>
+            <ul>
+              <li>Activation funnels by plan</li>
+              <li>Feature adoption cohorts</li>
+              <li>Release impact reports</li>
+            </ul>
+          </div>
+          <figure>
+            <div class="bars" aria-hidden="true"><span style="height:70%"></span><span style="height:64%"></span><span style="height:58%"></span><span style="height:61%"></span><span style="height:73%"></span><span style="height:81%"></span></div>
+            <figcaption>Weekly active accounts, thousands</figcaption>
+          </figure>
+        </div>
+        <div class="tabpanel" role="tabpanel" id="panel-success" aria-labelledby="tab-success" hidden>
+          <div>
+            <h3>Reach at-risk accounts first</h3>
+            <p>Health scores combine usage, support load and billing signals so your team calls the right customer.</p>
+            <ul>
+              <li>Account health scores</li>
+              <li>Renewal risk alerts</li>
+              <li>Playbooks in Slack</li>
+            </ul>
+          </div>
+          <figure>
+            <div class="bars" aria-hidden="true"><span style="height:88%"></span><span style="height:74%"></span><span style="height:66%"></span><span style="height:52%"></span><span style="height:41%"></span><span style="height:33%"></span></div>
+            <figcaption>Accounts at risk, last six weeks</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section class="block voices" aria-labelledby="voices-title">
+      <div class="wrap">
+        <div class="section-head">
+          <p class="kicker">Customers</p>
+          <h2 id="voices-title">Teams that stopped arguing about numbers.</h2>
+        </div>
+        <div class="carousel" aria-roledescription="carousel" aria-label="Customer testimonials" data-carousel>
+          <div class="viewport">
+            <ol class="track">
+              <li class="slide" role="group" aria-roledescription="slide" aria-label="1 of 5" data-slide="0">
+                <blockquote>“We stopped debating whose spreadsheet was right. Halden became the number everyone trusts in the Monday meeting.”</blockquote>
+                <div class="person"><img alt="Portrait of Dana Whitfield" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 72 72'%3E%3Crect width='72' height='72' fill='%23dfe9e4'/%3E%3Ccircle cx='36' cy='29' r='13' fill='%231f6f5c'/%3E%3Cpath d='M12 72c3-17 14-25 24-25s21 8 24 25z' fill='%231f6f5c'/%3E%3C/svg%3E">
+                  <div><strong>Dana Whitfield</strong><span>VP Finance, Copperline</span></div><b class="result">Close time −62%</b>
+                </div>
+              </li>
+              <li class="slide" role="group" aria-roledescription="slide" aria-label="2 of 5" data-slide="1" aria-hidden="true">
+                <blockquote>“Our product team finally sees which features drive expansion. Two of our last three roadmap bets came straight from Halden.”</blockquote>
+                <div class="person"><img alt="Portrait of Rafael Ortiz" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 72 72'%3E%3Crect width='72' height='72' fill='%23e7e4f3'/%3E%3Ccircle cx='36' cy='29' r='13' fill='%234b3f8f'/%3E%3Cpath d='M12 72c3-17 14-25 24-25s21 8 24 25z' fill='%234b3f8f'/%3E%3C/svg%3E">
+                  <div><strong>Rafael Ortiz</strong><span>Head of Product, Ostrava Labs</span></div><b class="result">+18% expansion revenue</b>
+                </div>
+              </li>
+              <li class="slide" role="group" aria-roledescription="slide" aria-label="3 of 5" data-slide="2" aria-hidden="true">
+                <blockquote>“Health scores flagged a churn risk three weeks before renewal. We saved the account and now run that playbook every week.”</blockquote>
+                <div class="person"><img alt="Portrait of Amara Okafor" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 72 72'%3E%3Crect width='72' height='72' fill='%23f6eadb'/%3E%3Ccircle cx='36' cy='29' r='13' fill='%23a35d17'/%3E%3Cpath d='M12 72c3-17 14-25 24-25s21 8 24 25z' fill='%23a35d17'/%3E%3C/svg%3E">
+                  <div><strong>Amara Okafor</strong><span>Director of Customer Success, Kestrel Bank</span></div><b class="result">4 renewals saved in Q3</b>
+                </div>
+              </li>
+              <li class="slide" role="group" aria-roledescription="slide" aria-label="4 of 5" data-slide="3" aria-hidden="true">
+                <blockquote>“Setup took an afternoon. By Friday the board deck pulled live numbers instead of screenshots from five tools.”</blockquote>
+                <div class="person"><img alt="Portrait of Jonas Lindqvist" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 72 72'%3E%3Crect width='72' height='72' fill='%23e1edf5'/%3E%3Ccircle cx='36' cy='29' r='13' fill='%232a5d84'/%3E%3Cpath d='M12 72c3-17 14-25 24-25s21 8 24 25z' fill='%232a5d84'/%3E%3C/svg%3E">
+                  <div><strong>Jonas Lindqvist</strong><span>COO, Brightwater</span></div><b class="result">1 afternoon to go live</b>
+                </div>
+              </li>
+              <li class="slide" role="group" aria-roledescription="slide" aria-label="5 of 5" data-slide="4" aria-hidden="true">
+                <blockquote>“Alerts arrive with the accounts behind them, so the right person acts the same day instead of at month end.”</blockquote>
+                <div class="person"><img alt="Portrait of Mei Tanaka" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 72 72'%3E%3Crect width='72' height='72' fill='%23f3e1e6'/%3E%3Ccircle cx='36' cy='29' r='13' fill='%238f2f4b'/%3E%3Cpath d='M12 72c3-17 14-25 24-25s21 8 24 25z' fill='%238f2f4b'/%3E%3C/svg%3E">
+                  <div><strong>Mei Tanaka</strong><span>Revenue Operations Lead, Tidewell</span></div><b class="result">Same-day follow-up</b>
+                </div>
+              </li>
+            </ol>
+          </div>
+          <div class="carousel-controls">
+            <button type="button" class="round" aria-label="Previous testimonial" data-prev><svg viewBox="0 0 20 20" aria-hidden="true">
+                <path d="M12 4l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg></button>
+            <div class="dots"><button type="button" class="dot" aria-label="Show testimonial 1" aria-current="true" data-go="0"></button><button type="button" class="dot" aria-label="Show testimonial 2" aria-current="false" data-go="1"></button><button type="button" class="dot" aria-label="Show testimonial 3" aria-current="false" data-go="2"></button><button type="button" class="dot" aria-label="Show testimonial 4" aria-current="false" data-go="3"></button><button type="button" class="dot" aria-label="Show testimonial 5" aria-current="false" data-go="4"></button></div>
+            <button type="button" class="round" aria-label="Next testimonial" data-next><svg viewBox="0 0 20 20" aria-hidden="true">
+                <path d="M8 4l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg></button>
+            <button type="button" class="autoplay" aria-pressed="false" data-autoplay>Pause rotation</button>
+          </div>
+          <div class="progress" aria-hidden="true"><span></span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="pricing">
+      <div class="wrap">
+        <div class="pricing-head">
+          <div class="section-head" style="margin:0">
+            <p class="kicker">Pricing</p>
+            <h2>Simple plans that grow with you.</h2>
+          </div>
+          <div class="billing" role="group" aria-label="Billing period"><button type="button" aria-pressed="false" data-billing="monthly">Monthly</button><button type="button" aria-pressed="true" data-billing="annual">Annual · save 20%</button></div>
+        </div>
+        <div class="plans">
+          <div class="plan-card">
+            <h3>Starter</h3>
+            <p class="desc">For founders tracking their first revenue metrics.</p>
+            <div class="amount" data-monthly="$0" data-annual="$0">$0 <small>forever</small></div>
+            <ul>
+              <li>3 dashboards</li>
+              <li>Stripe connector</li>
+              <li>Community support</li>
+            </ul><a class="button button-secondary" href="#signup">Get started</a>
+          </div>
+          <div class="plan-card featured">
+            <h3>Team</h3>
+            <p class="desc">For finance and product teams that share one source of truth.</p>
+            <div class="amount" data-monthly="$30" data-annual="$24">$24 <small>per seat / month</small></div>
+            <ul>
+              <li>Unlimited dashboards</li>
+              <li>All connectors</li>
+              <li>Forecasts and alerts</li>
+            </ul><a class="button button-primary" href="#signup">Start free trial</a>
+          </div>
+          <div class="plan-card">
+            <h3>Enterprise</h3>
+            <p class="desc">For organizations with security reviews and custom models.</p>
+            <div class="amount" data-monthly="Custom" data-annual="Custom">Custom</div>
+            <ul>
+              <li>SSO and SCIM</li>
+              <li>Dedicated data residency</li>
+              <li>Solutions engineer</li>
+            </ul><button class="button button-secondary" type="button" data-open-demo>Talk to sales</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="changelog">
+      <div class="wrap split">
+        <div class="faq">
+          <div class="section-head">
+            <p class="kicker">FAQ</p>
+            <h2>Questions teams ask before switching.</h2>
+          </div>
+          <details open>
+            <summary>How long does setup take?</summary>
+            <p>Most teams connect billing and CRM in under an hour. Historical data backfills overnight.</p>
+          </details>
+          <details>
+            <summary>Can we keep our existing metric definitions?</summary>
+            <p>Yes. Import definitions from SQL or spreadsheets and Halden keeps a versioned history of every change.</p>
+          </details>
+          <details>
+            <summary>Where is our data stored?</summary>
+            <p>Choose EU or US hosting. Enterprise plans can run in a dedicated region.</p>
+          </details>
+          <details>
+            <summary>Do you offer discounts for nonprofits?</summary>
+            <p>Registered nonprofits receive 50% off the Team plan.</p>
+          </details>
+        </div>
+        <div class="changelog">
+          <div class="section-head">
+            <p class="kicker">Changelog</p>
+            <h2>Shipped this month.</h2>
+          </div>
+          <iframe src="/embed.html" title="Halden changelog"></iframe>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="signup">
+      <div class="wrap">
+        <div class="signup">
+          <div>
+            <h2>Start with your own data.</h2>
+            <p>Create a workspace, connect Stripe and see your first revenue waterfall in minutes.</p>
+            <p style="margin:0;font-size:13px">Your sandbox API key</p>
+            <div class="api-key" data-needmark-redact>hd_sandbox_4f9a1c27e8b04d6f9e1a7c3b52d8e610</div>
+          </div>
+          <form onsubmit="event.preventDefault(); this.querySelector('[data-signup-status]').textContent = 'Workspace requested. We will email you shortly.';">
+            <label>Work email<input type="email" name="email" autocomplete="email" placeholder="you@company.com" required></label>
+            <label>Password<input type="password" name="password" autocomplete="new-password" placeholder="At least 12 characters" required></label>
+            <label>Company size<select name="size">
+                <option>1–20 people</option>
+                <option selected>21–200 people</option>
+                <option>201–1,000 people</option>
+                <option>More than 1,000 people</option>
+              </select></label>
+            <label class="check"><input type="checkbox" name="updates" checked>Send me the monthly product update</label>
+            <button class="button button-primary" type="submit">Create workspace</button>
+            <p data-signup-status role="status" style="margin:0;min-height:24px"></p>
+          </form>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap"><span>© 2026 Halden Analytics. A fictional product for the NeedMark demo.</span>
+      <nav aria-label="Footer"><a href="#pricing">Pricing</a><a href="#changelog">Changelog</a><a href="/react.html">Dashboard</a></nav>
+    </div>
+  </footer>
+
+  <dialog id="demo-dialog" aria-labelledby="demo-dialog-title">
+    <form method="dialog">
+      <h2 id="demo-dialog-title">Book a 30-minute demo</h2>
+      <p>We will tailor the walkthrough to your stack.</p>
+      <label>Name<input name="name" autocomplete="name"></label>
+      <label>Work email<input type="email" name="email" autocomplete="email"></label>
+      <label>Main data source<select name="source">
+          <option>Stripe</option>
+          <option>Chargebee</option>
+          <option>Salesforce</option>
+          <option>Snowflake</option>
+        </select></label>
+      <div class="row"><button class="button button-secondary" value="cancel">Cancel</button><button class="button button-primary" value="confirm">Request demo</button></div>
+    </form>
+  </dialog>
+
+  <script>
+    customElements.define('halden-status', class extends HTMLElement {
+      connectedCallback() {
+        if (this.shadowRoot) return;
+        this.attachShadow({ mode: 'open' }).innerHTML = `<style>:host{display:inline-flex}span{display:inline-flex;align-items:center;gap:8px;padding:4px 10px;border-radius:999px;background:#e3f1ec;color:#0f4436;font:600 12px/1.4 ui-sans-serif,-apple-system,sans-serif}i{width:8px;height:8px;border-radius:50%;background:#1f9d74;animation:pulse 2s ease-in-out infinite}@keyframes pulse{50%{opacity:.35}}@media (prefers-reduced-motion:reduce){i{animation:none}}</style><span><i></i>All systems operational</span>`;
+      }
+    });
+    const dialog = document.getElementById('demo-dialog');
+    document.querySelectorAll('[data-open-demo]').forEach((button) => button.addEventListener('click', () => dialog.showModal()));
+    const tabs = Array.from(document.querySelectorAll('[role="tab"]'));
+    const selectTab = (tab) => tabs.forEach((item) => {
+      const selected = item === tab;
+      item.setAttribute('aria-selected', String(selected)); item.tabIndex = selected ? 0 : -1;
+      document.getElementById(item.getAttribute('aria-controls')).hidden = !selected;
+    });
+    tabs.forEach((tab, index) => {
+      tab.addEventListener('click', () => selectTab(tab));
+      tab.addEventListener('keydown', (event) => {
+        if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+        const next = tabs[(index + (event.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+        selectTab(next); next.focus();
+      });
+    });
+    document.querySelectorAll('[data-billing]').forEach((button) => button.addEventListener('click', () => {
+      const period = button.dataset.billing;
+      document.querySelectorAll('[data-billing]').forEach((item) => item.setAttribute('aria-pressed', String(item === button)));
+      document.querySelectorAll('.amount[data-monthly]').forEach((amount) => { amount.firstChild.textContent = `${amount.dataset[period]} `; });
+    }));
+    // A recursive setTimeout instead of setInterval re-reads the global each tick, so NeedMark's pause, installed after this script, can hold the next slide.
+    // setIntervalではなくsetTimeoutを毎回呼び直すことで、このスクリプトより後に入るNeedMarkの一時停止でも次のスライドを止められる。
+    const carousel = document.querySelector('[data-carousel]');
+    const track = carousel.querySelector('.track'), slides = Array.from(carousel.querySelectorAll('.slide')), dots = Array.from(carousel.querySelectorAll('[data-go]'));
+    const autoplay = carousel.querySelector('[data-autoplay]'), progress = carousel.querySelector('.progress span');
+    let current = 0, timer, rotating = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const show = (index) => {
+      current = (index + slides.length) % slides.length;
+      track.style.transform = `translateX(-${current * 100}%)`;
+      slides.forEach((slide, position) => slide.setAttribute('aria-hidden', String(position !== current)));
+      dots.forEach((dot, position) => dot.setAttribute('aria-current', String(position === current)));
+      schedule();
+    };
+    const schedule = () => {
+      clearTimeout(timer); carousel.classList.remove('running');
+      if (!rotating) return;
+      void progress.offsetWidth; carousel.classList.add('running');
+      timer = setTimeout(() => show(current + 1), 6000);
+    };
+    carousel.querySelector('[data-prev]').addEventListener('click', () => show(current - 1));
+    carousel.querySelector('[data-next]').addEventListener('click', () => show(current + 1));
+    dots.forEach((dot) => dot.addEventListener('click', () => show(Number(dot.dataset.go))));
+    autoplay.addEventListener('click', () => {
+      rotating = !rotating; autoplay.setAttribute('aria-pressed', String(!rotating));
+      autoplay.textContent = rotating ? 'Pause rotation' : 'Resume rotation'; schedule();
+    });
+    autoplay.textContent = rotating ? 'Pause rotation' : 'Resume rotation'; autoplay.setAttribute('aria-pressed', String(!rotating));
+    show(0);
+  </script>
+</body>
+</html>
