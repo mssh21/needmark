@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "target": "ES2022", "module": "ESNext", "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"], "types": ["node"],
+    "strict": true, "noUncheckedIndexedAccess": true, "skipLibCheck": true,
+    "jsx": "react-jsx", "allowImportingTsExtensions": true, "noEmit": true
+  },
+  "include": ["src/**/*.ts", "demo/vite.config.ts", "demo/**/*.tsx", "tests/**/*.ts", "playwright.config.ts"]
+}

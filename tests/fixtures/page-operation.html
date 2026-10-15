@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>NeedMark — Page operation fixture</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;min-height:1600px;background:#fff;color:#253129;font:14px/1.5 sans-serif}main{position:relative;height:1600px}h1{margin:0;padding:24px 32px;font-size:24px}button,input,textarea{font:inherit}button{cursor:pointer}.controls{position:absolute;left:32px;top:90px;display:flex;flex-wrap:wrap;gap:8px;max-width:1080px}.controls button{padding:5px 8px}.target{position:absolute;top:220px;width:140px;height:50px;padding:0;border:0;color:#fff}.target-a{left:80px;background:rgb(12,174,93)}.target-b{left:280px;background:rgb(25,132,209)}.target-c{left:480px;background:rgb(181,66,43)}.target-d{left:680px;background:rgb(110,89,160)}#host-form{position:absolute;left:32px;top:380px;width:260px}label{display:block;margin:10px 0 4px}input,textarea{width:100%;padding:6px}textarea{height:70px}dialog{padding:24px}output{font-weight:bold}
+    @media(max-width:480px){.target-a{left:24px}.target-b{left:205px}.target-c,.target-d{display:none}.controls{left:16px;right:16px;top:340px}#host-form{top:860px}}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>ページ操作を伴うレビュー</h1>
+    <div class="controls">
+      <button id="host-counter" type="button">ホストのカウンターを増やす</button><output id="counter-value">0</output>
+      <button id="move-targets" type="button">元の対象を移動する</button>
+      <button id="clone-a" type="button">Aを同じ見た目で置き換える</button>
+      <button id="remove-b" type="button">Bを削除する</button>
+      <button id="remove-all" type="button">AとBを削除する</button>
+      <button id="hide-a" type="button">Aを非表示にする</button>
+      <button id="offscreen-b" type="button">Bを画面外へ移動する</button>
+      <button id="push-route" type="button">SPAページへ移動する</button>
+      <button id="query-route" type="button">クエリを変更する</button>
+      <button id="hash-route" type="button">ハッシュを変更する</button>
+      <button id="open-modal" type="button">ホストのダイアログを開く</button>
+    </div>
+    <button id="target-a" class="target target-a" type="button">対象A</button>
+    <button id="target-b" class="target target-b" type="button">対象B</button>
+    <button id="target-c" class="target target-c" type="button">対象C</button>
+    <button id="target-d" class="target target-d" type="button">対象D</button>
+    <form id="host-form">
+      <label for="host-input">ホスト入力</label><input id="host-input" value="AB">
+      <label for="host-textarea">ホストの文章</label><textarea id="host-textarea"></textarea>
+      <button type="submit">ホストのフォームを送信</button><output id="submit-value">0</output>
+    </form>
+  </main>
+  <dialog id="host-modal"><p>ホスト側のダイアログ</p><button type="button" onclick="this.closest('dialog').close()">ホストのダイアログを閉じる</button></dialog>
+  <script>
+    const state = window.pageOperationHost = { counter:0, submitted:0, modalCancelled:0, keys:[] };
+    document.getElementById('host-counter').onclick = () => { document.getElementById('counter-value').textContent = String(++state.counter); };
+    document.getElementById('host-form').onsubmit = event => { event.preventDefault(); document.getElementById('submit-value').textContent = String(++state.submitted); };
+    document.getElementById('move-targets').onclick = () => { for(const id of ['target-a','target-b']) document.getElementById(id).style.transform='translate(70px,50px)'; };
+    document.getElementById('clone-a').onclick = () => { const a=document.getElementById('target-a'); a.replaceWith(a.cloneNode(true)); };
+    document.getElementById('remove-b').onclick = () => document.getElementById('target-b').remove();
+    document.getElementById('remove-all').onclick = () => { for(const id of ['target-a','target-b']) document.getElementById(id)?.remove(); };
+    document.getElementById('hide-a').onclick = () => { document.getElementById('target-a').hidden=true; };
+    document.getElementById('offscreen-b').onclick = () => { document.getElementById('target-b').style.transform='translateY(1200px)'; };
+    document.getElementById('push-route').onclick = () => history.pushState({},'', '/review-page?variant=spa#details');
+    document.getElementById('query-route').onclick = () => history.replaceState({},'', '/?variant=query');
+    document.getElementById('hash-route').onclick = () => { location.hash='review-section'; };
+    document.getElementById('open-modal').onclick = () => document.getElementById('host-modal').showModal();
+    document.getElementById('host-modal').addEventListener('cancel', () => { state.modalCancelled++; });
+    document.addEventListener('keydown', event => {
+      if(event.composedPath()[0] instanceof Element && event.composedPath()[0].closest('#host-form,#host-counter,#host-modal')) state.keys.push({key:event.key,prevented:event.defaultPrevented,composing:event.isComposing});
+    });
+  </script>
+</body>
+</html>
