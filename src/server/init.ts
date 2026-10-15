@@ -16,6 +16,7 @@ export async function initialize(directory: string, options: InitOptions): Promi
   const config = `import type { NeedMarkOptions } from 'needmark';
 
 export default {
+  // Set enabled: false to turn NeedMark off for everyone; NEEDMARK=off does it for one person or run.
   // Review screen language: 'en' or 'ja'.
   language: ${JSON.stringify(options.language ?? 'ja')},
   // Screenshots: 'dom' redraws the page (no permission prompt), 'tab' records this browser tab (asks once to share it), 'none' takes no image.

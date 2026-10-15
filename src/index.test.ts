@@ -201,6 +201,18 @@ describe('Vite integration boundaries', () => {
     } finally { process.chdir(previous); }
   });
 
+  it.each([[{ enabled: false }, {}], [{}, { NEEDMARK: 'off' }]])('injects nothing when switched off by %j or %j', async (options, env) => {
+    const directory = await root(), previous = process.env.NEEDMARK;
+    Object.assign(process.env, env);
+    try {
+      const server = await createServer({ configFile: false, root: directory, plugins: [needmark(options)], server: { host: '127.0.0.1', port: 0 }, logLevel: 'silent' });
+      servers.push(server); await server.listen();
+      const origin = `http://127.0.0.1:${(server.httpServer!.address() as AddressInfo).port}`;
+      expect(await (await fetch(origin)).text()).not.toContain('needmark');
+      expect((await fetch(`${origin}/__needmark/feedback`)).status).not.toBe(403);
+    } finally { if (previous === undefined) delete process.env.NEEDMARK; else process.env.NEEDMARK = previous; }
+  });
+
   it('does not include scripts, endpoints or feedback files in production or preview', async () => {
     const directory = await root();
     await mkdir(join(directory, '.needmark/feedback'), { recursive: true });

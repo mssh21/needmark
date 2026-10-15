@@ -11,17 +11,18 @@ Use Node.js 22.12 or newer with npm, Yarn or pnpm. Install NeedMark in your appl
 ```sh
 pnpm add -D needmark   # npm install -D needmark / yarn add -D needmark
 pnpm exec needmark init
+pnpm dev               # your usual development command
 ```
 
 This guide writes CLI commands for pnpm. With npm use `npx needmark`, with Yarn (classic or Plug'n'Play) `yarn needmark`, for example `npx needmark init`. Initialization output and agent prompts use the command that matches your project's lockfile ([package managers](architecture.md#package-managers)).
 
-In a terminal, setup is in English. It first shows recommended settings (the review screen in your terminal's language, feedback kept on this computer, screenshots redrawn from the page) and asks whether to use them. Answer `n` to choose each item from a numbered list that explains it. Choices given as flags are not asked again. Supply all choices as flags for a noninteractive invocation:
+In a terminal, setup is in English. It first shows recommended settings (the review screen in your terminal's language, feedback kept on this computer, screenshots redrawn from the page and, when it recognizes your project, [connecting the development server](#connect-the-development-server)) and asks whether to use them. Answer `n` to choose each item from a numbered list that explains it. Choices given as flags are not asked again. Supply all choices as flags for a noninteractive invocation; without a terminal `init` changes no file of yours unless `--connect=yes` is given:
 
 ```sh
-pnpm exec needmark init --share=local --capture=dom --language=en
+pnpm exec needmark init --share=local --capture=dom --language=en --connect=yes
 ```
 
-Initialization writes `needmark.config.ts` and targeted Git ignore rules, preserving existing rules. It refuses to overwrite an existing config; see [migration](#migration) for compatibility with older projects. Installing does not start the application or an agent.
+Initialization writes `needmark.config.ts` and targeted Git ignore rules, preserving existing rules. It never overwrites an existing config: run again in a project that has one, `init` keeps it and only offers to connect the development server; see [migration](#migration) for compatibility with older projects. Installing does not start the application or an agent.
 
 ## Project configuration
 
@@ -39,6 +40,7 @@ export default {
 
 | Option | Behavior |
 | --- | --- |
+| `enabled` | `false` turns NeedMark off for everyone who uses this config; see [turn NeedMark off](#turn-needmark-off). |
 | `origins` | Optional Vite allowlist of exact origins, including scheme and port; no wildcards or paths. When omitted, the plugin allows `localhost`, `127.0.0.1` and `[::1]` on any port, so it keeps working when Vite moves to another port. Set it only to review through another hostname, such as a LAN address with `--host`, a tunnel or a custom local domain; the list then replaces the loopback default. It does not choose the proxy listener. |
 | `language` | `'en'` or `'ja'`; initial UI language defaults to `'ja'`. An explicit value also selects CLI prompt prose. |
 | `capture` | `'dom'`, `'tab'` or `'none'`; initial capture defaults to `'dom'`. |
@@ -56,9 +58,25 @@ A valid browser language preference overrides `language`. Change it in review se
 
 Comments, replies, captured page text, and existing feedback remain as written. Technical metadata, JSON keys, identifiers and commands retain their English names. Third-party/browser errors can remain in their original language; the language setting does not guarantee translation of every message.
 
-## Vite
+## Connect the development server
 
-Add the plugin explicitly to your existing Vite config, before any plugin whose pre-ordered transform compiles JSX:
+With your consent, `init` connects NeedMark so that your usual development command shows the toolbar. It changes only development configuration, never application source or production builds, and lists each line it changed:
+
+| Project | What `init` changes |
+| --- | --- |
+| `vite.config.*` (React, Vue, Svelte and other Vite projects) | Adds `import { needmark } from 'needmark'` and `needmark()` first in `plugins` |
+| `astro.config.*` | Adds the import and `needmark()` to `vite.plugins`, creating `vite: { plugins: [...] }` when needed |
+| A `dev` script running `next dev` | Prefixes it with `needmark dev --`; see [Next.js and other development servers](#nextjs-and-other-development-servers) |
+
+The change is committed with your project, so everyone who runs the development server gets the toolbar. `init` reads a config written as `defineConfig({...})`, a plain object, a named constant or a function returning the object; it leaves any other shape untouched and prints the manual steps below. `pnpm exec needmark init --connect=yes` connects later, and `pnpm exec needmark remove` removes exactly what connecting added, keeping `needmark.config.ts` and saved feedback.
+
+### Turn NeedMark off
+
+Start the development server with `NEEDMARK=off` (also `0`, `false` or `no`) to run it without NeedMark for yourself; `NEEDMARK=on` turns it back on for you even when the config says otherwise. `enabled: false` in `needmark.config.ts` turns it off for everyone. While off, the Vite plugin adds nothing and `needmark dev -- <command>` only runs the command on its usual port.
+
+### Vite
+
+To connect by hand, add the plugin to your existing Vite config, before any plugin whose pre-ordered transform compiles JSX:
 
 ```ts
 import { defineConfig } from 'vite';
@@ -73,7 +91,7 @@ Without arguments, the plugin loads `needmark.config.ts` from the current workin
 
 Run your usual Vite development command and open it on `localhost`, `127.0.0.1` or `[::1]`, or on a configured origin. The plugin uses Vite's HTML transformation, appends the widget to HTML that a framework renders without it, and runs only in development serve, excluding `vite preview` and production builds. It annotates local `.jsx`/`.tsx` native tags and entry HTML; other template/SSR/generated-source mapping is not universal. The widget mounts only in the top document. Accessible same-origin children can be selected from their parent; opening a child directly creates its own toolbar.
 
-## Astro
+### Astro
 
 Astro runs on Vite, so add the same plugin to the `vite` option and run `astro dev` as usual:
 
@@ -89,9 +107,17 @@ export default defineConfig({
 
 Astro renders pages without Vite's HTML transformation, so the plugin appends the widget script to the end of each HTML response instead. Source positions are not added to `.astro` templates; feedback keeps the DOM context and file hints.
 
-## Next.js and other development servers
+### Next.js and other development servers
 
-Start your application with its usual command. In that project, run:
+Put `needmark dev --` in front of the development command in `package.json`, as `init` does for Next.js:
+
+```json
+"scripts": { "dev": "needmark dev -- next dev" }
+```
+
+`pnpm dev` then serves the app with the toolbar on the port you always open: the port given to the command with `-p`/`--port` (removed from the command), otherwise `PORT`, otherwise 3000, or `--port` before `--`. NeedMark listens on `http://localhost:<port>` and starts the command with `PORT` set to a free port, so the server must read `PORT`, as Next.js and most Node servers do. Ctrl+C stops both, and the command's exit code is kept.
+
+For a server that does not read `PORT`, start it as usual and run the proxy next to it:
 
 ```sh
 pnpm exec needmark dev --target=http://localhost:3000 --origin=http://localhost:4190

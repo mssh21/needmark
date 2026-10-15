@@ -22,51 +22,21 @@ Requires Node.js 22.12 or newer. In your application project:
 
 ```sh
 pnpm add -D needmark   # npm install -D needmark / yarn add -D needmark
-pnpm exec needmark init --language=en
+pnpm exec needmark init
+pnpm dev               # your usual development command
 ```
 
-Examples use pnpm. With npm run the CLI as `npx needmark`, with Yarn as `yarn needmark`. Initialization output and agent prompts use the command that matches your project's lockfile.
+Open the app as usual; the NeedMark toolbar appears at the bottom of the page. Examples use pnpm. With npm run the CLI as `npx needmark`, with Yarn as `yarn needmark`.
 
-Initialization creates `needmark.config.ts` and targeted Git ignore rules. In a terminal, accept the recommended settings or choose each one from an explained list. Use `--language=ja` for Japanese; [all noninteractive flags](docs/getting-started.md#install-and-initialize) are documented in the guide.
+`init` shows recommended settings and, with your consent, connects NeedMark to the development server. It never touches application source or production builds:
 
-### Vite
+| Project | What `init` changes |
+| --- | --- |
+| Vite (React, Vue and others) | Adds `needmark()` to `plugins` in `vite.config.*` |
+| Astro | Adds `vite: { plugins: [needmark()] }` to `astro.config.*` |
+| Next.js | Starts the `dev` script through `needmark dev --`, which keeps your usual port and runs Next.js behind it |
 
-Add the plugin explicitly to your existing Vite configuration:
-
-```ts
-import { defineConfig } from 'vite';
-import { needmark } from 'needmark';
-
-export default defineConfig({
-  plugins: [needmark()],
-});
-```
-
-The plugin runs during development only and is absent from production builds and `vite preview`. Called without arguments, it loads `needmark.config.ts` from the directory where Vite runs. It works on `localhost`, `127.0.0.1` and `[::1]` without configuration; set `origins` only to review through another hostname, such as a LAN address or a tunnel.
-
-### Astro
-
-Astro runs on Vite, so add the plugin to the `vite` option and start `astro dev` as usual:
-
-```js
-// astro.config.mjs
-import { defineConfig } from 'astro/config';
-import { needmark } from 'needmark';
-
-export default defineConfig({
-  vite: { plugins: [needmark()] },
-});
-```
-
-### Next.js and other development servers
-
-Start your application normally, then run this in the same project:
-
-```sh
-pnpm exec needmark dev --target=http://localhost:3000
-```
-
-Open `http://localhost:4190`. The proxy adds the widget without changing application imports or builds. Target and review origin must be different loopback HTTP origins; [proxy setup and limits](docs/getting-started.md#nextjs-and-other-development-servers) explain the details.
+It also writes `needmark.config.ts` and targeted Git ignore rules. `NEEDMARK=off pnpm dev` starts without NeedMark for you; `enabled: false` in `needmark.config.ts` turns it off for everyone; `pnpm exec needmark remove` undoes the connection. Other servers and configs `init` cannot read are set up by hand as described in [Getting started](docs/getting-started.md#connect-the-development-server); [all noninteractive flags](docs/getting-started.md#install-and-initialize) are documented there too.
 
 ## Review, hand off, verify
 
