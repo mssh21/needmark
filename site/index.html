@@ -74,12 +74,11 @@
    Use --share=git instead only if I asked to share feedback through Git.
 5. Load NeedMark in the development server:
    - Vite (vite.config.*): add `import { needmark } from 'needmark';` and put `needmark()` in `plugins`, before any plugin that compiles JSX, such as @vitejs/plugin-react.
-   - Astro (astro.config.*): add `needmark()` to `vite.plugins`.
-   - Anything else, such as Next.js: change no files. NeedMark runs as a review proxy next to the app instead.
+   - Anything else, such as Next.js or Astro: change no files. NeedMark runs as a review proxy next to the app instead.
    Make no other changes. NeedMark never enters production builds.
 6. Run `&lt;needmark&gt; list` and check that it prints `[]`.
 7. If you can use MCP servers, ask me whether to register NeedMark so you can read feedback and its screenshots directly. Only if I agree, register it from this folder, for example `claude mcp add needmark -- &lt;needmark&gt; mcp` or `codex mcp add needmark -- &lt;needmark&gt; mcp`.
-8. Finish by telling me how to start reviewing. Vite or Astro: the usual dev command and URL. Anything else: start the app, run `&lt;needmark&gt; dev --target=http://localhost:&lt;app port&gt;`, then open http://localhost:4190.</pre>
+8. Finish by telling me how to start reviewing. Vite: the usual dev command and URL. Anything else: start the app, run `&lt;needmark&gt; dev --target=http://localhost:&lt;app port&gt;`, then open http://localhost:4190. If port 4190 is already in use, add `--origin=http://localhost:&lt;free port&gt;` and open that URL instead.</pre>
       </div>
     </section>
 
