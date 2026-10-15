@@ -234,6 +234,17 @@ test('nested iframe DOM capture preserves live pixels and private rectangles aft
   });
 });
 
+test('a scrolled page with smooth scrolling still captures its iframe with DOM capture', async ({ page }, testInfo) => {
+  await withReview(page, false, async (review) => {
+    await currentChild(page);
+    await page.evaluate(() => { document.documentElement.style.scrollBehavior = 'smooth'; scrollTo({ top: 80, behavior: 'instant' }); });
+    await expect.poll(() => page.evaluate(() => scrollY)).toBe(80);
+    await method(page, 'dom'); await select(page, review); const item = await save(page, review, 'なめらかなスクロールのページでも子画面を撮る');
+    await attach(testInfo, 'smooth-scroll-frame-saved', await readFile(`${review.output}/${item.id}/screenshot.png`), { saved: item });
+    expect(item.capture.method).toBe('dom'); expect(item.viewport.scrollY).toBe(80);
+  });
+});
+
 test('native tab PNG excludes review controls while preserving current child pixels and privacy masks', async ({ page, browserName }, testInfo) => {
   test.skip(browserName !== 'chromium', 'The automated native tab picker is supported by the Chromium launch configuration.');
   await withReview(page, false, async (review) => {
@@ -276,7 +287,7 @@ test('an inline frame keeps its current pixels between interleaved direct text a
 });
 
 
-test('an unrelated iframe added during real image acquisition rejects stale pixels and retains the typed comment for explicit image-free saving', async ({ page }, testInfo) => {
+test('an unrelated iframe added during real image acquisition rejects stale pixels and retains the typed comment for image-free saving', async ({ page }, testInfo) => {
   await withReview(page, false, async (review) => {
     const leaf = await currentChild(page); await method(page, 'dom');
     let release = () => {}, entered = () => {};
@@ -296,7 +307,7 @@ test('an unrelated iframe added during real image acquisition rejects stale pixe
       const input = page.getByLabel('コメント本文'); await input.fill(comment);
       await expect(page.getByRole('img', { name: 'コメントした場所のキャプチャ', exact: true })).toHaveCount(0);
       await expect(page.getByRole('button', { name: '保存', exact: true })).toBeDisabled();
-      await expect(page.getByRole('button', { name: '画像なしで保存する', exact: true })).toHaveCount(0);
+      await expect(page.getByText('画像を撮影できなかったため、画像なしで保存します。', { exact: true })).toHaveCount(0);
       expect(await leaf.locator('#held-real-resource').evaluate((image) => (image as HTMLImageElement).complete)).toBe(false);
       await page.evaluate((origin) => {
         const frame = document.createElement('iframe'); frame.id = 'unrelated-late-frame';
@@ -307,11 +318,10 @@ test('an unrelated iframe added during real image acquisition rejects stale pixe
       const newFrameState = await page.evaluate(() => ({ parentUrl: location.href, frames: Array.from(document.querySelectorAll('iframe')).map((frame) => ({ id: frame.id, url: frame.contentWindow!.location.href, privateNodes: frame.contentDocument!.querySelectorAll('input[type="password"],[data-needmark-redact]').length })) }));
       expect(newFrameState.frames.find((frame) => frame.id === 'unrelated-late-frame')?.privateNodes).toBe(0);
       release();
-      await expect(page.getByRole('button', { name: '画像なしで保存する', exact: true })).toBeVisible();
+      await expect(page.getByText('画像を撮影できなかったため、画像なしで保存します。', { exact: true })).toBeVisible();
       await expect(input).toHaveValue(comment); await expect(page.getByRole('img', { name: 'コメントした場所のキャプチャ', exact: true })).toHaveCount(0);
-      await expect(page.getByRole('button', { name: '保存', exact: true })).toBeDisabled();
+      await expect(page.getByRole('button', { name: '保存', exact: true })).toBeEnabled();
       await testInfo.attach('new-frame-during-capture', { body: JSON.stringify({ original, after: await originalChildState(page), newFrameState, rect, typedComment: await input.inputValue() }, null, 2), contentType: 'application/json' });
-      await page.getByRole('button', { name: '画像なしで保存する', exact: true }).click();
       const item = await save(page, review, comment);
       expect(item.capture).toEqual({ method: 'none', width: 0, height: 0 }); expect(item.image).toBeUndefined();
       expect(await readdir(`${review.output}/${item.id}`)).not.toContain('screenshot.png');

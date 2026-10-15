@@ -27,7 +27,7 @@ pnpm exec needmark init --language=ja
 
 例はpnpmで記載しています。npmでは`npx needmark`、Yarnでは`yarn needmark`でCLIを実行します。初期設定の案内とAIへの指示には、プロジェクトのロックファイルに合ったコマンドが入ります。
 
-初期設定で`needmark.config.ts`と用途に応じたGitの除外ルールを作成します。ターミナルではローカル・Git共有と撮影方法を選びます。英語にする場合は`--language=en`を指定します。[非対話実行の全フラグ](docs/getting-started.ja.md#インストールと初期設定)はガイドに記載しています。
+初期設定で`needmark.config.ts`と用途に応じたGitの除外ルールを作成します。ターミナルでは推奨設定をそのまま使うか、説明付きの一覧から項目ごとに選びます。英語にする場合は`--language=en`を指定します。[非対話実行の全フラグ](docs/getting-started.ja.md#インストールと初期設定)はガイドに記載しています。
 
 ### Vite
 
@@ -43,6 +43,20 @@ export default defineConfig({
 ```
 
 プラグインは開発時だけ動作し、本番ビルドと`vite preview`には入りません。引数なしで呼ぶと、Viteを起動したディレクトリの`needmark.config.ts`を読み込みます。`localhost`、`127.0.0.1`、`[::1]`では設定なしで動作します。LANのアドレスやトンネルなど別のホスト名でレビューする場合だけ`origins`を指定します。
+
+### Astro
+
+AstroはViteで動くため、`vite`オプションにプラグインを追加し、いつもどおり`astro dev`を実行します。
+
+```js
+// astro.config.mjs
+import { defineConfig } from 'astro/config';
+import { needmark } from 'needmark';
+
+export default defineConfig({
+  vite: { plugins: [needmark()] },
+});
+```
 
 ### Next.jsなどの開発サーバー
 

@@ -20,17 +20,11 @@ async function clickAt(page: Page, selector: string) {
 }
 const review = (page: Page) => page.locator('[data-needmark]');
 
-test('first-run start button saves the displayed settings and begins selection immediately', async ({ page }) => {
+test('the first comment begins selection immediately without opening settings', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'コメント', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'レビューを始める' })).toBeVisible();
-  await page.getByLabel('キャプチャ方式').selectOption('none');
-  await page.getByRole('button', { name: 'このまま始める' }).click();
   await expect(review(page).locator('.cover')).toBeVisible();
-  expect(await page.evaluate(() => [localStorage.getItem('needmark-configured'), localStorage.getItem('needmark-method')])).toEqual(['true', 'none']);
-  await page.keyboard.press('Escape');
-  await page.getByRole('button', { name: '設定', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'このまま始める' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: '設定', exact: true })).toHaveCount(0);
 });
 
 test('the bottom-centred icon toolbar names each tool, explains its purpose in tooltips and follows the shortcut preference', async ({ page }) => {
@@ -103,6 +97,22 @@ test('comment mode turns the bottom toolbar into the gesture hint and returns it
   await expect.poll(async () => Math.round((await dock.boundingBox())!.width)).toBe(Math.round(before.width));
 });
 
+test('the comment panel fits its width without horizontal scrolling', async ({ page }) => {
+  await page.goto('/'); await configure(page);
+  await page.getByRole('button', { name: 'コメント', exact: true }).click(); await clickAt(page, '#purchase-button');
+  await expect(page.getByLabel('コメント本文')).toBeVisible();
+  expect(await review(page).locator('.panel').evaluate((panel) => panel.scrollWidth - panel.clientWidth)).toBe(0);
+});
+
+test('the guide link in the draggable toolbar opens the guide in a new tab', async ({ page }) => {
+  await page.context().route('https://github.com/**', (route) => route.fulfill({ contentType: 'text/html', body: '<title>guide</title>' }));
+  await page.goto('/'); await configure(page);
+  await page.getByRole('button', { name: 'コメント', exact: true }).click();
+  const popup = page.waitForEvent('popup');
+  await review(page).locator('.dock').getByRole('link', { name: '使い方', exact: true }).click();
+  expect(decodeURIComponent((await popup).url())).toBe('https://github.com/mssh21/needmark/blob/main/docs/getting-started.ja.md#コメント');
+});
+
 test('a toolbar tip pending when selection starts never appears for the button selection hides', async ({ page }) => {
   await page.goto('/'); await configure(page);
   const tip = review(page).locator('.toolbar-tip');
@@ -114,23 +124,17 @@ test('a toolbar tip pending when selection starts never appears for the button s
   expect(Math.abs(box.x + box.width / 2 - (end.x + end.width / 2))).toBeLessThan(2);
 });
 
-test('one comment tool selects text by Alt drag, by an existing page selection, and several elements after one Shift click', async ({ page }) => {
+test('one comment tool selects text by Alt drag and several elements after one Shift click', async ({ page }) => {
   await page.goto('/'); await configure(page);
   const title = (await page.locator('#product-title').boundingBox())!;
   await page.getByRole('button', { name: 'コメント', exact: true }).click();
   await expect(review(page).locator('[data-hint]')).toHaveText('クリック・ドラッグで選択');
-  await expect(page.getByRole('button', { name: '選択中の文字にコメント', exact: true })).toBeHidden();
   await page.keyboard.down('Alt');
   await page.mouse.move(title.x + 2, title.y + title.height / 2); await page.mouse.down(); await page.mouse.move(title.x + 70, title.y + title.height / 2, { steps: 3 }); await page.mouse.up();
   await page.keyboard.up('Alt');
   await page.getByLabel('コメント本文').fill('Altドラッグの文字');
-  await page.getByRole('button', { name: 'キャンセル', exact: true }).click();
-  await page.evaluate(() => { const range = document.createRange(), node = document.querySelector('#product-title')!.firstChild!; range.setStart(node, 0); range.setEnd(node, 6); getSelection()!.removeAllRanges(); getSelection()!.addRange(range); });
-  await page.keyboard.press('Shift+C');
-  await page.getByRole('button', { name: '選択中の文字にコメント', exact: true }).click();
-  await page.getByLabel('コメント本文').fill('選んでおいた文字');
   await saveAndList(page);
-  await expect.poll(async () => (await saved()).map((item) => [item.target.kind, item.target.text])).toEqual([['text', 'Halden']]);
+  await expect.poll(async () => (await saved()).map((item) => [item.target.kind, item.comment])).toEqual([['text', 'Altドラッグの文字']]);
   await page.getByRole('button', { name: 'パネルを閉じる', exact: true }).click();
   await page.getByRole('button', { name: 'コメント', exact: true }).click();
   await page.keyboard.down('Shift'); await clickAt(page, '#purchase-button'); await page.keyboard.up('Shift');

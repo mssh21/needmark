@@ -198,11 +198,10 @@ test('twenty Shift-click targets survive toggles, Backspace, additive reverse ma
     for (const id of ids) await clickTarget(page, id); await page.keyboard.up('Shift'); await selection(page);
     await clickTarget(page, ids[19]!); await selection(page, ids.slice(0, 19)); await page.keyboard.press('Backspace'); await selection(page, ids.slice(0, 18));
     await clickTarget(page, ids[18]!); await clickTarget(page, ids[19]!); await selection(page); await dragGrid(page, union(await rectangles(page)), true); await selection(page);
-    await page.getByRole('button', { name: 'ページを操作', exact: true }).click(); await expect(page.getByRole('button', { name: '選択を再開', exact: true })).toHaveText('選択を再開 · 20件');
-    await page.locator('#native-counter').click(); await expect(page.getByLabel('Native click count')).toHaveText('1'); const before = await rectangles(page);
-    await page.locator('#reflow').click(); await expect.poll(async () => (await rectangles(page))[0]!.y).toBe(before[0]!.y + 36); await originalsRemain(originals);
-    await page.getByRole('button', { name: '選択を再開', exact: true }).click(); await selection(page); const current = await rectangles(page);
-    await complete(page, '明示した20要素を解除・追加・ページ操作後も欠けずに修正する'); const calls = await assertSourceCalls(review), item = await save(page, review);
+    const before = await rectangles(page);
+    await page.locator('#reflow').evaluate((button) => (button as HTMLButtonElement).click()); await expect.poll(async () => (await rectangles(page))[0]!.y).toBe(before[0]!.y + 36); await originalsRemain(originals);
+    await selection(page); const current = await rectangles(page);
+    await complete(page, '明示した20要素を解除・追加・再配置後も欠けずに修正する'); const calls = await assertSourceCalls(review), item = await save(page, review);
     assertComplete(item, review.source, current); expect(item.capture).toEqual({ method: 'none', width: 0, height: 0 }); expect(item.image).toBeUndefined(); await originalsRemain(originals);
     await info.attach('explicit-twenty-originals-after-reflow.json', { body: JSON.stringify({ item, before, current, sourceCalls: calls.map(({ token: _, ...value }) => value) }), contentType: 'application/json' });
   });

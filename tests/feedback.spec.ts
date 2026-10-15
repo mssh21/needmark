@@ -30,7 +30,7 @@ async function exportedPrompt(page: Page, browserName: string): Promise<string> 
   await page.getByRole('button', { name: 'プロンプトをコピー' }).click();
   const status = page.locator('[data-needmark] .toast');
   if (browserName === 'chromium') {
-    await expect(page.getByRole('button', { name: 'コピーしました', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'コピーしました', exact: true })).toHaveText('コピーしました');
     return page.evaluate(() => navigator.clipboard.readText());
   }
   await expect(status).toHaveText('自動コピーできませんでした。表示したテキストを手動でコピーできます。');

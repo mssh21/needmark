@@ -381,7 +381,7 @@ test('a normal area review over iframe padding never attributes a wholly unpaint
       await page.mouse.move(area.x, area.y); await page.mouse.down(); await page.mouse.move(area.x + area.width, area.y + area.height, { steps: 4 }); await page.mouse.up();
       const comment = 'iframeの余白だけを囲んだコメントに、画面へ描画されていない子要素を含めない';
       await page.getByLabel('コメント本文').fill(comment);
-      await expect.poll(async () => ({ image: await page.getByRole('img', { name: 'コメントした場所のキャプチャ', exact: true }).isVisible(), failed: await page.getByRole('button', { name: '画像なしで保存する', exact: true }).isVisible() })).not.toEqual({ image: false, failed: false });
+      await expect.poll(async () => ({ image: await page.getByRole('img', { name: 'コメントした場所のキャプチャ', exact: true }).isVisible(), failed: await page.getByText('画像を撮影できなかったため、画像なしで保存します。', { exact: true }).isVisible() })).not.toEqual({ image: false, failed: false });
       const captureState = await page.locator('[data-capture-state]').textContent();
       await expect(page.locator('[data-source-state]')).not.toHaveText('対象のコードを確認中…');
       const calls = await Promise.all(sourceCalls);

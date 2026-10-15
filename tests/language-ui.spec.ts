@@ -28,22 +28,20 @@ async function configurePageLanguage(page: Page, configured: string, preference?
   await page.goto('/');
 }
 
-test('first setup switches all feedback operations to English while saved Japanese content survives a switch back', async ({ page }) => {
+test('switching settings to English switches all feedback operations while saved Japanese content survives a switch back', async ({ page }) => {
   await page.addInitScript(() => {
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
       writeText: async (text: string) => { (window as unknown as { copiedLocalePrompt: string }).copiedLocalePrompt = text; },
     } });
   });
-  // The first-run panel has no author field, so a stored author must survive saving it.
-  await page.addInitScript((value) => { if (!localStorage.getItem('needmark-author')) localStorage.setItem('needmark-author', value); }, author);
   await page.goto('/');
-  await page.getByRole('button', { name: 'コメント', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'レビューを始める' })).toBeVisible();
+  await page.getByRole('button', { name: '設定', exact: true }).click();
   await page.getByLabel('表示言語').selectOption('en');
-  await expect(page.getByLabel('投稿者名')).toHaveCount(0);
+  await page.getByLabel('投稿者名').fill(author);
   await page.getByLabel('キャプチャ方式').selectOption('none');
   await page.getByRole('button', { name: '設定を保存', exact: true }).click();
   await expect(widget(page)).toHaveAttribute('lang', 'en');
+  await page.getByRole('button', { name: 'Comment', exact: true }).click();
   await expect(widget(page).locator('.cover')).toBeVisible();
   await expect(widget(page).locator('[data-hint]')).toHaveText('Click or drag to select');
   const bounds = (await page.locator('#purchase-button').boundingBox())!;
@@ -111,8 +109,8 @@ for (const { configured, preference, language } of [
   test(`language precedence: configuration ${configured}, preference ${preference} uses ${language}`, async ({ page }) => {
     await configurePageLanguage(page, configured, preference);
     await expect(widget(page)).toHaveAttribute('lang', language);
-    await page.getByRole('button', { name: language === 'en' ? 'Comment' : 'コメント', exact: true }).click();
-    await expect(page.getByRole('heading', { name: language === 'en' ? 'Start review' : 'レビューを始める', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: language === 'en' ? 'Settings' : '設定', exact: true }).click();
+    await expect(page.getByRole('heading', { name: language === 'en' ? 'Settings' : '設定', exact: true })).toBeVisible();
     await expect(widget(page).locator('#nm-language')).toHaveValue(language);
   });
 }

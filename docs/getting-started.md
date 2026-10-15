@@ -15,7 +15,7 @@ pnpm exec needmark init
 
 This guide writes CLI commands for pnpm. With npm use `npx needmark`, with Yarn (classic or Plug'n'Play) `yarn needmark`, for example `npx needmark init`. Initialization output and agent prompts use the command that matches your project's lockfile ([package managers](architecture.md#package-managers)).
 
-A terminal first asks for English or Japanese, then asks for local/Git sharing and DOM/tab/no image in that language. Supply all choices as flags for a noninteractive invocation:
+In a terminal, setup is in English. It first shows recommended settings (the review screen in your terminal's language, feedback kept on this computer, screenshots redrawn from the page) and asks whether to use them. Answer `n` to choose each item from a numbered list that explains it. Choices given as flags are not asked again. Supply all choices as flags for a noninteractive invocation:
 
 ```sh
 pnpm exec needmark init --share=local --capture=dom --language=en
@@ -71,7 +71,23 @@ export default defineConfig({
 
 Without arguments, the plugin loads `needmark.config.ts` from the current working directory when the development server starts, the same file the CLI reads. Passing settings, as in `needmark(settings)` or `needmark({ outputDir: 'reviews' })`, uses only those settings and skips the file.
 
-Run your usual Vite development command and open it on `localhost`, `127.0.0.1` or `[::1]`, or on a configured origin. The plugin uses Vite's HTML transformation and runs only in development serve, excluding `vite preview` and production builds. It annotates local `.jsx`/`.tsx` native tags and entry HTML; other template/SSR/generated-source mapping is not universal. The widget mounts only in the top document. Accessible same-origin children can be selected from their parent; opening a child directly creates its own toolbar.
+Run your usual Vite development command and open it on `localhost`, `127.0.0.1` or `[::1]`, or on a configured origin. The plugin uses Vite's HTML transformation, appends the widget to HTML that a framework renders without it, and runs only in development serve, excluding `vite preview` and production builds. It annotates local `.jsx`/`.tsx` native tags and entry HTML; other template/SSR/generated-source mapping is not universal. The widget mounts only in the top document. Accessible same-origin children can be selected from their parent; opening a child directly creates its own toolbar.
+
+## Astro
+
+Astro runs on Vite, so add the same plugin to the `vite` option and run `astro dev` as usual:
+
+```js
+// astro.config.mjs
+import { defineConfig } from 'astro/config';
+import { needmark } from 'needmark';
+
+export default defineConfig({
+  vite: { plugins: [needmark()] },
+});
+```
+
+Astro renders pages without Vite's HTML transformation, so the plugin appends the widget script to the end of each HTML response instead. Source positions are not added to `.astro` templates; feedback keeps the DOM context and file hints.
 
 ## Next.js and other development servers
 
@@ -111,13 +127,12 @@ The toolbar sits at the bottom centre of the page; drag it from anywhere, includ
 | Ctrl/Cmd+click | The element underneath an overlay |
 | Alt/Option+drag | Part of the text, for typos and wording |
 
-Multiple selection starts with Shift+click or Shift+drag; after that, plain clicks add or remove targets and the hint shows the count with **Finish selection** and **Interact with page**. If you select text on the page first and then press **Comment**, the hint offers **Comment on selected text** to comment on exactly that text.
+Multiple selection starts with Shift+click or Shift+drag; after that, plain clicks add or remove targets and the hint shows the count with **Finish selection**.
 
 Hover before clicking to preview the target’s outline, tag and best-effort name, plus a component when local metadata provides one. Pressing or releasing Ctrl/Cmd updates the covered-target preview even with the pointer still. Names use bounded label, text and ID hints rather than a complete accessibility-name calculation. The preview reads no form values and makes no source lookup requests. Observed page/root changes, scrolling, resizing and a new gesture clear it; the review host keeps it out of saved images. See [preview behavior and limits](architecture.md#review-interaction).
 
 - Ctrl/Cmd+click searches below the frontmost independent branch, passing additional empty containers or invisible covers to prefer content or controls. If only empty visual targets remain, it chooses the smallest visible one. A lower hit inside the frontmost open shadow root or accessible same-origin frame takes precedence over an outer branch. It keeps the frontmost target if no lower branch exists and never hides application overlays. Releasing the modifier does not finish selection; use Enter or the completion button.
 - In a multiple selection every selected original keeps its context and numbered outline. Escape cancels an active drag first while retaining earlier selections, then ends selection. A bounded marquee search reports incomplete discovery; clicks and later drags can add targets.
-- **Interact with page** during a multiple selection lets you use the application and resume selection. Changed or removed targets are excluded with a notice; changing the exact page URL ends retained selection.
 
 ### Write the comment
 
@@ -125,7 +140,7 @@ The comment panel shows the capture, then a **Category** choice above the commen
 
 **Save** (Ctrl/Cmd+Enter in the comment field) saves without opening the list and immediately starts selecting the next target; press Esc or the end button to stop, and open the list from the toolbar. While you type, a dashed outline marks the selected target; scrolling the page removes it. The capture appears between the heading and the comment field (click it to enlarge), and the source location for the agent sits below the form as a collapsed line.
 
-The first **Comment** opens settings. **Start with these settings** at the top saves the displayed values and starts selecting right away. Set an author name later in **Settings** when several people review the same files.
+**Comment** starts selecting right away, using `needmark.config.ts` and any values saved in **Settings**. Set an author name in **Settings** when several people review the same files.
 
 ### Keyboard shortcuts
 
@@ -148,7 +163,7 @@ Target references (items saved without a comment by earlier versions) still load
 | --- | --- |
 | `dom` | No sharing permission. Renders the current DOM, including accessible same-origin frames; unsupported CSS, video and cross-origin content can differ from visible pixels. |
 | `tab` | Requires sharing the current tab. Window/monitor sources are rejected; an active stream is reused until stopped or page exit. Choose the current tab when the browser cannot verify it. |
-| `none` | Saves comment and target context without an image. Capture failure offers this explicit continuation and preserves typed text. |
+| `none` | Saves comment and target context without an image. When capture fails, the comment switches to this mode and keeps the typed text, so you can save it as usual. |
 
 Saved pixels mask password fields and `data-needmark-redact` regions; `data-needback-redact` remains recognized. Mark a cross-origin iframe or closed shadow host itself to mask its interior. Masks do not alter the browser's live sharing stream. Changed targets, routes, viewport/frame geometry or sensitive regions can reject an in-flight capture. An accepted image retains its acquisition geometry; no audio/video recording is included. Inspect images in the zoom/pan viewer. [Capture details](architecture.md#capture) explain the full stability and rendering limits.
 
@@ -156,7 +171,7 @@ Saved pixels mask password fields and `data-needmark-redact` regions; `data-need
 
 Each feedback UUID folder contains `comment.md`, `context.json` and an optional `screenshot.png`. New projects use `.needmark/feedback`; demo files use `demo/.needmark/feedback`. JSON is the status source of truth. Target references use `intent: "reference"` and an empty comment. Upgrade all readers of a shared directory before adding references: older NeedMark versions reject their empty comments and may fail a mixed listing. The idle UI refreshes after CLI/Git changes without discarding active edits.
 
-The list header holds **Copy prompt** (an AI sparkle icon), search, filter and ⋮ icons. Search turns the header into a **Search by keyword** field, keeping the copy icon beside it; Esc or its close button clears it. The filter menu offers **This page only** (the same page as the pins, whichever loopback address you opened) and **Show resolved**, which can be combined; resolved items are hidden by default. The ⋮ menu has **Resolve all** and **Delete all**, which act on the items currently shown; deleting asks for confirmation inside the same panel and reports partial failures. **Copy prompt** copies the shown open repair requests (its tooltip gives the count, and the icon briefly turns into a check mark); copy one item from details instead. Each card shows the author (or *Guest*) on one line, how long ago it was posted, and the category tag above up to two lines of the comment, as in details, followed by the path of the page it was left on. The check icon next to the author resolves or reopens the item; an item resolved there stays in the list until the list is opened again. Open a card for its details. A card from another page first goes to that page, then shows its details and target there. Compact/standard/detailed/forensic control inline context; standard is the default and complete evidence remains in files. Source evidence distinguishes verified positions, ancestor hints and file candidates; check it against current code and the image. The copy button briefly changes to **Copied**; clipboard failures show a toast and offer manual inline copying. Notifications always appear as a toast at the bottom centre, and results the UI already shows, such as deletions or saved replies, are not announced.
+The list header holds **Copy prompt** (an AI sparkle icon), search, filter and ⋮ icons. Search turns the header into a **Search by keyword** field, keeping the copy icon beside it; Esc or its close button clears it. The filter menu offers **This page only** (the same page as the pins, whichever loopback address you opened) and **Show resolved**, which can be combined; resolved items are hidden by default. The ⋮ menu has **Resolve all** and **Delete all**, which act on the items currently shown; deleting asks for confirmation inside the same panel and reports partial failures. **Copy prompt** copies the shown open repair requests (its tooltip gives the count, and after copying it briefly shows a check mark and **Copied**); copy one item from details instead. Each card shows the author (or *Guest*) on one line, how long ago it was posted, and the category tag above up to two lines of the comment, as in details, followed by the path of the page it was left on. The check icon next to the author resolves or reopens the item; an item resolved there stays in the list until the list is opened again. Open a card for its details. A card from another page first goes to that page, then shows its details and target there. Compact/standard/detailed/forensic control inline context; standard is the default and complete evidence remains in files. Source evidence distinguishes verified positions, ancestor hints and file candidates; check it against current code and the image. The copy button briefly changes to **Copied**; clipboard failures show a toast and offer manual inline copying. Notifications always appear as a toast at the bottom centre, and results the UI already shows, such as deletions or saved replies, are not announced.
 
 ```sh
 pnpm exec needmark list
