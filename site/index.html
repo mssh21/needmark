@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NeedMark</title>
+  <meta name="description" content="Point at your UI, leave a comment, and hand it to any coding agent. Local-first visual feedback with context and screenshots.">
+  <link rel="alternate" hreflang="ja" href="ja/">
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 3a11 11 0 0 0-11 11v15l11-4a11 11 0 0 0 0-22z' fill='%231965e3'/%3E%3C/svg%3E">
+</head>
+<body>
+  <header class="top">
+    <a class="wordmark" href="./">NeedMark</a>
+    <nav>
+      <a class="optional" href="https://github.com/mssh21/needmark/blob/main/docs/getting-started.md">Docs</a>
+      <a class="optional" href="https://www.npmjs.com/package/needmark">npm</a>
+      <a href="https://github.com/mssh21/needmark">GitHub</a>
+      <a href="ja/" hreflang="ja" lang="ja">日本語</a>
+    </nav>
+  </header>
+
+  <main>
+    <div class="hero">
+      <h1>NeedMark</h1>
+      <p class="lead">Point at your UI, leave a comment, and hand it to any coding agent.</p>
+      <div class="actions">
+        <button class="button primary" type="button" data-copy="setup-prompt" data-copied="Copied">
+          <span class="label">Copy setup prompt</span>
+        </button>
+        <a class="button" href="https://github.com/mssh21/needmark">GitHub</a>
+      </div>
+      <p class="facts">MIT · Node.js 22.12+ · No account, no AI lock-in · Development only</p>
+    </div>
+
+    <div class="mock" aria-hidden="true">
+      <div class="mock-bar"><i></i><i></i><i></i><span>localhost:5173</span></div>
+      <div class="mock-page">
+        <div class="mock-card"></div>
+        <div class="mock-card target"><span class="pin" style="top:-11px;right:-11px">1</span></div>
+        <div class="mock-card"></div>
+        <div class="mock-wide"></div>
+        <span class="pin extra" style="top:122px;right:56px">2</span>
+        <div class="note">
+          <b>Fix</b>
+          <p>The total is hard to spot. Make the number larger than the label.</p>
+        </div>
+        <div class="toolbar">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M8 3v10M3 8h10"/></svg>
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8z"/><circle cx="8" cy="8" r="2"/></svg>
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="6"/><path d="M6.5 5.5v5M9.5 5.5v5"/></svg>
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2.5 4h11M2.5 8h7M2.5 12h4"/></svg>
+          <span class="count">2</span>
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <section id="setup">
+      <h2>Set up with your agent</h2>
+      <p>Paste this prompt into the coding agent that works in your project, such as Claude Code, Codex or Cursor. It installs NeedMark, creates <code>needmark.config.ts</code>, connects your development server and tells you how to start reviewing.</p>
+      <div class="code prompt">
+        <div class="prompt-head">
+          <span>Setup prompt</span>
+          <button class="button" type="button" data-copy="setup-prompt" data-copied="Copied"><span class="label">Copy</span></button>
+        </div>
+<pre id="setup-prompt">Set up NeedMark (https://github.com/mssh21/needmark) in this project. NeedMark is a development-only tool: I point at the UI in the browser and leave comments, which are saved as local files for a coding agent.
+
+1. Run `node -v`. NeedMark needs Node.js 22.12 or newer; if it is older, stop and tell me.
+2. Work in the app that has the development server (in a monorepo, that package's folder). Pick the package manager from the nearest lockfile: pnpm-lock.yaml → pnpm, yarn.lock → Yarn, package-lock.json or none → npm. The NeedMark command is then `pnpm exec needmark`, `yarn needmark` or `npx needmark`; below it is written as &lt;needmark&gt;.
+3. Install it as a dev dependency: `pnpm add -D needmark`, `yarn add -D needmark` or `npm install -D needmark`.
+4. If needmark.config.ts does not exist yet, initialize without questions:
+   &lt;needmark&gt; init --language=en --share=local --capture=dom
+   Use --share=git instead only if I asked to share feedback through Git.
+5. Load NeedMark in the development server:
+   - Vite (vite.config.*): add `import { needmark } from 'needmark';` and put `needmark()` in `plugins`, before any plugin that compiles JSX, such as @vitejs/plugin-react.
+   - Astro (astro.config.*): add `needmark()` to `vite.plugins`.
+   - Anything else, such as Next.js: change no files. NeedMark runs as a review proxy next to the app instead.
+   Make no other changes. NeedMark never enters production builds.
+6. Run `&lt;needmark&gt; list` and check that it prints `[]`.
+7. If you can use MCP servers, ask me whether to register NeedMark so you can read feedback and its screenshots directly. Only if I agree, register it from this folder, for example `claude mcp add needmark -- &lt;needmark&gt; mcp` or `codex mcp add needmark -- &lt;needmark&gt; mcp`.
+8. Finish by telling me how to start reviewing. Vite or Astro: the usual dev command and URL. Anything else: start the app, run `&lt;needmark&gt; dev --target=http://localhost:&lt;app port&gt;`, then open http://localhost:4190.</pre>
+      </div>
+    </section>
+
+    <section id="install">
+      <h2>Manual installation</h2>
+      <p>Requires Node.js 22.12 or newer. In your application project:</p>
+      <div class="code">
+        <div class="tabs" role="tablist">
+          <button type="button" role="tab" data-tab="pnpm" aria-selected="true">pnpm</button>
+          <button type="button" role="tab" data-tab="npm" aria-selected="false">npm</button>
+          <button type="button" role="tab" data-tab="yarn" aria-selected="false">Yarn</button>
+        </div>
+        <div data-panel="pnpm"><pre>pnpm add -D needmark
+pnpm exec needmark init</pre></div>
+        <div data-panel="npm" hidden><pre>npm install -D needmark
+npx needmark init</pre></div>
+        <div data-panel="yarn" hidden><pre>yarn add -D needmark
+yarn needmark init</pre></div>
+        <button class="copy" type="button" aria-label="Copy"><svg class="idle" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="5" y="5" width="8.5" height="8.5" rx="1.5"/><path d="M10.5 5V3.5A1 1 0 0 0 9.5 2.5h-6a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1H5"/></svg><svg class="done" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8.5l3 3 7-7"/></svg></button>
+      </div>
+      <p><code>init</code> asks for the review language, where to keep feedback and how to take screenshots, then writes <code>needmark.config.ts</code> and targeted Git ignore rules.</p>
+
+      <h3>Vite</h3>
+      <p>Add the plugin to your existing configuration. It runs only in the development server and is absent from production builds.</p>
+      <div class="code">
+<pre>import { defineConfig } from 'vite';
+import { needmark } from 'needmark';
+
+export default defineConfig({
+  plugins: [needmark()],
+});</pre>
+        <button class="copy" type="button" aria-label="Copy"><svg class="idle" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="5" y="5" width="8.5" height="8.5" rx="1.5"/><path d="M10.5 5V3.5A1 1 0 0 0 9.5 2.5h-6a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1H5"/></svg><svg class="done" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8.5l3 3 7-7"/></svg></button>
+      </div>
+      <p>With Astro, add <code>needmark()</code> to <code>vite.plugins</code> in <code>astro.config.mjs</code>.</p>
+
+      <h3>Next.js and other development servers</h3>
+      <p>Start your app as usual, then run the review proxy and open <code>http://localhost:4190</code>. Your imports and builds stay unchanged.</p>
+      <div class="code">
+        <div class="tabs" role="tablist">
+          <button type="button" role="tab" data-tab="pnpm" aria-selected="true">pnpm</button>
+          <button type="button" role="tab" data-tab="npm" aria-selected="false">npm</button>
+          <button type="button" role="tab" data-tab="yarn" aria-selected="false">Yarn</button>
+        </div>
+        <div data-panel="pnpm"><pre>pnpm exec needmark dev --target=http://localhost:3000</pre></div>
+        <div data-panel="npm" hidden><pre>npx needmark dev --target=http://localhost:3000</pre></div>
+        <div data-panel="yarn" hidden><pre>yarn needmark dev --target=http://localhost:3000</pre></div>
+        <button class="copy" type="button" aria-label="Copy"><svg class="idle" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="5" y="5" width="8.5" height="8.5" rx="1.5"/><path d="M10.5 5V3.5A1 1 0 0 0 9.5 2.5h-6a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1H5"/></svg><svg class="done" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8.5l3 3 7-7"/></svg></button>
+      </div>
+    </section>
+
+    <section id="usage">
+      <h2>How you use it</h2>
+      <ol class="steps">
+        <li>Open your app in the development server and press <b>Comment</b> (+) in the toolbar, or <code>Shift</code>+<code>C</code>.</li>
+        <li>Click an element or drag an area. Shift+click selects several elements; Alt/Option+drag selects part of the text.</li>
+        <li>Write the comment, choose <b>Fix</b>, <b>Discuss</b> or <b>Question</b>, and save it with a screenshot or without one.</li>
+        <li>Open <b>Comments</b>, press <b>Copy prompt</b> and paste it into your agent.</li>
+        <li>The agent fixes the code and replies with how it checked the change. Check it yourself, then mark the comment resolved.</li>
+      </ol>
+    </section>
+
+    <section id="files">
+      <h2>What gets saved</h2>
+      <p>Every comment becomes a folder in your project, so any agent with access to the files can read it, and you can keep it local or share it through Git.</p>
+      <div class="code">
+<pre>.needmark/feedback/&lt;id&gt;/
+  comment.md       the comment, page and target
+  context.json     selector, component and source location
+  screenshot.png   optional, with passwords masked</pre>
+      </div>
+    </section>
+
+    <section id="mcp">
+      <h2>Let your agent read it directly</h2>
+      <p>Agents that support MCP, such as Claude Code, Codex and Gemini CLI, can list feedback, see its screenshot, reply, resolve and wait for new comments through <code>needmark mcp</code>. It needs no extra server or account and opens no network port.</p>
+      <div class="code">
+<div class="tabs" role="tablist">
+          <button type="button" role="tab" data-tab="pnpm" aria-selected="true">pnpm</button>
+          <button type="button" role="tab" data-tab="npm" aria-selected="false">npm</button>
+          <button type="button" role="tab" data-tab="yarn" aria-selected="false">Yarn</button>
+        </div>
+        <div data-panel="pnpm"><pre># Claude Code
+claude mcp add needmark -- pnpm exec needmark mcp
+# Codex
+codex mcp add needmark -- pnpm exec needmark mcp</pre></div>
+        <div data-panel="npm" hidden><pre># Claude Code
+claude mcp add needmark -- npx needmark mcp
+# Codex
+codex mcp add needmark -- npx needmark mcp</pre></div>
+        <div data-panel="yarn" hidden><pre># Claude Code
+claude mcp add needmark -- yarn needmark mcp
+# Codex
+codex mcp add needmark -- yarn needmark mcp</pre></div>
+        <button class="copy" type="button" aria-label="Copy"><svg class="idle" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="5" y="5" width="8.5" height="8.5" rx="1.5"/><path d="M10.5 5V3.5A1 1 0 0 0 9.5 2.5h-6a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1H5"/></svg><svg class="done" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8.5l3 3 7-7"/></svg></button>
+      </div>
+      <p>Without MCP, the CLI does the same: <code>needmark export</code>, <code>watch</code>, <code>reply</code> and <code>resolve</code>.</p>
+    </section>
+
+    <section id="docs">
+      <h2>Documentation</h2>
+      <div class="links">
+        <a href="https://github.com/mssh21/needmark/blob/main/docs/getting-started.md">Getting started</a>
+        <a href="https://github.com/mssh21/needmark/blob/main/docs/getting-started.md#capture-and-privacy">Capture and privacy</a>
+        <a href="https://github.com/mssh21/needmark/blob/main/docs/getting-started.md#connect-an-ai-agent">Connect an AI agent</a>
+        <a href="https://github.com/mssh21/needmark/blob/main/docs/architecture.md">Architecture</a>
+      </div>
+    </section>
+  </main>
+
+  <footer>MIT License · Made by <a href="https://github.com/mssh21">mssh21</a></footer>
+  <script src="site.js"></script>
+</body>
+</html>
