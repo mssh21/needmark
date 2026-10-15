@@ -62,7 +62,7 @@ Tag a test only when its outcome depends on engine behaviour: rendering and DOM/
 ### Large (Playwright)
 
 - Import `test` and `expect` from [`tests/support/review.ts`](../tests/support/review.ts), not from `@playwright/test`. Its automatic fixture empties the shared feedback folder before every test.
-- Use the helpers there instead of repeating setup: `configureReview` (settings through the panel), `enableWidgetOption` (submission or runtime source lookup on the served page), `saveAndList`, `searchList`, `toggleFilter`, and `output` / `tempRoot` for paths. Add a helper only when at least two specs need the same setup and it is not the behaviour under test.
+- Use the helpers there instead of repeating setup: `configureReview` (settings through the panel), `enableWidgetOption` (submission or runtime source lookup on the served page), `saveAndList`, `searchList`, `toggleFilter`, `output` / `tempRoot` for paths, and `tabColorTolerance` for colours read from a native tab capture, whose video conversion is lossier on Linux than on macOS. Add a helper only when at least two specs need the same setup and it is not the behaviour under test.
 - Locate elements by role, label and text first; fall back to `[data-needmark] .class` selectors only for internals with no accessible handle (pins, outlines, previews).
 - Fixed-content fixtures that a spec needs beyond the demo live in `tests/fixtures/`.
 
@@ -75,11 +75,11 @@ pnpm test        # Vitest small and medium tests
 pnpm test:e2e    # Playwright: every spec in headed Chromium, @cross-engine tests in WebKit
 ```
 
-Install the browser engines once with `pnpm exec playwright install chromium webkit`.
+Install the browser engines once with `pnpm exec playwright install chromium webkit`. On Linux, add `--with-deps` and run E2E under a virtual display, `xvfb-run --auto-servernum pnpm test:e2e`, because Chromium runs headed.
 
-While working, run what the change touches: `pnpm test src/server/storage.test.ts`, `pnpm test:e2e tests/review-ux.spec.ts`, a single test with `-g "<title>"`, or one engine with `--project=chromium`. Rebuild with `pnpm build` before E2E after changing `src/`. Before committing or opening a pull request, all four commands must pass. CI runs `build`, `typecheck` and `test` on Node 22 and 24; E2E runs locally because it needs headed Chromium with tab-capture flags.
+While working, run what the change touches: `pnpm test src/server/storage.test.ts`, `pnpm test:e2e tests/review-ux.spec.ts`, a single test with `-g "<title>"`, or one engine with `--project=chromium`. Rebuild with `pnpm build` before E2E after changing `src/`. Before committing or opening a pull request, all four commands must pass. CI (`.github/workflows/ci.yml`) runs `build`, `typecheck` and `test` on Node 22 and 24, and the full E2E suite on Node 24 on Ubuntu under `xvfb-run`; when E2E fails, the traces in `test-results/` are uploaded as the `playwright-traces` artifact.
 
-E2E specs run sequentially against one demo server on port 4192 that writes to `needmark-e2e-feedback` in the temporary directory (`/private/tmp` on macOS). Specs that need a proxy start their own on other ports.
+E2E specs run sequentially against one demo server on port 4192 that writes to `needmark-e2e-feedback` in the temporary directory (`/private/tmp` on macOS). Specs that need a proxy start their own on other ports. Chromium runs with overlay scrollbars on every platform, so the viewport keeps its full width as on macOS; the suite does not cover classic scrollbars.
 
 ## Maintaining the suites
 
