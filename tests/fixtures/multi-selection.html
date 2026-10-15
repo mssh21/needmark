@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>NeedMark — Multi-selection fixture</title>
+  <style>
+    *{box-sizing:border-box}[hidden]{display:none!important}body{margin:0;min-height:850px;background:#fff;color:#253129;font:16px/1.4 sans-serif}
+    button{font:inherit;cursor:pointer}.target{position:absolute;border:0;margin:0;padding:0;color:#fff;width:120px;height:60px;top:180px}
+    #target-a{left:100px;background:rgb(12,174,93)}#target-b{left:300px;background:rgb(25,132,209)}#boundary{left:500px;background:rgb(181,66,43);width:100px}#partial{left:650px;background:rgb(110,89,160);width:100px}
+    #semantic-button{position:absolute;left:100px;top:300px;width:150px;height:60px;padding:0;border:0}#semantic-button span{display:block;padding:16px}
+    #semantic-paragraph{position:absolute;left:300px;top:300px;width:180px;height:60px;margin:0;padding:12px;background:#eef2e9}
+    #semantic-list{position:absolute;left:550px;top:300px;width:180px;height:60px;margin:0;padding:10px;list-style:none;background:#eef2e9}#semantic-child{width:160px;height:40px;padding:0;border:0}
+    #caps button{position:absolute;top:480px;width:65px;height:50px;padding:0;border:0;background:#315b3f;color:#fff}#caps span{display:block;padding:12px 0}
+    #review-shadow{position:absolute;left:850px;top:180px;width:120px;height:60px}#review-frame{position:absolute;left:850px;top:300px;width:250px;height:140px;border:2px solid #253129}
+    #host-controls{position:absolute;left:80px;top:660px;display:flex;gap:12px}
+  </style>
+</head>
+<body>
+  <div id="basic"><button class="target" id="target-a">A</button><button class="target" id="target-b">B</button><button class="target" id="boundary">Boundary</button><button class="target" id="partial">Partial</button></div>
+  <div id="semantic"><button id="semantic-button"><span id="semantic-span">Parent button</span></button><p id="semantic-paragraph">Paragraph <strong id="semantic-strong">strong text</strong></p><li id="semantic-list"><button id="semantic-child">Child control</button></li></div>
+  <div id="caps"></div>
+  <div id="roots"><div id="review-shadow"></div><iframe id="review-frame" title="レビュー埋め込み"></iframe></div>
+  <div id="host-controls"><button id="move-originals">元の対象を移動する</button><button id="clone-original">Aを同じ見た目で置き換える</button><button id="host-counter">カウンターを増やす</button><output id="counter">0</output></div>
+  <div id="positioned-cases" hidden style="position:relative;height:850px;padding-top:600px">
+    <div style="width:100px;height:60px;margin-left:100px;overflow:hidden">
+      <button id="absolute-escape" style="position:absolute;left:260px;top:610px;width:100px;height:50px;border:0;padding:0;background:rgb(187,52,46);color:#fff">Absolute escape</button>
+      <button id="fixed-escape" style="position:fixed;left:420px;top:610px;width:100px;height:50px;border:0;padding:0;background:rgb(34,142,75);color:#fff">Fixed escape</button>
+    </div>
+    <div style="visibility:hidden"><button id="override-visible" style="position:absolute;left:550px;top:610px;width:100px;height:50px;border:0;padding:0;background:rgb(178,101,28);color:#fff;visibility:visible">Visible override</button></div>
+    <div style="width:100px;height:60px;margin-left:700px;margin-top:-60px;overflow:hidden;transform:translateZ(0)"><button id="fixed-clipped" style="position:fixed;left:120px;top:10px;width:100px;height:50px;border:0;padding:0;background:rgb(137,57,161);color:#fff">Fixed clipped</button></div>
+    <div style="position:relative;width:80px;height:60px;margin-left:1000px;margin-top:-60px;overflow:hidden">
+      <button id="overflow-partial" style="position:absolute;left:70px;top:10px;width:80px;height:50px;border:0;padding:0;background:rgb(32,117,193);color:#fff">Partial clip</button>
+      <button id="overflow-clipped" style="position:absolute;left:100px;top:10px;width:80px;height:50px;border:0;padding:0;background:rgb(88,117,25);color:#fff">Whole clip</button>
+    </div>
+  </div>
+  <script>
+    window.multiNativeClicks={};for(const button of document.querySelectorAll('#positioned-cases button'))button.onclick=()=>{window.multiNativeClicks[button.id]=(window.multiNativeClicks[button.id]||0)+1;};
+    const caps=document.getElementById('caps');for(let index=1;index<=13;index++){const button=document.createElement('button');button.id='cap-'+index;button.style.left=(40+(index-1)*80)+'px';const span=document.createElement('span');span.id='cap-span-'+index;span.textContent='Item '+index;button.append(span);caps.append(button);}
+    document.getElementById('review-shadow').attachShadow({mode:'open'}).innerHTML='<style>button{box-sizing:border-box;width:120px;height:60px;border:0;padding:0;background:#835d99;color:#fff;font:16px sans-serif}</style><button id="shadow-review">Shadow target</button>';
+    document.getElementById('review-frame').srcdoc='<body style="margin:0;background:#fff"><button id="frame-review" style="position:absolute;left:30px;top:25px;width:140px;height:55px;border:0;padding:0;background:#bf772c;color:#fff;font:16px sans-serif">Frame target</button><button id="frame-partial" style="position:absolute;left:30px;top:120px;width:140px;height:45px">Partly visible</button><button id="frame-offscreen" style="position:absolute;left:30px;top:170px;width:140px;height:40px">Clipped away</button><div style="opacity:0"><button id="frame-hidden" style="position:absolute;left:30px;top:90px;width:140px;height:25px;visibility:visible">Hidden parent</button></div></body>';
+    document.getElementById('move-originals').onclick=()=>{for(const id of ['target-a','target-b'])document.getElementById(id).style.transform='translate(50px,30px)';};
+    document.getElementById('clone-original').onclick=()=>{const target=document.getElementById('target-a');target.replaceWith(target.cloneNode(true));};
+    document.getElementById('host-counter').onclick=()=>{const counter=document.getElementById('counter');counter.textContent=String(Number(counter.textContent)+1);};
+  </script>
+</body>
+</html>
