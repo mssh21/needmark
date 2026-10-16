@@ -221,6 +221,18 @@ test('Enter completes a multiple selection into a focused composer whose draft o
   await expect(outlines).toHaveCount(0);
 });
 
+test('the wheel in comment mode scrolls a page whose content scrolls inside an app shell instead of the document', { tag: '@cross-engine' }, async ({ page }) => {
+  await page.goto('/'); await configure(page);
+  await page.evaluate(() => {
+    const shell = document.createElement('div'); shell.id = 'app-shell'; shell.style.cssText = 'height:100vh;overflow:auto';
+    shell.append(...Array.from(document.body.children).filter((element) => !element.matches('[data-needmark], script')));
+    document.body.prepend(shell); document.documentElement.style.overflow = document.body.style.overflow = 'hidden';
+  });
+  await page.getByRole('button', { name: 'コメント', exact: true }).click();
+  await page.mouse.move(600, 400); await page.mouse.wheel(0, 300);
+  await expect.poll(() => page.locator('#app-shell').evaluate((shell) => shell.scrollTop)).toBeGreaterThan(0);
+});
+
 test('Ctrl/Cmd+Shift+F toggles selection and Shift+L is not a NeedMark shortcut', async ({ page }) => {
   await page.goto('/'); await configure(page);
   await page.keyboard.press('ControlOrMeta+Shift+F');
