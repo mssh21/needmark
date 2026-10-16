@@ -1,6 +1,6 @@
 {
   "name": "needmark",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Point at your UI, leave a comment, and hand it to any coding agent. Local-first visual feedback with context and screenshots. No account, no MCP, no AI lock-in.",
   "type": "module",
   "license": "MIT",
