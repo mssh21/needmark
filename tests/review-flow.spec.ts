@@ -195,6 +195,9 @@ test('the single save keeps reviewing without opening the list, by button or Ctr
   await expect.poll(async () => (await saved()).map((item) => item.comment).sort()).toEqual(['一つ目', '二つ目']);
   await page.keyboard.press('Escape');
   await expect(review(page).locator('.cover')).toBeHidden();
+  // The composer closed with the save, so the saved comment's pin previews again.
+  await page.getByRole('button', { name: 'コメント: 一つ目' }).hover();
+  await expect(review(page).locator('.tip')).toContainText('一つ目');
 });
 
 test('Enter completes a multiple selection into a focused composer whose draft outline marks every target and disappears on scroll and close', async ({ page }) => {

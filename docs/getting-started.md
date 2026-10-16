@@ -131,7 +131,7 @@ The command loads shared config, including language, capture, output directory, 
 
 ### Toolbar
 
-The toolbar sits at the bottom centre of the page; drag it from anywhere, including its buttons, to move it. The button at its right end collapses it to that single button; press it again to bring the tools back. Shortcuts keep working while it is collapsed. Hover or focus a button to see its name, what it does and its shortcut. Panels can be moved by dragging their header, which stays at the top while the panel scrolls; a moved panel stays there until you close it.
+The toolbar sits at the bottom centre of the page; drag it from anywhere, including its buttons, to move it. The button at its right end, the NeedMark logo, collapses it to that single button; press it again to bring the tools back. Shortcuts keep working while it is collapsed. Hover or focus a button to see its name, what it does and its shortcut. Panels can be moved by dragging their header, which stays at the top while the panel scrolls; a moved panel stays there until you close it.
 
 | Button | Purpose |
 | --- | --- |

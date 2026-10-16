@@ -173,7 +173,7 @@ test('two saved pins stay inside a narrow positive child viewport intersection a
       const second = await saveReview(page, frame, origin, output, '同じ場所のコメント二件目');
       const initialPins = await Promise.all([first.pin.boundingBox(), second.pin.boundingBox()]);
       expect(initialPins[0]).not.toBeNull(); expect(initialPins[1]).not.toBeNull();
-      expect(Math.abs(initialPins[0]!.x - initialPins[1]!.x)).toBeGreaterThan(20);
+      expect(Math.abs(initialPins[0]!.x - initialPins[1]!.x)).toBeGreaterThan(initialPins[0]!.width);
       await frame.evaluate(() => scrollTo(308, 76));
       await expect.poll(() => frame.evaluate(() => [scrollX, scrollY])).toEqual([308, 76]);
       const intersection = await page.evaluate(() => {
