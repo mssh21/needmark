@@ -133,6 +133,8 @@ export async function captureFramePlan(document: Document, scale: number,
   cloneOptions: (source: Document) => (clone: Document) => void,
   budget = { frames: 0 }, depth = 0): Promise<FrameCapturePlan> {
   const records: FrameSnapshot[] = [];
+  const view = document.defaultView, viewport = document.scrollingElement ?? document.documentElement;
+  const scrollbars = !!view && (view.innerWidth > viewport.clientWidth || view.innerHeight > viewport.clientHeight);
   function frameElements(root: Document | ShadowRoot): HTMLIFrameElement[] {
     const frames: HTMLIFrameElement[] = [];
     for (const element of root.querySelectorAll('*')) {
@@ -191,6 +193,11 @@ export async function captureFramePlan(document: Document, scale: number,
     validate();
   }
   return { validate, async restore(clone) {
+    // html2canvas lays its clone out with scrolling="no", so a page that reserves room for classic scrollbars would be laid out wider there and every box would move.
+    // Giving the clone its own scrollbars back keeps the live layout, including media queries, instead of loosening the frame position check.
+    // html2canvasは複製をscrolling="no"で配置するため、従来型スクロールバーの幅を確保するページでは複製の方が広く配置され、すべての箱がずれる。
+    // 枠の位置確認を緩める代わりに複製へスクロールバーを戻し、メディアクエリも含めて実際の配置を保つ。
+    if (scrollbars) clone.defaultView?.frameElement?.removeAttribute('scrolling');
     const locations = records.map((record) => locate(clone, record.location));
     const frames = records.map((record) => inertFrame(clone, record));
     const detach: (() => void)[] = [];

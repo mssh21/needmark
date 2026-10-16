@@ -24,7 +24,7 @@ async function close(server: Server) {
 }
 
 /** Actual React dev allocation frames, current local JSX, source maps and public protected proxy. */
-async function withReview(page: Page, nested: boolean, run: (review: Review) => Promise<void>, inline = false) {
+async function withReview(page: Page, nested: boolean, run: (review: Review) => Promise<void>, variant?: 'inline' | 'classic-scrollbar') {
   const root = await mkdtemp(join(tempRoot, 'needmark-frame-capture-'));
   let upstream: Server | undefined, proxy: ReviewProxy | undefined;
   try {
@@ -55,12 +55,13 @@ async function withReview(page: Page, nested: boolean, run: (review: Review) => 
           #child-password,#child-redact{position:absolute;left:370px;width:160px;height:40px;border:0;border-radius:0;background:#9922a9;color:#fff}#child-password{top:275px}#child-redact{top:335px}
           #child-marker{position:absolute;left:370px;top:220px;width:120px;height:30px;background:#31c7ad}
           #root-password,#root-redact,#root-marker{position:absolute;left:940px;width:180px;height:40px;border:0;border-radius:0;background:#9922a9;color:#fff}#root-password{top:200px}#root-redact{top:260px}#root-marker{top:140px;background:#5b42bd}
+          ${url.searchParams.has('classic-scrollbar') ? '::-webkit-scrollbar{width:15px;height:15px;background:#c8c8c8}' : ''}
         </style></head><body><div id="app"></div><script type="module" src="/app.js"></script></body></html>`);
       } else { response.writeHead(404); response.end(); }
     });
     const target = await listen(upstream), reservation = createServer(), origin = await listen(reservation); await close(reservation);
     proxy = await startReviewProxy({ root, target, origin, capture: 'dom', editor: 'vscode' });
-    await page.goto(origin + '/' + (nested ? '?nested' : inline ? '?inline' : ''));
+    await page.goto(origin + '/' + (nested ? '?nested' : variant ? '?' + variant : ''));
     await expect(leafTarget(page, nested)).toBeVisible(); await expect(page.getByRole('button', { name: 'コメント', exact: true })).toBeVisible();
     await run({ root, output: root + '/.needmark/feedback', source, origin });
   } finally { await proxy?.close(); if (upstream?.listening) await close(upstream); await rm(root, { recursive: true, force: true }); }
@@ -247,6 +248,20 @@ test('a scrolled page with smooth scrolling still captures its iframe with DOM c
   });
 });
 
+test('a page whose classic scrollbar narrows the viewport still captures its iframe with DOM capture', { tag: '@cross-engine' }, async ({ page }, testInfo) => {
+  await withReview(page, false, async (review) => {
+    // A styled scrollbar is never an overlay, so the page reserves its width as Windows and Linux do by default, whatever the platform's scrollbar setting.
+    expect(await page.evaluate(() => innerWidth - document.documentElement.clientWidth)).toBe(15);
+    await currentChild(page);
+    const { samples, note } = await captureSamples(page);
+    await method(page, 'dom'); await select(page, review); const item = await save(page, review, '従来型スクロールバーのページでも子画面を撮る');
+    expect(item.capture.method).toBe('dom');
+    const png = await readFile(`${review.output}/${item.id}/screenshot.png`), actual = await evidence(page, png, samples, note);
+    await attach(testInfo, 'classic-scrollbar-frame-saved', png, { actual, saved: item });
+    expectPixels(actual, samples);
+  }, 'classic-scrollbar');
+});
+
 test('native tab PNG excludes review controls while preserving current child pixels and privacy masks', async ({ page, browserName }, testInfo) => {
   await withReview(page, false, async (review) => {
     await currentChild(page); const { samples } = await captureSamples(page); await method(page, 'tab');
@@ -284,7 +299,7 @@ test('an inline frame keeps its current pixels between interleaved direct text a
     }))).toEqual(originalLine);
     expect(await originalChildState(page)).toEqual(originalChild); expect(item.target.rect).toEqual(rect); expect(item.target.code!.elements[0]!.rect).toEqual(rect);
     expect(item.capture).toEqual({ method: 'dom', width: 2400, height: 1700 });
-  }, true);
+  }, 'inline');
 });
 
 
