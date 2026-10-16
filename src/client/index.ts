@@ -786,6 +786,24 @@ function mount(endpoint: string, token: string) {
   }
   addEventListener('scroll', () => { if (pointerStart?.mode === 'text') previewText(pointerStart); else if (pointerStart) { const rect = dragRectangle(pointerStart); if (Math.hypot(rect.width, rect.height) > 6) highlight(rect); } }, { passive: true });
   cover.addEventListener('contextmenu', (event) => { if (!cover.hidden && event.ctrlKey) event.preventDefault(); });
+  // A wheel over the fixed cover scrolls only the cover's ancestors, so a page that scrolls inside an element (an app shell under a body with overflow hidden, a table with overflow auto) froze while commenting. The wheel is handed to the nearest element under the pointer that can still scroll that way, and the top document is left to the browser so its native smooth scrolling is kept.
+  // 固定されたカバー上のホイールはカバーの祖先しかスクロールしないため、要素の中でスクロールするページ（bodyがoverflow:hiddenのアプリ枠や、overflow:autoの表）はコメント中に動かなくなっていた。ポインター下でまだその向きへスクロールできる最も近い要素へホイールを渡し、最上位の文書はブラウザ本来のなめらかなスクロールを保つためブラウザに任せる。
+  cover.addEventListener('wheel', (event) => {
+    // Ctrl+wheel is a trackpad pinch or page zoom, which stays with the browser. / Ctrl+ホイールはトラックパッドのピンチやページ拡大なので、ブラウザに任せる。
+    if (cover.hidden || event.ctrlKey) return;
+    const unit = event.deltaMode === WheelEvent.DOM_DELTA_LINE ? 16 : event.deltaMode === WheelEvent.DOM_DELTA_PAGE ? innerHeight : 1, left = event.deltaX * unit, top = event.deltaY * unit;
+    const room = (delta: number, position: number, client: number, size: number) => delta < 0 ? position > 0 : delta > 0 && Math.ceil(position + client) < size;
+    const scrolls = (element: Element) => {
+      const viewport = element === element.ownerDocument.scrollingElement, style = getComputedStyle(element);
+      const open = (overflow: string) => viewport ? overflow !== 'hidden' && overflow !== 'clip' : /auto|scroll|overlay/.test(overflow);
+      return open(style.overflowX) && room(left, element.scrollLeft, element.clientWidth, element.scrollWidth) || open(style.overflowY) && room(top, element.scrollTop, element.clientHeight, element.scrollHeight);
+    };
+    for (let element = elementAtPoint(event.clientX, event.clientY, host) ?? null; element && element !== document.scrollingElement;) {
+      if (scrolls(element)) { event.preventDefault(); element.scrollBy({ left, top, behavior: 'instant' }); return; }
+      const root = element.getRootNode() as Document | ShadowRoot;
+      element = element.assignedSlot ?? element.parentElement ?? ('host' in root ? root.host : root.defaultView?.frameElement ?? null);
+    }
+  }, { passive: false });
   const cancelPointer = (event: PointerEvent) => { if (pointerStart?.id === event.pointerId) { clearSelectionGesture(); outline.hidden = true; } };
   cover.addEventListener('pointercancel', cancelPointer); cover.addEventListener('lostpointercapture', cancelPointer);
   cover.addEventListener('pointerleave', clearHover); window.addEventListener('blur', clearHover);
