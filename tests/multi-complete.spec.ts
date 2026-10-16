@@ -177,8 +177,11 @@ test('forward marquee retains all twenty original targets through real DOM captu
     await info.attach('saved-twenty-targets.png', { body: png, contentType: 'image/png' });
     await info.attach('twenty-current-source-and-geometry.json', { body: JSON.stringify({ item, nativeRects, sourceCalls: calls.map(({ token: _, ...value }) => value), pixels: actual }), contentType: 'application/json' });
     const diskBefore = await readFile(`${review.output}/${item.id}/context.json`, 'utf8');
-    const reloaded = page.waitForResponse((response) => response.url().endsWith('/__needmark/feedback') && response.request().method() === 'GET');
-    await page.reload(); expect((await (await reloaded).json()).feedback).toEqual([item]);
+    // The old page keeps polling until the reload commits, and the body of a poll that answers after navigation is gone, so only the reloaded page's list request counts.
+    // 古いページはリロードが確定するまでポーリングを続け、遷移後に返ったポーリングの本文は読めないため、リロード後のページの一覧取得だけを数える。
+    let committed = false;
+    const reloaded = page.waitForResponse((response) => committed && response.url().endsWith('/__needmark/feedback') && response.request().method() === 'GET');
+    await page.reload({ waitUntil: 'commit' }); committed = true; expect((await (await reloaded).json()).feedback).toEqual([item]);
     await page.getByRole('button', { name: 'コメント一覧', exact: true }).click(); await page.locator('[data-needmark] .open-item').click();
     await page.getByRole('button', { name: 'プロンプトをコピー', exact: true }).click(); assertPrompt(await copied(page), item);
     for (const detail of ['compact', 'standard', 'detailed', 'forensic']) {
