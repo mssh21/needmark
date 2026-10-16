@@ -6,15 +6,7 @@ Point at your UI, leave a comment, and hand it to your usual coding agent. NeedM
 
 MIT licensed. It requires no account, MCP server or specific AI provider. The runtime UI does not require React; use the Vite development plugin or a separate review proxy for an existing HTTP development server, including Next.js. NeedMark is independent of hosted NeedBack.
 
-## Try locally
-
-```sh
-pnpm install
-pnpm build
-pnpm demo
-```
-
-Open `http://127.0.0.1:4190`. Use the toolbar to select a target and write a comment. Settings let you choose English or Japanese and DOM, tab or image-free capture. Demo feedback stays in `demo/.needmark/feedback`.
+[Website](https://mssh21.github.io/needmark/) · [Documentation](docs/README.md) · [npm](https://www.npmjs.com/package/needmark)
 
 ## Install in your project
 
@@ -67,4 +59,4 @@ Set `language: 'en'` or `'ja'` in `needmark.config.ts`; the UI defaults to Japan
 - [はじめに](docs/getting-started.ja.md): the same guide in Japanese.
 - [Architecture and operating limits](docs/architecture.md): detailed implementation reference in English.
 - [Agentation comparison and product evaluation (Japanese)](docs/agentation-comparison.ja.md)
-- [Documentation index](docs/README.md) · [MIT license](LICENSE)
+- [Documentation index](docs/README.md) · [Contributing](CONTRIBUTING.md) · [MIT license](LICENSE)
