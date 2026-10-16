@@ -12,7 +12,7 @@ NeedMark is published to npm by GitHub Actions. Changing `version` in `package.j
 2. publishes with `npm publish` through npm trusted publishing, so no npm token is stored in GitHub and npm attaches a provenance attestation;
 3. creates the Git tag and GitHub release `v<version>` with generated release notes.
 
-The release workflow does not run E2E tests; the CI workflow runs them on every pull request and push to `main`.
+The release workflow does not run E2E tests; the CI workflow runs them on pull requests and pushes to `main` that change more than documentation or the site ([`testing.md`](./testing.md#running)).
 
 ## Making a release
 
