@@ -6,7 +6,7 @@
     "dev": "astro dev --host 127.0.0.1 --port 4330"
   },
   "dependencies": {
-    "astro": "^5.18.2"
+    "astro": "^7.2.8"
   },
   "devDependencies": {
     "needmark": "workspace:*"
