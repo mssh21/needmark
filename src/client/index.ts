@@ -217,7 +217,7 @@ function mount(endpoint: string, token: string) {
   // 通知は常にトーストにしてパネルには内容だけを置く。UIで分かる結果（削除した項目、保存した返信、押したボタンの状態）は通知しない。
   function notify(text: string, error = false) {
     const toast = shadow.querySelector<HTMLElement>('.toast')!; toast.textContent = text; toast.classList.toggle('error', error); toast.getAnimations().forEach((animation) => animation.cancel()); toast.hidden = false;
-    nativeClearTimeout(toastTimer); toastTimer = nativeSetTimeout(() => { if (!motion()) { toast.hidden = true; return; } toast.animate({ opacity: [1, 0], translate: ['0px 0px', '0px 6px'] }, { duration: 160, easing: easeIn, fill: 'forwards' }).finished.then(() => { toast.hidden = true; toast.getAnimations().forEach((animation) => animation.cancel()); }, () => {}); }, error ? 5000 : 1500);
+    nativeClearTimeout(toastTimer); toastTimer = nativeSetTimeout(() => { if (!motion()) { toast.hidden = true; return; } toast.animate({ opacity: [1, 0], translate: ['0px 0px', '0px 6px'] }, { duration: 160, easing: easeIn, fill: 'forwards' }).finished.then(() => { toast.hidden = true; toast.getAnimations().forEach((animation) => animation.cancel()); }, () => {}); }, error ? 3000 : 1500);
   }
   // The reply composer runs to the panel's bottom edge, so a manual copy field is placed above the replies instead of after it.
   // 返信の入力エリアはパネルの下端まで広がるため、手動コピー欄はその後ろではなく返信の上に置く。
