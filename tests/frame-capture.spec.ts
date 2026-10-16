@@ -1,5 +1,5 @@
 import { type Frame, type Locator, type Page, type TestInfo } from '@playwright/test';
-import { test, expect, output, tempRoot, configureReview } from './support/review.js';
+import { test, expect, output, tempRoot, configureReview, tabColorTolerance } from './support/review.js';
 import { build } from 'esbuild';
 import { createServer, type Server } from 'node:http';
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
@@ -106,7 +106,9 @@ async function save(page: Page, review: Review, comment: string): Promise<Feedba
 }
 async function currentChild(page: Page, nested = false) {
   const target = leafTarget(page, nested); await target.click(); await expect(target).toHaveText('Current child 1');
-  const { leaf } = await frames(page, nested); await leaf.getByRole('textbox', { name: 'Live child note', exact: true }).fill('MMMMMMMMMMMM');
+  const { leaf } = await frames(page, nested); const note = leaf.getByRole('textbox', { name: 'Live child note', exact: true }); await note.fill('MMMMMMMMMMMM');
+  // Chromium on Linux draws a near-black focus ring that the ink measurement would count as text, and DOM capture never draws focus rings.
+  await note.blur();
   expect(await target.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe('rgb(217, 91, 36)'); return leaf;
 }
 async function point(locator: Locator, name: string, color: number[], inset = 12): Promise<Sample> {
@@ -250,7 +252,7 @@ test('native tab PNG excludes review controls while preserving current child pix
     await currentChild(page); const { samples } = await captureSamples(page); await method(page, 'tab');
     const rect = await select(page, review), item = await save(page, review, '高精度の子画面画像にレビューツールを混ぜない');
     const png = await readFile(`${review.output}/${item.id}/screenshot.png`), actual = await evidence(page, png, samples);
-    await attach(testInfo, 'native-frame-saved', png, { actual, saved: item }); expectPixels(actual, samples, 2);
+    await attach(testInfo, 'native-frame-saved', png, { actual, saved: item }); expectPixels(actual, samples, tabColorTolerance);
     expect(item.capture.method).toBe('tab'); expect(item.capture.width).toBe(actual.width); expect(item.capture.height).toBe(actual.height);
     expect(item.target.rect).toEqual(rect); expect(item.target.code!.elements[0]!.rect).toEqual(rect); expect(item.capture.width).toBeGreaterThan(500);
   });

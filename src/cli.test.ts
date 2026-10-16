@@ -89,7 +89,10 @@ describe('CLI initialization', () => {
     const child = execFile(process.execPath, [cli, 'dev', '--', process.execPath, 'app.mjs', '--port', String(port)], { cwd: directory });
     try {
       let html = '';
-      for (let attempt = 0; attempt < 100 && !html; attempt++) html = await fetch(`http://localhost:${port}/`).then((response) => response.text(), async () => { await new Promise((wait) => setTimeout(wait, 100)); return ''; });
+      for (let attempt = 0; attempt < 100 && !html; attempt++) {
+        const response = await fetch(`http://localhost:${port}/`).catch(() => undefined);
+        if (response?.ok) html = await response.text(); else await new Promise((wait) => setTimeout(wait, 100));
+      }
       expect(html).toContain('/__needmark/client.js');
       expect(html).not.toContain(`app ${port}`);
     } finally { child.kill('SIGINT'); }
