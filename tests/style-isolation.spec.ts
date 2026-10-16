@@ -1,9 +1,9 @@
-import { test, expect, type Page, type Locator, type TestInfo } from '@playwright/test';
-import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { type Page, type Locator, type TestInfo } from '@playwright/test';
+import { test, expect, saveAndList, output, tempRoot } from './support/review.js';
+import { join } from 'node:path';
+import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import type { Feedback } from '../src/shared/types.js';
-import { saveAndList } from './save.js';
 
-const output = '/private/tmp/needmark-e2e-feedback';
 const widget = (page: Page) => page.locator('[data-needmark]');
 const inheritedTypography = 'font-family:monospace;font-size:24px;font-weight:900;font-style:italic;letter-spacing:.15em;word-spacing:.3em;text-transform:uppercase;text-indent:64px;text-align:right;direction:rtl;white-space:nowrap';
 const clientSamples = ['label[for="nm-author"]', '#nm-author', '.panel .mono', '[data-action="settings-save"]', '[data-hint]', '.dock button', '.badge'];
@@ -29,8 +29,8 @@ async function sourceTypography(page: Page) {
   return typography(page.locator('body'), ['#app-typography-probe']);
 }
 async function evidence(page: Page, info: TestInfo, name: string) {
-  const path = `/private/tmp/needmark-style-evidence/${info.project.name}-${name}.png`;
-  await mkdir('/private/tmp/needmark-style-evidence', { recursive: true });
+  const path = join(tempRoot, 'needmark-style-evidence', `${info.project.name}-${name}.png`);
+  await mkdir(join(tempRoot, 'needmark-style-evidence'), { recursive: true });
   await page.screenshot({ path, animations: 'disabled' });
   await info.attach(name, { path, contentType: 'image/png' });
   const metadata = await page.evaluate(() => {
@@ -67,9 +67,8 @@ async function saved() {
   return JSON.parse(await readFile(`${output}/${ids[0]}/context.json`, 'utf8')) as Feedback;
 }
 
-test.beforeEach(async () => { await rm(output, { recursive: true, force: true }); });
 
-test('inherited html typography leaves review fields readable and editable while the RTL page retains its styles', async ({ page }, info) => {
+test('inherited html typography leaves review fields readable and editable while the RTL page retains its styles', { tag: '@cross-engine' }, async ({ page }, info) => {
   await prepare(page);
   const expected = await typography(widget(page), clientSamples);
   await page.addStyleTag({ content: `html{${inheritedTypography}}` });
@@ -79,7 +78,7 @@ test('inherited html typography leaves review fields readable and editable while
   expect(appStyle['#app-typography-probe']?.direction).toBe('rtl');
   await evidence(page, info, 'review-on-styled-rtl-page');
   await page.getByLabel('Author name').fill('投稿者名をそのまま残す');
-  await page.getByRole('button', { name: 'Save settings', exact: true }).click();
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
   await selectTarget(page, '#purchase-button');
   const comment = '日本語と MixedCase をそのまま保存する';
   await page.getByLabel('Comment text').fill(comment);
@@ -90,7 +89,7 @@ test('inherited html typography leaves review fields readable and editable while
   await expect(widget(page)).toHaveAttribute('lang', 'en');
 });
 
-test('body typography stays outside the review host before a native dialog and after reparenting into it', async ({ page }, info) => {
+test('body typography stays outside the review host before a native dialog and after reparenting into it', { tag: '@cross-engine' }, async ({ page }, info) => {
   await prepare(page);
   const expected = await typography(widget(page), clientSamples);
   await page.addStyleTag({ content: `body{${inheritedTypography}}` });
@@ -108,7 +107,7 @@ test('body typography stays outside the review host before a native dialog and a
   expect(actual).toEqual(expected);
   await evidence(page, info, 'review-in-styled-native-dialog');
   await page.getByLabel('Author name').fill('Dialog reviewer');
-  await page.getByRole('button', { name: 'Save settings', exact: true }).click();
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
   await page.getByRole('button', { name: 'Modal action', exact: true }).click();
   await expect(page.locator('#styled-native-dialog')).toHaveAttribute('data-clicks', '1');
   await selectTarget(page, '#app-modal-target');
@@ -124,14 +123,14 @@ test('body typography stays outside the review host before a native dialog and a
   expect(await typography(widget(page), clientSamples)).toEqual(expected);
 });
 
-test('global important div rules preserve page clicks while selection still intercepts them', async ({ page }, info) => {
+test('global important div rules preserve page clicks while selection still intercepts them', { tag: '@cross-engine' }, async ({ page }, info) => {
   await prepare(page);
   const expected = await typography(widget(page), clientSamples);
   await page.addStyleTag({ content: `div{${inheritedTypography.split(';').map((value) => `${value}!important`).join(';')};pointer-events:auto!important}` });
   const appStyle = await sourceTypography(page), actual = await typography(widget(page), clientSamples);
   const pointerEvents = await widget(page).evaluate((node) => getComputedStyle(node).pointerEvents);
   await info.attach('global-rule-comparison', { body: JSON.stringify({ expected, actual, pointerEvents }, null, 2), contentType: 'application/json' });
-  await page.getByRole('button', { name: 'Save settings', exact: true }).click();
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
   const appBounds = (await page.locator('#purchase-button').boundingBox())!;
   await page.mouse.click(appBounds.x + appBounds.width / 2, appBounds.y + appBounds.height / 2);
   await expect(page.locator('#purchase-status')).toHaveText('Trial reserved. Check your inbox for the setup link.');

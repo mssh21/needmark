@@ -296,8 +296,14 @@ function framesOf(fiber: Fiber): RuntimeSourceFrame[] {
   if (!Object.hasOwn(fiber, '_debugStack')) return [];
   const debug = fiber._debugStack;
   if (!debug || typeof debug !== 'object' || !('stack' in debug) || typeof debug.stack !== 'string') return [];
+  return runtimeFramesOf(debug.stack);
+}
+
+// Parsing needs only the stack text, so it is kept apart from the fiber lookup and tested in code-context.test.ts without a browser.
+// 解析にはスタックの文字列だけがあればよいため、fiberの探索と分け、code-context.test.tsでブラウザなしに検証する。
+export function runtimeFramesOf(stack: string): RuntimeSourceFrame[] {
   const frames: RuntimeSourceFrame[] = [];
-  for (const line of debug.stack.slice(0, 16000).split('\n').slice(0, 40)) {
+  for (const line of stack.slice(0, 16000).split('\n').slice(0, 40)) {
     // V8 (`at name (url:line:col)`) and JavaScriptCore (`name@url:line:col`) print stacks differently, so each has a pattern and both produce one result shape.
     // V8とJavaScriptCoreはスタックの書式が異なるため、それぞれのパターンで解析し、同じ形の結果にそろえる。
     const match = /^\s*at\s+(?:(.*?)\s+\()?((?:https?:\/\/)\S+):([1-9]\d*):([1-9]\d*)\)?\s*$/.exec(line)
@@ -414,7 +420,7 @@ function normalizedText(value: string): string { return value.replace(/\s+/g, ' 
 
 // A pin on the wrong element misleads more than a pin at its recorded position, so any changed evidence rejects the match.
 // 誤った要素に付くピンは記録位置のピンより誤解を招くため、手掛かりが1つでも変わっていれば一致とみなさない。
-export function isElementMatch(element: Element, context: ElementContext): boolean {
+export function isElementMatch(element: Element, context: ElementContext, ignoreText = false): boolean {
   if (context.frameUrls !== undefined) {
     if (!isFrameUrls(context.frameUrls, context.rootPath, document.URL)) return false;
     const current = rootEvidenceOf(element).frameUrls;
@@ -427,8 +433,8 @@ export function isElementMatch(element: Element, context: ElementContext): boole
     const expected = context.attributes[name];
     if ((expected || customIdentifiers.includes(name)) && element.getAttribute(name) !== expected) return false;
   }
-  if (normalizedText(textOf(element).slice(0, 500)) !== normalizedText(context.text)) return false;
-  if (context.accessibleName !== undefined && normalizedText(accessibleNameOf(element)) !== normalizedText(context.accessibleName)) return false;
+  if (!ignoreText && normalizedText(textOf(element).slice(0, 500)) !== normalizedText(context.text)) return false;
+  if (!ignoreText && context.accessibleName !== undefined && normalizedText(accessibleNameOf(element)) !== normalizedText(context.accessibleName)) return false;
   if (context.sourceOrigin === 'runtime') {
     if (!context.source || context.sourceRelation !== 'self' || !hostFiberOf(element)) return false;
     const mapped = sourceOf(element);

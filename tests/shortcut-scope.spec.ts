@@ -1,15 +1,14 @@
-import { test, expect, type Page } from '@playwright/test';
-import { readFile, readdir, rm } from 'node:fs/promises';
+import { type Page } from '@playwright/test';
+import { test, expect, output } from './support/review.js';
+import { readFile, readdir } from 'node:fs/promises';
 import type { Feedback } from '../src/shared/types.js';
 
-const output = '/private/tmp/needmark-e2e-feedback';
-test.beforeEach(async () => { await rm(output, { recursive: true, force: true }); });
 async function configure(page: Page, shortcuts = true) {
   await page.getByRole('button', { name: '設定', exact: true }).click();
   await expect(page.getByLabel('キーボードショートカット')).toHaveValue('true');
   await page.getByLabel('キャプチャ方式').selectOption('none');
   await page.getByLabel('キーボードショートカット').selectOption(String(shortcuts));
-  await page.getByRole('button', { name: '設定を保存' }).click();
+  await page.getByRole('button', { name: '保存', exact: true }).click();
 }
 async function chooseTarget(page: Page) {
   await page.getByRole('button', { name: 'コメント', exact: true }).click();
@@ -39,7 +38,7 @@ async function hostState(page: Page) {
   return page.evaluate(() => (window as unknown as { shortcutHost: { submitted: number; keys: { key: string; prevented: boolean }[] } }).shortcutHost);
 }
 
-test('enabled shortcuts never submit or intercept a host input, textarea or inherited editable region', async ({ page }) => {
+test('enabled shortcuts never submit or intercept a host input, textarea or inherited editable region', { tag: '@cross-engine' }, async ({ page }) => {
   await page.goto('/'); await configure(page); await hostEvents(page);
   for (const name of ['Host input', 'Host textarea', 'Host editable', 'Host shadow textarea']) {
     await page.getByRole('textbox', { name, exact: true }).focus();
@@ -71,7 +70,7 @@ test('disabled global shortcuts pass through to the host and stay disabled after
   expect(await page.evaluate(() => localStorage.getItem('needmark-shortcuts'))).toBe('false');
   await page.reload(); await page.getByRole('button', { name: '設定', exact: true }).click();
   await expect(page.getByLabel('キーボードショートカット')).toHaveValue('false');
-  await page.getByLabel('キーボードショートカット').selectOption('true'); await page.getByRole('button', { name: '設定を保存' }).click();
+  await page.getByLabel('キーボードショートカット').selectOption('true'); await page.getByRole('button', { name: '保存', exact: true }).click();
   await page.locator('#purchase-button').focus(); await page.keyboard.press('Shift+C');
   await expect(page.locator('[data-needmark] .cover')).toBeVisible();
   await page.keyboard.press('Escape'); await expect(page.locator('[data-needmark] .cover')).toBeHidden();

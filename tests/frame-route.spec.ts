@@ -1,11 +1,11 @@
-import { test, expect, type Frame, type Locator, type Page, type TestInfo } from '@playwright/test';
+import { type Frame, type Locator, type Page, type TestInfo } from '@playwright/test';
+import { test, expect, saveAndList, output, tempRoot, configureReview } from './support/review.js';
 import { build } from 'esbuild';
 import { createServer, type Server } from 'node:http';
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { resolve, join } from 'node:path';
 import { startReviewProxy, type ReviewProxy } from '../dist/proxy.js';
 import type { ElementContext, Feedback, RuntimeSourceRequest, RuntimeSourceResult, SourceLocation } from '../src/shared/types.js';
-import { saveAndList } from './save.js';
 
 type FrameContext = ElementContext & { frameUrls?: string[] };
 type Review = { root: string; output: string; source: string; origin: string };
@@ -28,7 +28,7 @@ async function close(server: Server) {
 
 /** Real React frames, current JSX, HTTP source maps and protected public proxy; no /source response mocks. */
 async function withReview(page: Page, nested: boolean, run: (review: Review) => Promise<void>) {
-  const root = await mkdtemp('/private/tmp/needmark-frame-route-');
+  const root = await mkdtemp(join(tempRoot, 'needmark-frame-route-'));
   let upstream: Server | undefined, proxy: ReviewProxy | undefined;
   try {
     const source = await readFile(fixturePath, 'utf8');
@@ -83,9 +83,7 @@ function sourceOf(review: Review): SourceLocation {
   return { file: sourceFile, line: line + 1, column: lines[line]!.indexOf('<button') + 1, component: 'RouteTarget' };
 }
 async function method(page: Page, value: 'dom' | 'none') {
-  await page.getByRole('button', { name: '設定', exact: true }).click();
-  await page.getByLabel('キャプチャ方式').selectOption(value);
-  await page.getByRole('button', { name: '設定を保存', exact: true }).click();
+  await configureReview(page, { method: value });
 }
 async function select(page: Page, review: Review, nested = false) {
   const response = page.waitForResponse((response) => response.url() === review.origin + '/__needmark/source' && response.request().method() === 'POST');
@@ -131,7 +129,7 @@ async function attachState(page: Page, frame: Frame, saved: Feedback, name: stri
   await testInfo.attach(name + '-screen', { body: await page.screenshot(), contentType: 'image/png' });
 }
 
-test('saved sourced child review refuses the identical target on another child route and recovers only the exact URL', async ({ page }, testInfo) => {
+test('saved sourced child review refuses the identical target on another child route and recovers only the exact URL', { tag: '@cross-engine' }, async ({ page }, testInfo) => {
   await withReview(page, false, async (review) => {
     await method(page, 'dom'); await select(page, review);
     const comment = '子画面Aにだけ対応するコメント', item = await save(page, review, comment);
@@ -158,7 +156,7 @@ test('saved sourced child review refuses the identical target on another child r
   });
 });
 
-test('connected child-only push, replace, hash and back changes notify automatically without DOM mutations and legacy contexts remain readable', async ({ page }, testInfo) => {
+test('connected child-only push, replace, hash and back changes notify automatically without DOM mutations and legacy contexts remain readable', { tag: '@cross-engine' }, async ({ page }, testInfo) => {
   await withReview(page, false, async (review) => {
     await method(page, 'none'); await select(page, review);
     const comment = 'pure child history', item = await save(page, review, comment);
@@ -210,7 +208,7 @@ test('connected child-only push, replace, hash and back changes notify automatic
   });
 });
 
-test('nested iframe, shadow and iframe evidence records only ordered frame URLs and rejects independent outer or inner route changes', async ({ page }) => {
+test('nested iframe, shadow and iframe evidence records only ordered frame URLs and rejects independent outer or inner route changes', { tag: '@cross-engine' }, async ({ page }) => {
   await withReview(page, true, async (review) => {
     await method(page, 'none'); await select(page, review, true);
     const comment = 'nested child identity', item = await save(page, review, comment);
@@ -234,7 +232,7 @@ test('nested iframe, shadow and iframe evidence records only ordered frame URLs 
   });
 });
 
-test('same connected child route drift rejects original-node and range capture and preserves typed feedback for explicit image-free saving', async ({ page }, testInfo) => {
+test('same connected child route drift rejects original-node and range capture and preserves typed feedback for image-free saving', { tag: '@cross-engine' }, async ({ page }, testInfo) => {
   await withReview(page, false, async (review) => {
     const guardResult = await page.evaluate(async (origin) => {
       const { contextForElement, contextForRange, createCaptureGuard, viewportRectOf, viewportRectForRange } = await import(origin + '/identity.js');
@@ -279,13 +277,12 @@ test('same connected child route drift rejects original-node and range capture a
     await frame.evaluate((path) => history.pushState({}, '', path), childB);
     expect(await original!.evaluate((element) => element.isConnected && element === element.ownerDocument.querySelector('button[data-cy]'))).toBe(true);
     await page.evaluate(() => (window as unknown as { releaseCaptureGate: () => void }).releaseCaptureGate());
-    await expect(page.getByRole('button', { name: '画像なしで保存する', exact: true })).toBeVisible();
+    await expect(page.getByText('画像を撮影できなかったため、画像なしで保存します。', { exact: true })).toBeVisible();
     await expect(page.getByLabel('コメント本文')).toHaveValue(comment);
     await expect(page.getByLabel('コメント本文')).toBeFocused();
     await expect(page.getByRole('img', { name: 'コメントした場所のキャプチャ', exact: true })).toBeHidden();
-    await expect(page.getByRole('button', { name: '保存', exact: true })).toBeDisabled();
+    await expect(page.getByRole('button', { name: '保存', exact: true })).toBeEnabled();
     expect(page.url()).toBe(parentUrl);
-    await page.getByRole('button', { name: '画像なしで保存する', exact: true }).click();
     const saved = await save(page, review, comment);
     expect(saved.capture).toEqual({ method: 'none', width: 0, height: 0 }); expect(saved.image).toBeUndefined();
     expect((saved.target.code!.elements[0] as FrameContext).frameUrls).toEqual([review.origin + childA]);
@@ -294,7 +291,7 @@ test('same connected child route drift rejects original-node and range capture a
   });
 });
 
-test('child history observation preserves native behavior and reconnects without duplicate or obsolete callbacks', async ({ page }, testInfo) => {
+test('child history observation preserves native behavior and reconnects without duplicate or obsolete callbacks', { tag: '@cross-engine' }, async ({ page }, testInfo) => {
   await withReview(page, false, async (review) => {
     const result = await page.evaluate(async (origin) => {
       const { installPageChanges } = await import(origin + '/identity.js');
@@ -378,45 +375,5 @@ test('child history observation preserves native behavior and reconnects without
     expect(result.rootRemovalPreservesApp).toBe(true); expect(result.obsoleteAfterRemoval).toBe(0); expect(result.reboundNotifications).toBe(1);
     expect(result.disposalPreservesApp).toBe(true); expect(result.obsoleteNotifications).toBe(0);
     expect(result.appState).toEqual({ app: true }); expect(result.appUrl).toBe(review.origin + '/inert?instance=9');
-  });
-});
-
-test('resuming retained multiple selection removes a child original from another route before completion instead of rebinding its source', async ({ page }) => {
-  await withReview(page, false, async (review) => {
-    await method(page, 'none');
-    const frame = await leafFrame(page), child = await leafTarget(page).elementHandle(), parentUrl = page.url();
-    if (!child) throw new Error('Original child target is missing');
-    const heading = page.locator('#app h1'), headingRect = await heading.boundingBox();
-    await page.getByRole('button', { name: 'コメント', exact: true }).click();
-    const childRect = await leafTarget(page).boundingBox();
-    if (!childRect || !headingRect) throw new Error('Selected originals need visible rectangles');
-    await page.keyboard.down('Shift'); await page.mouse.click(childRect.x + childRect.width / 2, childRect.y + childRect.height / 2); await page.keyboard.up('Shift');
-    // The full-width heading center is under the selection hint; its text at the left remains directly selectable.
-    await page.mouse.click(headingRect.x + 12, headingRect.y + headingRect.height / 2);
-    const outlines = page.locator('[data-needmark] .selected-outline');
-    await expect(outlines).toHaveCount(2);
-    await page.getByRole('button', { name: 'ページを操作', exact: true }).click();
-    const resume = page.getByRole('button', { name: '選択を再開', exact: true });
-    await expect(resume).toHaveText('選択を再開 · 2件');
-    await frame.evaluate((path) => history.pushState({}, '', path), childB);
-    expect(page.url()).toBe(parentUrl);
-    expect(await child.evaluate((element) => element.isConnected && element === element.ownerDocument.querySelector('button[data-cy]'))).toBe(true);
-    await resume.click(); await expect(outlines).toHaveCount(1);
-    await expect(page.getByText('1件の選択対象が消えたか変わったため、選択から外しました。', { exact: true })).toBeVisible();
-    expect(await outlines.first().boundingBox()).toEqual(headingRect);
-    await page.getByRole('button', { name: '選択を完了', exact: true }).click();
-    await page.getByLabel('コメント本文').fill('同じ親画面に残る見出しだけを修正する');
-    await saveAndList(page);
-    await expect(page.getByText('コメントを保存しました。', { exact: true })).toBeVisible();
-    const ids = (await readdir(review.output)).filter((id) => !id.startsWith('.')); expect(ids).toHaveLength(1);
-    const saved = JSON.parse(await readFile(review.output + '/' + ids[0] + '/context.json', 'utf8')) as Feedback;
-    expect(saved.target.kind).toBe('multi'); expect(saved.target.rect).toEqual(headingRect);
-    expect(saved.target.code?.elements).toHaveLength(1);
-    expect(saved.target.code!.elements[0]).toMatchObject({ tag: 'h1', text: 'Child route review' });
-    expect(saved.target.code!.elements[0]!.attributes).not.toHaveProperty('data-cy');
-    expect(saved.target.code!.elements[0]!.source?.component).not.toBe('RouteTarget');
-    expect(JSON.stringify(saved)).not.toContain(childA);
-    expect(JSON.stringify(saved)).not.toContain(childB);
-    await child.dispose();
   });
 });

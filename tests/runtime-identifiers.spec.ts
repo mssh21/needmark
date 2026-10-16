@@ -1,11 +1,11 @@
-import { test, expect, type Locator, type Page } from '@playwright/test';
+import { type Locator, type Page } from '@playwright/test';
+import { test, expect, saveAndList, output, tempRoot, configureReview } from './support/review.js';
 import { build } from 'esbuild';
 import { createServer, type Server } from 'node:http';
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { resolve, join } from 'node:path';
 import { startReviewProxy, type ReviewProxy } from '../dist/proxy.js';
 import type { ElementContext, Feedback, RuntimeSourceRequest, RuntimeSourceResult, SourceLocation } from '../src/shared/types.js';
-import { saveAndList } from './save.js';
 
 type Scenario = 'static' | 'duplicate' | 'dynamic' | 'unconfigured' | 'roots';
 type Review = { root: string; output: string; source: string; origin: string; mapRequests: () => number };
@@ -26,7 +26,7 @@ async function close(server: Server) {
 
 /** Real React dev frames, HTTP assets/maps, current JSX files, and the public review proxy. No /source responses are stubbed. */
 async function withReview(page: Page, scenario: Scenario, run: (review: Review) => Promise<void>) {
-  const root = await mkdtemp('/private/tmp/needmark-runtime-identifiers-');
+  const root = await mkdtemp(join(tempRoot, 'needmark-runtime-identifiers-'));
   let upstream: Server | undefined, proxy: ReviewProxy | undefined;
   try {
     let source = await readFile(fixturePath, 'utf8');
@@ -60,9 +60,7 @@ async function withReview(page: Page, scenario: Scenario, run: (review: Review) 
     });
     await page.goto(`${origin}/${scenario === 'roots' ? '?roots' : ''}`);
     await expect(page.locator('.targets [data-cy]')).toBeVisible();
-    await page.getByRole('button', { name: '設定', exact: true }).click();
-    await page.getByLabel('キャプチャ方式').selectOption('none');
-    await page.getByRole('button', { name: '設定を保存', exact: true }).click();
+    await configureReview(page, { method: 'none' });
     await run({ root, output: `${root}/.needmark/feedback`, source, origin, mapRequests: () => maps });
   } finally {
     await proxy?.close(); if (upstream?.listening) await close(upstream); await rm(root, { recursive: true, force: true });
@@ -100,7 +98,7 @@ async function save(page: Page, review: Review, comment: string): Promise<Feedba
 async function closePanel(page: Page) { await page.getByRole('button', { name: 'パネルを閉じる', exact: true }).click(); }
 const copied = (page: Page) => page.evaluate(() => (window as unknown as { copied: string }).copied);
 
-test('real proxy verifies cy, component and configured custom identifiers through saved source, editor, prompt and reordered pins', async ({ page }) => {
+test('real proxy verifies cy, component and configured custom identifiers through saved source, editor, prompt and reordered pins', { tag: '@cross-engine' }, async ({ page }) => {
   await withReview(page, 'static', async (review) => {
     const targets = [
       { attribute: 'data-cy', value: 'cy-checkout', component: 'CypressTarget', text: 'Cypress source review' },
@@ -144,7 +142,8 @@ test('real proxy verifies cy, component and configured custom identifiers throug
       const target = await cy.boundingBox(), marker = await pin.boundingBox();
       return marker && target ? Math.abs((marker.y + marker.height / 2) - (target.y + target.height / 2)) : Infinity;
     }).toBeLessThan(1);
-    await pin.hover(); await expect(page.locator('[data-needmark] .tip')).not.toContainText('対象未確認');
+    // Pins hold still while hovered, so the pointer leaves before the page changes the target.
+    await pin.hover(); await expect(page.locator('[data-needmark] .tip')).not.toContainText('対象未確認'); await page.mouse.move(10, 10);
     await cy.evaluate((element) => { const duplicate = document.createElement('button'); duplicate.hidden = true; duplicate.setAttribute('data-cy', 'cy-checkout'); document.body.append(duplicate); });
     await expect.poll(async () => {
       const marker = await pin.boundingBox();
@@ -192,7 +191,7 @@ for (const scenario of ['duplicate', 'dynamic', 'unconfigured'] as const) {
   });
 }
 
-test('real shadow and iframe React targets keep per-root unique identifiers and source evidence after reload', async ({ page }, testInfo) => {
+test('real shadow and iframe React targets keep per-root unique identifiers and source evidence after reload', { tag: '@cross-engine' }, async ({ page }, testInfo) => {
   await withReview(page, 'roots', async (review) => {
     const source = expectedSource(review, 'data-cy="cy-checkout"', 'CypressTarget');
     const targets = [
@@ -230,7 +229,7 @@ test('real shadow and iframe React targets keep per-root unique identifiers and 
       expect(identity).toMatchObject({ resolvedExactNode: true, hostFiberMatches: true, isConnected: true, ownerDocumentIsCurrent: true });
       const pin = page.getByRole('button', { name: `コメント: ${target.comment}`, exact: true });
       await expect(pin).toBeVisible(); await pin.hover();
-      await expect(page.locator('[data-needmark] .tip')).not.toContainText('対象未確認');
+      await expect(page.locator('[data-needmark] .tip')).not.toContainText('対象未確認'); await page.mouse.move(10, 10);
       const original = await target.target.elementHandle();
       if (!original) throw new Error('Original root target is missing');
       await original.evaluate((element) => element.setAttribute('data-cy', 'changed-root-target'));

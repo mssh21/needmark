@@ -1,9 +1,9 @@
-import { test, expect, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { test, expect, output } from './support/review.js';
 import { readFile, readdir, rm } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import type { Feedback } from '../src/shared/types.js';
 
-const output = '/private/tmp/needmark-e2e-feedback';
 const moduleUrl = `/@fs/${resolve('src/client/context/code-context.ts')}`;
 const preview = (page: Page) => page.locator('[data-needmark] .target-preview');
 const outline = (page: Page) => page.locator('[data-needmark] .outline');
@@ -76,7 +76,7 @@ test('preview, outline and saved target agree without requesting source while ho
   await info.attach('capture-without-preview', { body: png, contentType: 'image/png' });
 });
 
-test('stationary Ctrl and Cmd update the same hit and keep gesture depth latched when shortcuts are disabled', async ({ page }) => {
+test('stationary Ctrl and Cmd update the same hit and keep gesture depth latched when shortcuts are disabled', { tag: '@cross-engine' }, async ({ page }) => {
   await start(page, false);
   await page.evaluate(() => {
     const node = document.createElement('div'); node.id = 'hover-layered';
@@ -129,7 +129,7 @@ test('new frame and shadow targets clear their preview on local mutations and sc
   await expect(preview(page)).toBeHidden(); await expect(outline(page)).toBeHidden();
 });
 
-test('hint, page changes, cancellation and page operation clear the preview without losing selected targets', async ({ page }) => {
+test('hint, page changes and cancellation clear the preview without losing selected targets', async ({ page }) => {
   await start(page);
   await page.evaluate(() => {
     document.body.style.minHeight = '2000px';
@@ -160,9 +160,6 @@ test('hint, page changes, cancellation and page operation clear the preview with
   await page.keyboard.down('Shift'); await page.mouse.click(170, 195); await page.keyboard.up('Shift'); await expect(preview(page)).toBeHidden();
   await expect(page.locator('[data-needmark] .selected-outline')).toHaveCount(1);
   await page.mouse.move(171, 195); await expect(preview(page)).toBeVisible();
-  await page.getByRole('button', { name: 'ページを操作', exact: true }).click(); await expect(preview(page)).toBeHidden();
-  await page.keyboard.down('Control'); await page.keyboard.up('Control'); await expect(preview(page)).toBeHidden();
-  await page.getByRole('button', { name: '選択を再開', exact: true }).click();
   await expect(page.locator('[data-needmark] .selected-outline')).toHaveCount(1);
   await page.getByRole('button', { name: '選択を完了', exact: true }).click();
   await expect(page.locator('[data-needmark] .draft-outline')).toHaveCount(1);
@@ -189,7 +186,7 @@ test('a slotted leaf observes rendered shadow scrolling and mutations through it
   await expect(preview(page)).toBeHidden(); await expect(outline(page)).toBeHidden();
 });
 
-test('long plain labels fit near viewport edges and a native modal remains selectable', async ({ page }, info) => {
+test('long plain labels fit near viewport edges and a native modal remains selectable', { tag: '@cross-engine' }, async ({ page }, info) => {
   await start(page);
   await page.evaluate(() => {
     const button = document.createElement('button'); button.id = 'edge-booking'; button.textContent = 'Edge booking'; button.setAttribute('aria-label', '長い予約ボタン '.repeat(100));

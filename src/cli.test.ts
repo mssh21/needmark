@@ -34,13 +34,15 @@ const run = (directory: string, args: string[], answers?: string[]) => execute(p
   [...(answers ? ['--import', terminal] : []), cli, ...args],
   { cwd: directory, timeout: 10_000, env: { ...process.env, ...(answers ? { NEEDMARK_TEST_ANSWERS: JSON.stringify(answers) } : {}) } });
 
-describe('CLI language configuration', () => {
-  it.each([undefined, 'en', 'ja'] as const)('persists the %s initialization choice without a terminal', async (language) => {
+describe('CLI initialization', () => {
+  it.each([undefined, 'en', 'ja'] as const)('persists the %s initialization choice without a terminal and reports it in English', async (language) => {
     const directory = await temporary();
     const result = await run(directory, ['init', ...(language ? [`--language=${language}`] : [])]);
     expect(await loadProjectConfig(directory)).toEqual({ language: language ?? 'ja', capture: 'dom', outputDir: '.needmark/feedback' });
     expect(result.stderr).toBe('');
-    expect(result.stdout).toContain(language === 'en' ? 'Created needmark.config.ts' : 'needmark.config.tsを作成しました');
+    expect(result.stdout).toContain('Created needmark.config.ts');
+    expect(result.stdout).toContain('Redraw the page');
+    expect(result.stdout).not.toMatch(/[\u3040-\u30ff]/);
   });
 
   it.each(['fr', 'EN', 'en-US', ' ja'])('rejects language flag %j before writing any settings', async (language) => {
@@ -51,28 +53,61 @@ describe('CLI language configuration', () => {
     expect(await readFile(join(directory, '.gitignore'), 'utf8')).toBe('preserved/\n');
   });
 
-  it.each(['en', 'ja'] as const)('selects %s before the other terminal questions and persists the answer', async (language) => {
+  it('accepts the recommended settings with one answer in a terminal', async () => {
     const directory = await temporary();
-    await run(directory, ['init'], [language, 'git', 'none']);
-    expect(await loadProjectConfig(directory)).toEqual({ language, capture: 'none', outputDir: '.needmark/feedback' });
+    await run(directory, ['init'], ['']);
+    expect(await loadProjectConfig(directory)).toMatchObject({ capture: 'dom', outputDir: '.needmark/feedback' });
+    expect(await readFile(join(directory, '.gitignore'), 'utf8')).toContain('/.needmark/');
+    const questions = JSON.parse(await readFile(join(directory, 'questions.json'), 'utf8')) as string[];
+    expect(questions).toHaveLength(1);
+    expect(questions[0]).toContain('Use the recommended settings?');
+  });
+
+  it('connects a Vite project only with consent and remove undoes it while keeping the settings', async () => {
+    const directory = await temporary(), original = "import { defineConfig } from 'vite';\n\nexport default defineConfig({});\n";
+    await writeFile(join(directory, 'vite.config.ts'), original);
+    await writeFile(join(directory, 'pnpm-lock.yaml'), '');
+    const declined = await run(directory, ['init']);
+    expect(await readFile(join(directory, 'vite.config.ts'), 'utf8')).toBe(original);
+    expect(declined.stdout).toContain('init --connect=yes');
+    const config = await readFile(join(directory, 'needmark.config.ts'), 'utf8');
+    const connected = await run(directory, ['init', '--connect=yes']);
+    expect(connected.stdout).toContain('Kept the existing needmark.config.ts');
+    expect(await readFile(join(directory, 'needmark.config.ts'), 'utf8')).toBe(config);
+    expect(await readFile(join(directory, 'vite.config.ts'), 'utf8')).toContain('plugins: [needmark()]');
+    expect(connected.stdout).toContain('Changed vite.config.ts');
+    expect(connected.stdout).toContain('start your development server as usual (pnpm dev)');
+    const removed = await run(directory, ['remove']);
+    expect(await readFile(join(directory, 'vite.config.ts'), 'utf8')).toBe(original);
+    expect(removed.stdout).toContain('pnpm remove needmark');
+    expect(await readFile(join(directory, 'needmark.config.ts'), 'utf8')).toContain('capture');
+  });
+
+  it('serves a wrapped development command on its usual port and passes it through when switched off', async () => {
+    const directory = await temporary(), port = 4000 + Math.floor(Math.random() * 900);
+    await writeFile(join(directory, 'app.mjs'), "import { createServer } from 'node:http';\ncreateServer((q, r) => { r.setHeader('content-type', 'text/html'); r.end('<html><body>app ' + process.env.PORT + '</body></html>'); }).listen(Number(process.env.PORT));\n");
+    const child = execFile(process.execPath, [cli, 'dev', '--', process.execPath, 'app.mjs', '--port', String(port)], { cwd: directory });
+    try {
+      let html = '';
+      for (let attempt = 0; attempt < 100 && !html; attempt++) {
+        const response = await fetch(`http://localhost:${port}/`).catch(() => undefined);
+        if (response?.ok) html = await response.text(); else await new Promise((wait) => setTimeout(wait, 100));
+      }
+      expect(html).toContain('/__needmark/client.js');
+      expect(html).not.toContain(`app ${port}`);
+    } finally { child.kill('SIGINT'); }
+    const plain = await execute(process.execPath, [cli, 'dev', '--', process.execPath, '-e', 'console.log("plain " + (process.env.PORT ?? "none"))'], { cwd: directory, env: { ...process.env, NEEDMARK: 'off' } });
+    expect(plain.stdout).toContain('plain none');
+  });
+
+  it('asks each remaining choice by number after the recommendation is declined', async () => {
+    const directory = await temporary();
+    await run(directory, ['init', '--language=en'], ['n', '2', '3']);
+    expect(await loadProjectConfig(directory)).toEqual({ language: 'en', capture: 'none', outputDir: '.needmark/feedback' });
+    expect(await readFile(join(directory, '.gitignore'), 'utf8')).toContain('!/.needmark/feedback/**');
     const questions = JSON.parse(await readFile(join(directory, 'questions.json'), 'utf8')) as string[];
     expect(questions).toHaveLength(3);
-    expect(questions[0]).toContain('Language / 言語');
-    expect(questions[1]).toContain(language === 'en' ? 'Feedback storage' : 'コメントの保存先');
-  });
-
-  it('uses the language flag for terminal questions without asking for it again', async () => {
-    const directory = await temporary();
-    await run(directory, ['init', '--language=en'], ['', '']);
-    expect(await loadProjectConfig(directory)).toMatchObject({ language: 'en', capture: 'dom' });
-    expect(JSON.parse(await readFile(join(directory, 'questions.json'), 'utf8'))).toHaveLength(2);
-  });
-
-  it('rejects an unsupported terminal language before asking about or writing project settings', async () => {
-    const directory = await temporary();
-    await expect(run(directory, ['init'], ['fr'])).rejects.toMatchObject({ code: 1 });
-    expect(JSON.parse(await readFile(join(directory, 'questions.json'), 'utf8'))).toHaveLength(1);
-    await expect(readFile(join(directory, 'needmark.config.ts'))).rejects.toMatchObject({ code: 'ENOENT' });
+    expect(questions[2]).toContain('Record this browser tab');
   });
 
   it.each([{ args: [] }, { args: ['help'] }, { args: ['--help'] }, { args: ['unknown'] }])('does not import trusted settings for help invocation $args', async ({ args }) => {

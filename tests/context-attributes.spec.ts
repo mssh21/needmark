@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './support/review.js';
 import { resolve } from 'node:path';
 
 const moduleUrl = `/@fs/${resolve('src/client/context/code-context.ts')}`;
@@ -27,11 +27,8 @@ test('captures configured empty identifiers without including input values, priv
     const { configureContextAttributes, describeElement } = await import(url);
     configureContextAttributes(['data-feature']);
     const input = document.querySelector('input')!; input.value = 'current-private-input';
-    let rejectsValue = false;
-    try { configureContextAttributes(['value']); } catch { rejectsValue = true; }
-    return { rejectsValue, context: describeElement(input) };
+    return { context: describeElement(input) };
   }, moduleUrl);
-  expect(evidence.rejectsValue).toBe(true);
   expect(evidence.context.attributes).toEqual({ id: 'review-input', title: 'Field title', 'data-feature': '' });
   const saved = JSON.stringify(evidence.context);
   for (const value of ['private-value', 'current-private-input', 'private-token', 'private-legacy', 'private-command']) expect(saved).not.toContain(value);

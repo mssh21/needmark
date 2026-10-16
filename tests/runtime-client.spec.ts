@@ -1,20 +1,13 @@
-import { test, expect, type Page } from '@playwright/test';
-import { readFile, readdir, rm } from 'node:fs/promises';
+import { type Page } from '@playwright/test';
+import { test, expect, saveAndList, output, configureReview, enableWidgetOption } from './support/review.js';
+import { readFile, readdir } from 'node:fs/promises';
 import type { Feedback } from '../src/shared/types.js';
-import { saveAndList } from './save.js';
-const output = '/private/tmp/needmark-e2e-feedback';
-test.beforeEach(async () => { await rm(output, { recursive: true, force: true }); });
 
 // The protocol response is controlled here to verify UI races. Live React extraction is tested separately.
 async function setup(page: Page) {
-  await page.route('http://127.0.0.1:4192/', async (route) => {
-    const response = await route.fetch();
-    await route.fulfill({ response, body: (await response.text()).replace('data-needmark-capture=', 'data-needmark-runtime-source="true" data-needmark-capture=') });
-  });
+  await enableWidgetOption(page, 'data-needmark-runtime-source');
   await page.goto('/');
-  await page.getByRole('button', { name: '設定', exact: true }).click();
-  await page.getByLabel('キャプチャ方式').selectOption('none');
-  await page.getByRole('button', { name: '設定を保存' }).click();
+  await configureReview(page, { method: 'none' });
   await page.evaluate(() => {
     document.querySelectorAll('[data-needmark-source]').forEach((element) => element.removeAttribute('data-needmark-source'));
     for (const selector of ['#purchase-button', '#product-title']) {

@@ -1,10 +1,10 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './support/review.js';
 import { resolve } from 'node:path';
-import type { ElementContext, RuntimeSourceFrame } from '../src/shared/types.js';
+import type { ElementContext } from '../src/shared/types.js';
 
 const moduleUrl = `/@fs/${resolve('src/client/context/code-context.ts')}`;
 
-test('real React dev host creation frames are aligned, bounded and do not use parent metadata', async ({ page }) => {
+test('real React dev host creation frames are aligned, bounded and do not use parent metadata', { tag: '@cross-engine' }, async ({ page }) => {
   await page.goto('/react.html');
   await expect(page.locator('#purchase-one')).toBeVisible();
   const evidence = await page.evaluate(async (url) => {
@@ -42,33 +42,21 @@ test('real React dev host creation frames are aligned, bounded and do not use pa
   expect(evidence.contextKeys).not.toContain('stack');
 });
 
-test('runtime frame parsing rejects unsupported stacks and ambiguous or nonhost metadata', async ({ page }) => {
+// Stack syntax is parsed in code-context.test.ts; this checks which fiber the page offers and that the raw stack never reaches saved context.
+test('runtime source requests read frames only from the element\'s own unambiguous host fiber and never save the stack', async ({ page }) => {
   await page.goto('/');
   await page.setContent('<section id="container"><button id="runtime">Action</button><span id="native">Plain native text</span></section>');
   const evidence = await page.evaluate(async (url) => {
     const { contextForElement, runtimeSourceRequest } = await import(url);
     const element = document.querySelector('#runtime')!;
-    const stack = [
-      'Error: raw-stack-sentinel',
-      '    at jsxDEV (http://127.0.0.1:4192/node_modules/react.js:10:20)',
-      '    at RuntimeWidget (http://127.0.0.1:4192/src/Widget.tsx?t=1:12:3)',
-      '    at RuntimeWidget (http://127.0.0.1:4192/src/Widget.tsx?t=1:12:3)',
-      'RuntimeWidget@webpack-internal:///src/Unsupported.tsx:2:5',
-      '    at RuntimeWidget (webpack-internal:///./src/Unsupported.tsx:2:5)',
-      '    at RuntimeWidget (file:///private/src/Unsupported.tsx:2:5)',
-      '    at RuntimeWidget (http://user:secret@127.0.0.1:4192/private.tsx:2:5)',
-      '    at RuntimeWidget (http://127.0.0.1:4192/zero.tsx:0:5)',
-      '    at RuntimeWidget (https://example.test/third.tsx:15:7)',
-      '    at Fourth (http://127.0.0.1:4192/fourth.tsx:17:9)',
-      '    at Fifth (http://127.0.0.1:4192/fifth.tsx:19:11)',
-      '    at Sixth (http://127.0.0.1:4192/sixth.tsx:21:13)',
-    ].join('\n');
-    const fiber: { stateNode: Element; type: string; _debugStack?: { stack: string }; return: { type: unknown } } = {
-      stateNode: element, type: 'button', _debugStack: { stack }, return: { type: function RuntimeWidget() {} },
+    const stack = 'Error: raw-stack-sentinel\n    at RuntimeWidget (http://user:secret@127.0.0.1:4192/private.tsx:2:5)\n    at RuntimeWidget (http://127.0.0.1:4192/src/Widget.tsx:12:3)';
+    const fiber: { stateNode: Element; type: string; _debugStack?: { stack: string }; return: { type: unknown; _debugStack: { stack: string } } } = {
+      stateNode: element, type: 'button', _debugStack: { stack },
+      return: { type: function RuntimeWidget() {}, _debugStack: { stack: '    at ParentComponent (http://127.0.0.1:4192/src/Parent.tsx:4:2)' } },
     };
     Object.defineProperty(element, '__reactFiber$fixture', { value: fiber, configurable: true, enumerable: true });
     const code = contextForElement(element);
-    const valid = runtimeSourceRequest(code);
+    const own = runtimeSourceRequest(code);
     Object.defineProperty(element, '__reactFiber$ambiguous', { value: fiber, configurable: true, enumerable: true });
     const ambiguous = runtimeSourceRequest(code);
     Reflect.deleteProperty(element, '__reactFiber$ambiguous');
@@ -77,12 +65,9 @@ test('runtime frame parsing rejects unsupported stacks and ambiguous or nonhost 
     fiber.stateNode = element; delete fiber._debugStack;
     const missing = runtimeSourceRequest(code);
     const native = runtimeSourceRequest(contextForElement(document.querySelector('#native')!));
-    return { valid, ambiguous, nonhost, missing, native, serializedContext: JSON.stringify(code) };
+    return { own, ambiguous, nonhost, missing, native, serializedContext: JSON.stringify(code) };
   }, moduleUrl);
-  expect(evidence.valid.elements[0]?.frames).toHaveLength(5);
-  expect(evidence.valid.elements[0]?.frames[0]).toMatchObject({ url: 'http://127.0.0.1:4192/node_modules/react.js', line: 10, column: 20 });
-  expect(evidence.valid.elements[0]?.frames[1]).toMatchObject({ url: 'http://127.0.0.1:4192/src/Widget.tsx?t=1', line: 12, column: 3, component: 'RuntimeWidget' });
-  expect(evidence.valid.elements[0]?.frames.at(-1)?.component).toBe('Fifth');
+  expect(evidence.own.elements[0]?.frames).toEqual([{ url: 'http://127.0.0.1:4192/src/Widget.tsx', line: 12, column: 3, component: 'RuntimeWidget' }]);
   for (const request of [evidence.ambiguous, evidence.nonhost, evidence.missing, evidence.native]) expect(request.elements[0]?.frames).toEqual([]);
   expect(evidence.serializedContext).not.toContain('raw-stack-sentinel');
   expect(evidence.serializedContext).not.toContain('secret');
@@ -156,50 +141,7 @@ test('developer component and Cypress identifiers remain available to code searc
   expect(evidence.changedComponent).toBe(true);
 });
 
-test('JavaScriptCore frame syntax is parsed conservatively in creation order without raw stack persistence', async ({ page }) => {
-  await page.goto('/');
-  await page.setContent('<button id="jsc-purchase" class="purchase primary">Purchase</button>');
-  const evidence = await page.evaluate(async (url) => {
-    const { contextForElement, runtimeSourceRequest, resolveContextElement } = await import(url);
-    const element = document.querySelector('#jsc-purchase')!;
-    const stack = [
-      'Error: private-jsc-stack-sentinel',
-      '@http://127.0.0.1:4192/node_modules/react_jsx-dev-runtime.js:246:36',
-      'PurchaseButton@http://127.0.0.1:4192/src/Purchase.tsx?t=2:12:3',
-      'PurchaseButton@http://127.0.0.1:4192/src/Purchase.tsx?t=2:12:3',
-      'PurchaseButton@webpack-internal:///src/Unsupported.tsx:2:5',
-      'PurchaseButton@file:///private/src/Unsupported.tsx:2:5',
-      'PurchaseButton@http://user:secret@127.0.0.1:4192/private.tsx:2:5',
-      'PurchaseButton@http://127.0.0.1:4192/zero.tsx:0:5',
-      'PurchaseButton@http://127.0.0.1:4192/large.tsx:1000001:5',
-      'invalid pseudo function@data:text/javascript,alert(1):1:1',
-      'Third@https://example.test/third.tsx:15:7',
-      'Fourth@http://127.0.0.1:4192/fourth.tsx:17:9',
-      'Fifth@http://127.0.0.1:4192/fifth.tsx:19:11',
-      'Sixth@http://127.0.0.1:4192/sixth.tsx:21:13',
-    ].join('\n');
-    Object.defineProperty(element, '__reactFiber$fixture', { enumerable: true, value: {
-      stateNode: element, type: 'button', _debugStack: { stack },
-      return: { type: function PurchaseButton() {}, _debugStack: { stack: 'ParentComponent@http://127.0.0.1:4192/src/Parent.tsx:4:2' } },
-    } });
-    const code = contextForElement(element), request = runtimeSourceRequest(code);
-    const resolved = resolveContextElement(code.elements[0]) === element;
-    return { request, resolved, code };
-  }, moduleUrl);
-  const frames: RuntimeSourceFrame[] | undefined = evidence.request.elements[0]?.frames;
-  expect(frames).toHaveLength(5);
-  expect(frames?.[0]).toEqual({ url: 'http://127.0.0.1:4192/node_modules/react_jsx-dev-runtime.js', line: 246, column: 36 });
-  expect(frames?.[1]).toEqual({ url: 'http://127.0.0.1:4192/src/Purchase.tsx?t=2', line: 12, column: 3, component: 'PurchaseButton' });
-  expect(frames?.at(-1)?.component).toBe('Fifth');
-  expect(frames?.some((frame) => frame.component === 'ParentComponent')).toBe(false);
-  expect(evidence.code.elements[0]?.attributes).toMatchObject({ id: 'jsc-purchase', class: 'purchase primary' });
-  expect(evidence.resolved).toBe(true);
-  expect(JSON.stringify(evidence.code)).not.toContain('private-jsc-stack-sentinel');
-  expect(JSON.stringify(evidence.code)).not.toContain('secret');
-  expect(JSON.stringify(evidence.code)).not.toContain('http://');
-});
-
-test('a real React component with a retained creation frame exposes its own source and captured identifiers in both engines', async ({ page }) => {
+test('a real React component with a retained creation frame exposes its own source and captured identifiers in both engines', { tag: '@cross-engine' }, async ({ page }) => {
   await page.goto('/react.html');
   const fixtureUrl = `/@fs/${resolve('tests/fixtures/runtime-nontail.tsx')}`;
   await page.evaluate(async (url) => {

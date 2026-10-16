@@ -1,10 +1,10 @@
-import { test, expect, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { test, expect, output, configureReview } from './support/review.js';
 import { resolve } from 'node:path';
-import { readFile, readdir, rm } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import type { Feedback } from '../src/shared/types.js';
 import type { CaptureSnapshot } from '../src/client/capture/identity.js';
 
-const output = '/private/tmp/needmark-e2e-feedback';
 const urls = { capture: `/@fs/${resolve('src/client/capture/screenshot.ts')}`, identity: `/@fs/${resolve('src/client/capture/identity.ts')}`, context: `/@fs/${resolve('src/client/context/code-context.ts')}` };
 const background = [217, 223, 199, 255], shade = [250, 244, 221, 255], mask = [46, 49, 52, 255];
 const shapes = [
@@ -60,9 +60,8 @@ async function domCapture(page: Page) {
     } finally { capture.stop(); host.remove(); }
   }, urls);
 }
-test.beforeEach(async () => { await rm(output, { recursive: true, force: true }); });
 
-test('full viewport DOM PNG preserves the consumer trapezoid, inset, circle, ellipse and clipped descendants outside the selected target', async ({ page }) => {
+test('full viewport DOM PNG preserves the consumer trapezoid, inset, circle, ellipse and clipped descendants outside the selected target', { tag: '@cross-engine' }, async ({ page }) => {
   await fixture(page); const native = await page.screenshot();
   expect(await pixels(page, native.toString('base64'), shapes)).toEqual(expected(shapes));
   const captured = await domCapture(page);
@@ -74,7 +73,7 @@ test('full viewport DOM PNG preserves the consumer trapezoid, inset, circle, ell
   expect(await pixels(page, captured.png, [{ name: 'excluded-kit', x: 1090, y: 40 }])).toEqual([{ name: 'excluded-kit', color: background }]);
 });
 
-test('DOM shape rendering handles pseudo-elements, open shadow and same-origin frame content while keeping all privacy masks', async ({ page }) => {
+test('DOM shape rendering handles pseudo-elements, open shadow and same-origin frame content while keeping all privacy masks', { tag: '@cross-engine' }, async ({ page }) => {
   await fixture(page); expect(await pixels(page, (await page.screenshot()).toString('base64'), nested)).toEqual(expected(nested));
   const before = await page.evaluate(() => ({
     password: (document.querySelector('#private-password') as HTMLInputElement).value,
@@ -91,15 +90,14 @@ test('DOM shape rendering handles pseudo-elements, open shadow and same-origin f
   expect(before).toEqual({ password: 'private-password', shadow: 'shadow-private', frame: 'frame-private' });
 });
 
-test('the real widget saves a full viewport shape-correct PNG and selected code geometry without requesting tab permission', async ({ page }) => {
+test('the real widget saves a full viewport shape-correct PNG and selected code geometry without requesting tab permission', { tag: '@cross-engine' }, async ({ page }) => {
   let sharingRequests = 0; await page.exposeFunction('recordUnexpectedSharing', () => { sharingRequests++; });
   await page.addInitScript(() => {
     if (navigator.mediaDevices) Object.defineProperty(navigator.mediaDevices, 'getDisplayMedia', { configurable: true, value: () => {
       void (window as unknown as { recordUnexpectedSharing(): Promise<void> }).recordUnexpectedSharing(); return Promise.reject(new Error('DOM capture must not request tab permission'));
     } });
   });
-  await fixture(page, true); await page.getByRole('button', { name: '設定', exact: true }).click();
-  await page.getByLabel('キャプチャ方式').selectOption('dom'); await page.getByRole('button', { name: '設定を保存', exact: true }).click();
+  await fixture(page, true); await configureReview(page, { method: 'dom' });
   await page.getByRole('button', { name: 'コメント', exact: true }).click(); const bounds = (await page.locator('#review-target').boundingBox())!;
   await page.mouse.click(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
   await page.getByLabel('コメント本文').fill('台形と丸の形を維持して余白を調整する');

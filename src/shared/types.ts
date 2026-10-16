@@ -123,6 +123,7 @@ export interface FeedbackSubmission {
 
 /** Options are specified in docs/getting-started.md#project-configuration. / 各オプションの仕様は docs/getting-started.ja.md#プロジェクト設定 を参照。 */
 export interface NeedMarkOptions {
+  enabled?: boolean;
   origins?: string[];
   language?: NeedMarkLanguage;
   capture?: CaptureMethod;

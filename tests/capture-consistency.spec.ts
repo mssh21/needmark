@@ -1,11 +1,11 @@
-import { test, expect, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { test, expect, output, configureReview } from './support/review.js';
 import { resolve } from 'node:path';
-import { readFile, readdir, rm } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import type { CaptureGuard } from '../src/client/capture/identity.js';
 import type { ScreenshotCapture } from '../src/client/capture/screenshot.js';
 import type { Feedback, FeedbackInput, Rectangle } from '../src/shared/types.js';
 
-const output = '/private/tmp/needmark-e2e-feedback';
 const urls = { capture: `/@fs/${resolve('src/client/capture/screenshot.ts')}`, identity: `/@fs/${resolve('src/client/capture/identity.ts')}`, context: `/@fs/${resolve('src/client/context/code-context.ts')}` };
 interface NativeHarness {
   capture: ScreenshotCapture; canvas: HTMLCanvasElement; host: HTMLElement; requested: Promise<void>; closed: number;
@@ -50,9 +50,8 @@ async function nativeFixture(page: Page) {
   }, urls.capture);
 }
 
-test.beforeEach(async () => { await rm(output, { recursive: true, force: true }); });
 
-test('DOM pixels, selection outline and committed code geometry agree after the same original element moves before prepare', async ({ page }) => {
+test('DOM pixels, selection outline and committed code geometry agree after the same original element moves before prepare', { tag: '@cross-engine' }, async ({ page }) => {
   await modulePage(page);
   const result = await page.evaluate(async (urls) => {
     const { ScreenshotCapture } = await import(urls.capture), { createCaptureGuard, applyCaptureSnapshot } = await import(urls.identity);
@@ -80,7 +79,7 @@ test('DOM pixels, selection outline and committed code geometry agree after the 
   expect(result.capture).toEqual({ method: 'dom', ...result.image });
 });
 
-test('native frames prepare after the hide delay, rebase before acquisition and reject later original movement without committing', async ({ page }) => {
+test('native frames prepare after the hide delay, rebase before acquisition and reject later original movement without committing', { tag: '@cross-engine' }, async ({ page }) => {
   await nativeFixture(page);
   const result = await page.evaluate(async (urls) => {
     const fixture = (window as unknown as { nativeHarness: NativeHarness }).nativeHarness;
@@ -108,7 +107,7 @@ test('native frames prepare after the hide delay, rebase before acquisition and 
   expect(result.capture).toEqual({ method: 'tab', width: 1200, height: 850 });
 });
 
-test('native pixel acquisition rejects privacy identity, geometry, URL and DPR drift and masks tolerated subpixel movement at the original edges', async ({ page }) => {
+test('native pixel acquisition rejects privacy identity, geometry, URL and DPR drift and masks tolerated subpixel movement at the original edges', { tag: '@cross-engine' }, async ({ page }) => {
   await nativeFixture(page);
   const result = await page.evaluate(async () => {
     const fixture = (window as unknown as { nativeHarness: NativeHarness }).nativeHarness;
@@ -145,9 +144,8 @@ test('native pixel acquisition rejects privacy identity, geometry, URL and DPR d
 });
 
 for (const change of ['move', 'replace'] as const) {
-  test(`widget preserves typed feedback after original ${change} during DOM rendering and requires explicit image-free saving`, async ({ page }) => {
-    await page.goto('/'); await page.getByRole('button', { name: '設定', exact: true }).click();
-    await page.getByLabel('キャプチャ方式').selectOption('dom'); await page.getByRole('button', { name: '設定を保存', exact: true }).click();
+  test(`widget preserves typed feedback after original ${change} during DOM rendering and falls back to image-free saving`, { tag: '@cross-engine' }, async ({ page }) => {
+    await page.goto('/'); await configureReview(page, { method: 'dom' });
     await page.evaluate(() => {
       const state = window as unknown as { captureGateReached: boolean; releaseCaptureGate: () => void; captureGateObserver: MutationObserver };
       state.captureGateReached = false; const pending = new Promise<void>((resolve) => { state.releaseCaptureGate = resolve; });
@@ -169,11 +167,10 @@ for (const change of ['move', 'replace'] as const) {
       if (change === 'move') original.style.transform = 'translateX(30px)'; else original.replaceWith(original.cloneNode(true));
       (window as unknown as { releaseCaptureGate: () => void }).releaseCaptureGate();
     }, change);
-    await expect(page.getByRole('button', { name: '画像なしで保存する', exact: true })).toBeVisible();
+    await expect(page.getByText('画像を撮影できなかったため、画像なしで保存します。', { exact: true })).toBeVisible();
     await expect(page.getByLabel('コメント本文')).toHaveValue(`撮影待ちに入力した ${change} のコメント`);
-    await expect(page.getByRole('button', { name: '保存', exact: true })).toBeDisabled();
     await expect(page.getByRole('img', { name: 'コメントした場所のキャプチャ', exact: true })).toBeHidden();
-    await page.getByRole('button', { name: '画像なしで保存する', exact: true }).click(); await page.getByRole('button', { name: '保存', exact: true }).click();
+    await page.getByRole('button', { name: '保存', exact: true }).click();
     await expect(page.getByText('コメントを保存しました。', { exact: true })).toBeVisible();
     const ids = (await readdir(output)).filter((id) => !id.startsWith('.')); expect(ids).toHaveLength(1);
     const saved = JSON.parse(await readFile(`${output}/${ids[0]}/context.json`, 'utf8')) as Feedback;

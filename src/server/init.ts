@@ -11,7 +11,19 @@ export async function initialize(directory: string, options: InitOptions): Promi
   if (options.language !== undefined && !isNeedMarkLanguage(options.language)) throw new Error('Invalid NeedMark language. Use en or ja.');
   if (!['dom', 'tab', 'none'].includes(options.capture) || !['local', 'git'].includes(options.share)) throw new Error('Invalid initialization choice.');
   const outputDir = defaultFeedbackDirectory(directory), storage = outputDir.split('/')[0]!;
-  const config = `import type { NeedMarkOptions } from 'needmark';\n\nexport default {\n  language: ${JSON.stringify(options.language ?? 'ja')},\n  capture: ${JSON.stringify(options.capture)},\n  outputDir: '${outputDir}',\n} satisfies NeedMarkOptions;\n`;
+  // The comments name what each value does, because the file is where people come back to change a choice made during setup.
+  // 初期設定で選んだ値を後から変えるときに見るのはこのファイルのため、各値の意味をコメントで残す。
+  const config = `import type { NeedMarkOptions } from 'needmark';
+
+export default {
+  // Set enabled: false to turn NeedMark off for everyone; NEEDMARK=off does it for one person or run.
+  // Review screen language: 'en' or 'ja'.
+  language: ${JSON.stringify(options.language ?? 'ja')},
+  // Screenshots: 'dom' redraws the page (no permission prompt), 'tab' records this browser tab (asks once to share it), 'none' takes no image.
+  capture: ${JSON.stringify(options.capture)},
+  outputDir: '${outputDir}',
+} satisfies NeedMarkOptions;
+`;
   const configPath = join(directory, 'needmark.config.ts');
   if (!existsSync(configPath) && existsSync(join(directory, 'needback.config.ts'))) throw new Error('Existing needback.config.ts is still supported. Rename it to needmark.config.ts before initializing again.');
   // The exclusive `wx` flag refuses an existing file atomically, unlike an exists check followed by a write.

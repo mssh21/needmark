@@ -18,6 +18,12 @@ export interface FrameCapturePlan {
 const changed = () => new Error('撮影中に埋め込み画面が変わりました。画像なしで保存するか、場所を選び直してください。');
 const unavailable = () => new Error('埋め込み画面を再現できませんでした。画像なしで保存するか、高精度キャプチャを選んでください。');
 const ignored = (element: Element) => !!element.closest('[data-needmark],[data-html2canvas-ignore]') || element.localName === 'script';
+// html2canvas scrolls its clone before onclone, and a page with smooth scrolling is still moving there, so frames are compared in document coordinates.
+// html2canvasはoncloneの前に複製をスクロールし、なめらかなスクロールのページではまだ移動中のため、iframeは文書座標で比較する。
+const documentRect = (element: Element) => {
+  const rect = element.getBoundingClientRect(), view = element.ownerDocument.defaultView;
+  return { x: rect.x + (view?.scrollX ?? 0), y: rect.y + (view?.scrollY ?? 0), width: rect.width, height: rect.height };
+};
 const styleEntries = (element: Element): [string, string][] => {
   const style = element.ownerDocument.defaultView!.getComputedStyle(element);
   return Array.from(style).map((name): [string, string] => [name, style.getPropertyValue(name)]);
@@ -127,6 +133,8 @@ export async function captureFramePlan(document: Document, scale: number,
   cloneOptions: (source: Document) => (clone: Document) => void,
   budget = { frames: 0 }, depth = 0): Promise<FrameCapturePlan> {
   const records: FrameSnapshot[] = [];
+  const view = document.defaultView, viewport = document.scrollingElement ?? document.documentElement;
+  const scrollbars = !!view && (view.innerWidth > viewport.clientWidth || view.innerHeight > viewport.clientHeight);
   function frameElements(root: Document | ShadowRoot): HTMLIFrameElement[] {
     const frames: HTMLIFrameElement[] = [];
     for (const element of root.querySelectorAll('*')) {
@@ -144,7 +152,7 @@ export async function captureFramePlan(document: Document, scale: number,
       const styles = styleEntries(frame);
       if (child && styles.some(([name, value]) => name === 'background-blend-mode' && value.split(',').some((mode) => mode.trim() !== 'normal'))) throw unavailable();
       const parent = frame.parentElement ?? (frame.getRootNode() as ShadowRoot).host;
-      records.push({ frame, location: locationOf(frame, document), rect: viewportRectOf(frame), localRect: frame.getBoundingClientRect(), parentRect: parent.getBoundingClientRect(),
+      records.push({ frame, location: locationOf(frame, document), rect: viewportRectOf(frame), localRect: documentRect(frame), parentRect: documentRect(parent),
         attributes: Array.from(frame.attributes, ({ name, value }): [string, string] => [name, value]), styles, document: child,
         ...(child ? { url: child.URL } : {}), width: view?.innerWidth ?? 0, height: view?.innerHeight ?? 0,
         scrollX: view?.scrollX ?? 0, scrollY: view?.scrollY ?? 0 });
@@ -185,6 +193,11 @@ export async function captureFramePlan(document: Document, scale: number,
     validate();
   }
   return { validate, async restore(clone) {
+    // html2canvas lays its clone out with scrolling="no", so a page that reserves room for classic scrollbars would be laid out wider there and every box would move.
+    // Giving the clone its own scrollbars back keeps the live layout, including media queries, instead of loosening the frame position check.
+    // html2canvasは複製をscrolling="no"で配置するため、従来型スクロールバーの幅を確保するページでは複製の方が広く配置され、すべての箱がずれる。
+    // 枠の位置確認を緩める代わりに複製へスクロールバーを戻し、メディアクエリも含めて実際の配置を保つ。
+    if (scrollbars) clone.defaultView?.frameElement?.removeAttribute('scrolling');
     const locations = records.map((record) => locate(clone, record.location));
     const frames = records.map((record) => inertFrame(clone, record));
     const detach: (() => void)[] = [];
@@ -200,8 +213,8 @@ export async function captureFramePlan(document: Document, scale: number,
       for (let index = 0; index < frames.length; index++) {
         const parent = locations[index]!.parent;
         const box = parent.nodeType === 11 ? (parent as ShadowRoot).host : parent as Element;
-        if (!rectanglesMatch(frames[index]!.getBoundingClientRect(), records[index]!.localRect)
-          || !rectanglesMatch(box.getBoundingClientRect(), records[index]!.parentRect)) throw unavailable();
+        if (!rectanglesMatch(documentRect(frames[index]!), records[index]!.localRect)
+          || !rectanglesMatch(documentRect(box), records[index]!.parentRect)) throw unavailable();
       }
     } catch (error) { frames.forEach((frame) => frame.remove()); throw error; }
     finally { detach.forEach((clean) => clean()); }

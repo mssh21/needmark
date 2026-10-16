@@ -1,11 +1,11 @@
-import { test, expect, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { test, expect, saveAndList, output, tempRoot, configureReview, tabColorTolerance } from './support/review.js';
 import { build } from 'esbuild';
 import { createServer, type Server } from 'node:http';
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { resolve, join } from 'node:path';
 import { startReviewProxy, type ReviewProxy } from '../dist/proxy.js';
 import type { Feedback, Rectangle, RuntimeSourceRequest, RuntimeSourceResult, SourceLocation } from '../src/shared/types.js';
-import { saveAndList } from './save.js';
 
 const fixturePath = resolve('tests/fixtures/frame-capture.jsx'), sourceFile = 'src/frame-capture.jsx';
 const currentColor = [217, 91, 36, 255], outlineColor = [25, 101, 227, 255];
@@ -23,7 +23,7 @@ async function close(server: Server) {
 
 /** Real unmodified CaptureTarget, live React state, source maps and protected public proxy. */
 async function withReview(page: Page, run: (review: { origin: string; output: string; source: string }) => Promise<void>) {
-  const root = await mkdtemp('/private/tmp/needmark-frame-padding-');
+  const root = await mkdtemp(join(tempRoot, 'needmark-frame-padding-'));
   let upstream: Server | undefined, proxy: ReviewProxy | undefined;
   try {
     const source = await readFile(fixturePath, 'utf8'); await mkdir(root + '/src'); await writeFile(root + '/' + sourceFile, source);
@@ -81,7 +81,7 @@ async function pixels(page: Page, png: Buffer, rect: Rectangle, privateRects: Re
 }
 
 // One actual saved review: native rendered geometry is the independent oracle, not NeedMark's mapping.
-test('a padded bordered iframe saves its original target geometry and DOM PNG outline at the native rendered position', async ({ page }, testInfo) => {
+test('a padded bordered iframe saves its original target geometry and DOM PNG outline at the native rendered position', { tag: '@cross-engine' }, async ({ page }, testInfo) => {
   await withReview(page, async ({ origin, output, source }) => {
     const frameLocator = page.locator('#outer-capture-frame');
     await frameLocator.evaluate((element) => {
@@ -109,8 +109,7 @@ test('a padded bordered iframe saves its original target geometry and DOM PNG ou
       const native = await page.screenshot({ caret: 'initial' }), nativePixels = await pixels(page, native, rect, privateRects);
       await testInfo.attach('padded-frame-native.png', { body: native, contentType: 'image/png' });
       expect(nativePixels.inside).toEqual(currentColor); expectPrivacy(nativePixels.privacy, [153, 34, 169, 255]);
-      await page.getByRole('button', { name: '設定', exact: true }).click();
-      await page.getByLabel('キャプチャ方式').selectOption('dom'); await page.getByRole('button', { name: '設定を保存', exact: true }).click();
+      await configureReview(page, { method: 'dom' });
       const response = page.waitForResponse((item) => item.url() === origin + '/__needmark/source' && item.request().method() === 'POST');
       await page.getByRole('button', { name: 'コメント', exact: true }).click();
       await expect(page.locator('[data-needmark] .cover')).toBeVisible();
@@ -171,9 +170,7 @@ async function privacyRects(frame: import('@playwright/test').Frame): Promise<Re
   return Object.fromEntries(entries);
 }
 async function configureMethod(page: Page, method: 'none' | 'tab') {
-  await page.getByRole('button', { name: '設定', exact: true }).click();
-  await page.getByLabel('キャプチャ方式').selectOption(method);
-  await page.getByRole('button', { name: '設定を保存', exact: true }).click();
+  await configureReview(page, { method });
 }
 async function storedComment(output: string, comment: string) {
   const ids = (await readdir(output, { withFileTypes: true })).filter((entry) => entry.isDirectory() && !entry.name.startsWith('.'));
@@ -203,7 +200,7 @@ function expectPrivacy(actual: Record<string, number[][]>, color: number[]) {
   for (const corners of Object.values(actual)) for (const corner of corners) expect(corner).toEqual(color);
 }
 
-test('padded scaled frames select a thin original at its native center and retain exact native text-range geometry', async ({ page }, testInfo) => {
+test('padded scaled frames select a thin original at its native center and retain exact native text-range geometry', { tag: '@cross-engine' }, async ({ page }, testInfo) => {
   await withReview(page, async ({ origin, output, source }) => {
     const frame = await paddedFrame(page, true), target = frame.locator('[data-cy="frame-live-button"]');
     await target.click(); await expect(target).toHaveText('Current child 1');
@@ -248,7 +245,6 @@ test('padded scaled frames select a thin original at its native center and retai
 });
 
 test('native tab capture masks every padded scaled child corner at its actual rendered position', async ({ page, browserName }, testInfo) => {
-  test.skip(browserName !== 'chromium', 'The automated native tab picker is supported by the Chromium launch configuration.');
   await withReview(page, async ({ origin, output, source }) => {
     const frame = await paddedFrame(page, true), target = frame.locator('[data-cy="frame-live-button"]');
     await target.click(); await expect(target).toHaveText('Current child 1');
@@ -267,7 +263,7 @@ test('native tab capture masks every padded scaled child corner at its actual re
       await testInfo.attach('padded-scaled-tab-saved.png', { body: png, contentType: 'image/png' });
       await testInfo.attach('padded-scaled-tab-privacy.json', { body: JSON.stringify({ nativePixels, actual, privateRects, rect, saved }, null, 2), contentType: 'application/json' });
       expectPrivacy(actual.privacy, [46, 49, 52, 255]);
-      actual.inside.forEach((value, index) => expect(Math.abs(value - currentColor[index]!)).toBeLessThanOrEqual(2));
+      actual.inside.forEach((value, index) => expect(Math.abs(value - currentColor[index]!)).toBeLessThanOrEqual(tabColorTolerance));
       expect(saved.capture.method).toBe('tab'); expect(actual.width).toBe(saved.capture.width); expect(actual.height).toBe(saved.capture.height); expect(saved.capture.width).toBeGreaterThan(500);
       expect(saved.viewport.devicePixelRatio).toBe(2); expectGeometry(saved.target.rect, rect); expectGeometry(saved.target.code!.elements[0]!.rect, rect);
       expect(saved.target.code!.elements[0]).toMatchObject({ source: expectedSource(source), sourceRelation: 'self', sourceOrigin: 'runtime', frameUrls: [frame.url()] });
@@ -278,48 +274,8 @@ test('native tab capture masks every padded scaled child corner at its actual re
   });
 });
 
-test('multi marquee excludes an unpainted child control whose geometry falls entirely in padded iframe space', async ({ page }, testInfo) => {
-  await withReview(page, async () => {
-    const frame = await paddedFrame(page, true), target = frame.locator('[data-cy="frame-live-button"]');
-    await target.click(); await expect(target).toHaveText('Current child 1');
-    await target.evaluate((element) => Object.assign((element as HTMLElement).style, { left: '-20px', top: '260px', width: '12px', height: '12px', padding: '0', overflow: 'hidden' }));
-    const original = await target.elementHandle(); if (!original) throw new Error('Clipped original missing');
-    try {
-      const parentUrl = page.url(), childUrl = frame.url(), rect = await target.boundingBox(); if (!rect) throw new Error('Clipped native rectangle missing');
-      const point = { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
-      const parentHit = await page.evaluate((point) => document.elementFromPoint(point.x, point.y)?.id, point);
-      const childGeometry = await original.evaluate((element) => {
-        const rect = element.getBoundingClientRect();
-        return { rect: rect.toJSON(), connected: element.isConnected,
-          nativeHit: element.ownerDocument.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2) === element };
-      });
-      const frameBounds = await page.locator('#outer-capture-frame').evaluate((element) => {
-        const frame = element as HTMLIFrameElement, bounds = frame.getBoundingClientRect(), style = getComputedStyle(frame), scale = bounds.width / frame.offsetWidth;
-        return { innerBorder: bounds.left + frame.clientLeft * scale, contentLeft: bounds.left + (frame.clientLeft + parseFloat(style.paddingLeft)) * scale };
-      });
-      expect(childGeometry.connected).toBe(true); expect(childGeometry.nativeHit).toBe(false); expect(childGeometry.rect.right).toBeLessThan(0);
-      expect(parentHit).toBe('outer-capture-frame'); expect(rect.x).toBeGreaterThan(frameBounds.innerBorder); expect(rect.x + rect.width).toBeLessThan(frameBounds.contentLeft);
-      await configureMethod(page, 'none');
-      await page.getByRole('button', { name: 'コメント', exact: true }).click();
-      const cover = page.locator('[data-needmark] .cover'); await expect(cover).toBeVisible();
-      await page.mouse.move(rect.x - 1, rect.y - 1); await page.keyboard.down('Shift'); await page.mouse.down(); await page.keyboard.up('Shift'); await page.mouse.move(rect.x + rect.width + 1, rect.y + rect.height + 1, { steps: 4 }); await page.mouse.up();
-      await expect(page.locator('[data-needmark] .selected-outline')).toHaveCount(0);
-      await expect(page.locator('[data-needmark] [data-hint]')).toContainText('0件を選択');
-      await page.getByRole('button', { name: '選択を完了', exact: true }).click();
-      await expect(page.getByLabel('コメント本文')).toBeHidden(); await expect(cover).toBeVisible();
-      await expect(page.locator('[data-needmark] [data-hint]')).toContainText('0件を選択');
-      expect(await original.evaluate((element) => element.isConnected && element === element.ownerDocument.querySelector('[data-cy="frame-live-button"]'))).toBe(true);
-      expect(page.url()).toBe(parentUrl); expect(frame.url()).toBe(childUrl);
-      await testInfo.attach('padded-space-unpainted-control.json', { body: JSON.stringify({ rect, point, parentHit, childGeometry, frameBounds }, null, 2), contentType: 'application/json' });
-      await testInfo.attach('padded-space-unpainted-control.png', { body: await page.screenshot({ caret: 'initial' }), contentType: 'image/png' });
-      await page.keyboard.press('Escape'); await expect(cover).toBeHidden();
-    } finally { await original.dispose(); }
-  });
-});
-
-
-// Normal Area sampling must describe painted evidence, independently of exact JSX verification.
-test('a normal area review over iframe padding never attributes a wholly unpainted child target to its image or AI prompt', async ({ page }, testInfo) => {
+// Marquee and area sampling must describe painted evidence, independently of exact JSX verification.
+test('marquee and area reviews over iframe padding never attribute a wholly unpainted child target to the selection, image or AI prompt', { tag: '@cross-engine' }, async ({ page }, testInfo) => {
   await page.addInitScript(() => Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async (value: string) => {
     (window as unknown as { copied: string }).copied = value;
   } } }));
@@ -361,8 +317,14 @@ test('a normal area review over iframe padding never attributes a wholly unpaint
       expect(area.x).toBeGreaterThan(frameBounds.innerBorder); expect(area.x + area.width).toBeLessThan(frameBounds.contentLeft);
       expect(originalIdentity).toEqual({ sameDocument: true, sameNode: true });
       expect(rect.width).toBeCloseTo(15); expect(rect.height).toBeCloseTo(9.6, 1); expect(area.width).toBeGreaterThan(5); expect(area.height).toBeGreaterThan(5);
-      await page.getByRole('button', { name: '設定', exact: true }).click();
-      await page.getByLabel('キャプチャ方式').selectOption('dom'); await page.getByRole('button', { name: '設定を保存', exact: true }).click();
+      await page.getByRole('button', { name: 'コメント', exact: true }).click();
+      const cover = page.locator('[data-needmark] .cover'); await expect(cover).toBeVisible();
+      await page.mouse.move(rect.x - 1, rect.y - 1); await page.keyboard.down('Shift'); await page.mouse.down(); await page.keyboard.up('Shift'); await page.mouse.move(rect.x + rect.width + 1, rect.y + rect.height + 1, { steps: 4 }); await page.mouse.up();
+      await expect(page.locator('[data-needmark] .selected-outline')).toHaveCount(0);
+      await page.getByRole('button', { name: '選択を完了', exact: true }).click();
+      await expect(page.getByLabel('コメント本文')).toBeHidden(); await expect(page.locator('[data-needmark] [data-hint]')).toContainText('0件を選択');
+      await page.keyboard.press('Escape'); await expect(cover).toBeHidden();
+      await configureReview(page, { method: 'dom' });
       const frameBefore = await page.locator('#outer-capture-frame').evaluate((element) => element.outerHTML);
       const childBefore = await frame.evaluate(() => ({ html: document.body.innerHTML, url: location.href, scrollX, scrollY }));
       const native = await page.screenshot({ caret: 'initial' });
@@ -381,7 +343,7 @@ test('a normal area review over iframe padding never attributes a wholly unpaint
       await page.mouse.move(area.x, area.y); await page.mouse.down(); await page.mouse.move(area.x + area.width, area.y + area.height, { steps: 4 }); await page.mouse.up();
       const comment = 'iframeの余白だけを囲んだコメントに、画面へ描画されていない子要素を含めない';
       await page.getByLabel('コメント本文').fill(comment);
-      await expect.poll(async () => ({ image: await page.getByRole('img', { name: 'コメントした場所のキャプチャ', exact: true }).isVisible(), failed: await page.getByRole('button', { name: '画像なしで保存する', exact: true }).isVisible() })).not.toEqual({ image: false, failed: false });
+      await expect.poll(async () => ({ image: await page.getByRole('img', { name: 'コメントした場所のキャプチャ', exact: true }).isVisible(), failed: await page.getByText('画像を撮影できなかったため、画像なしで保存します。', { exact: true }).isVisible() })).not.toEqual({ image: false, failed: false });
       const captureState = await page.locator('[data-capture-state]').textContent();
       await expect(page.locator('[data-source-state]')).not.toHaveText('対象のコードを確認中…');
       const calls = await Promise.all(sourceCalls);

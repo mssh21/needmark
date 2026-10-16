@@ -1,11 +1,9 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, saveAndList, output } from './support/review.js';
 import { readFile, readdir, rm } from 'node:fs/promises';
 import type { Feedback } from '../src/shared/types.js';
-import { saveAndList } from './save.js';
 
-const output = '/private/tmp/needmark-e2e-feedback';
 
-test('a target beneath multiple empty covers keeps its identifiers and visible pixels through save and sharing', async ({ page }, info) => {
+test('a target beneath multiple empty covers keeps its identifiers and visible pixels through save and sharing', { tag: '@cross-engine' }, async ({ page }, info) => {
   await rm(output, { recursive: true, force: true });
   await page.addInitScript(() => {
     localStorage.setItem('needmark-configured', 'true');

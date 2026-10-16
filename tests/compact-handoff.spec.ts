@@ -1,11 +1,9 @@
-import { test, expect, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { test, expect, searchList, toggleFilter, output, enableWidgetOption } from './support/review.js';
 import { randomUUID } from 'node:crypto';
-import { rm } from 'node:fs/promises';
 import type { ElementContext, Feedback, FeedbackInput, FeedbackStatus } from '../src/shared/types.js';
 import { input } from './fixtures.js';
-import { searchList, toggleFilter } from './save.js';
 
-const output = '/private/tmp/needmark-e2e-feedback';
 type ClipboardState = { compactCopied?: string; compactCopyPending?: boolean; rejectCompactCopy?: (error: Error) => void };
 const copied = (page: Page) => page.evaluate(() => (window as unknown as ClipboardState).compactCopied ?? '');
 function element(selector = '#compact-target', file = 'src/CompactButton.tsx'): ElementContext {
@@ -25,15 +23,12 @@ async function setup(page: Page, submit = false, compact = true) {
     } } });
   });
   // Control the optional UI transport; the actual Node callback is covered by review-api tests.
-  if (submit) await page.route('http://127.0.0.1:4192/', async (route) => {
-    const response = await route.fetch();
-    await route.fulfill({ response, body: (await response.text()).replace('data-needmark-capture=', 'data-needmark-submit="true" data-needmark-capture=') });
-  });
+  if (submit) await enableWidgetOption(page, 'data-needmark-submit');
   await page.goto('/'); await page.getByRole('button', { name: '設定', exact: true }).click();
   await expect(page.getByLabel('AIへの情報量')).toHaveValue('standard');
   await page.getByLabel('キャプチャ方式').selectOption('none');
   if (compact) await page.getByLabel('AIへの情報量').selectOption({ label: '簡潔：コメントと場所・画像パス' });
-  await page.getByRole('button', { name: '設定を保存', exact: true }).click();
+  await page.getByRole('button', { name: '保存', exact: true }).click();
 }
 async function headers(page: Page) { return { 'x-needmark-token': (await page.locator('script[data-needmark-token]').getAttribute('data-needmark-token'))! }; }
 async function seed(page: Page, comment: string, selected = target(), status: FeedbackStatus = 'open', url = page.url(), image = false): Promise<Feedback> {
@@ -53,25 +48,24 @@ async function list(page: Page) {
 }
 async function copyList(page: Page) { await page.getByRole('button', { name: 'プロンプトをコピー', exact: true }).click(); return copied(page); }
 
-test.beforeEach(async () => { await rm(output, { recursive: true, force: true }); });
 
 test('compact preference survives saving and reload, changes actual output, and invalid saved values fall back to standard', async ({ page }) => {
   await setup(page); const item = await seed(page, '保存した簡潔設定でこのボタンを修正する');
   expect(await page.evaluate(() => localStorage.getItem('needmark-detail'))).toBe('compact');
   await page.reload(); await page.getByRole('button', { name: '設定', exact: true }).click();
   await expect(page.getByLabel('AIへの情報量')).toHaveValue('compact');
-  await page.getByRole('button', { name: '設定を保存', exact: true }).click(); await list(page);
+  await page.getByRole('button', { name: '保存', exact: true }).click(); await list(page);
   const compact = await copyList(page);
   for (const value of [item.id, item.comment, item.url, `${item.id}/context.json`, 'src/CompactButton.tsx:17:3']) expect(compact).toContain(value);
   await page.getByRole('button', { name: '設定', exact: true }).click();
   await page.getByLabel('AIへの情報量').selectOption('standard');
-  await page.getByRole('button', { name: '設定を保存', exact: true }).click(); await list(page);
+  await page.getByRole('button', { name: '保存', exact: true }).click(); await list(page);
   const standard = await copyList(page); expect(standard).not.toEqual(compact);
   expect(standard).toContain(item.comment);
   await page.evaluate(() => localStorage.setItem('needmark-detail', 'unsupported-format'));
   await page.reload(); await page.getByRole('button', { name: '設定', exact: true }).click();
   await expect(page.getByLabel('AIへの情報量')).toHaveValue('standard');
-  await page.getByRole('button', { name: '設定を保存', exact: true }).click();
+  await page.getByRole('button', { name: '保存', exact: true }).click();
   expect(await page.evaluate(() => localStorage.getItem('needmark-detail'))).toBe('standard');
 });
 

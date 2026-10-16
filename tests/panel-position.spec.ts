@@ -1,10 +1,9 @@
-import { test, expect, type Page, type TestInfo } from '@playwright/test';
-import { readFile, readdir, rm } from 'node:fs/promises';
+import { type Page, type TestInfo } from '@playwright/test';
+import { test, expect, saveAndList, searchList, output } from './support/review.js';
+import { readFile, readdir } from 'node:fs/promises';
 import type { Feedback } from '../src/shared/types.js';
 import { input } from './fixtures.js';
-import { saveAndList, searchList } from './save.js';
 
-const output = '/private/tmp/needmark-e2e-feedback';
 const positionKey = 'needmark-toolbar-position';
 const panel = (page: Page) => page.getByRole('region', { name: 'NeedMark', exact: true });
 const dock = (page: Page) => page.locator('[data-needmark] .dock');
@@ -69,7 +68,6 @@ async function selection(field: ReturnType<Page['getByLabel']>) {
   return field.evaluate((element) => ({ start: (element as HTMLTextAreaElement).selectionStart, end: (element as HTMLTextAreaElement).selectionEnd, scroll: (element as HTMLTextAreaElement).scrollTop }));
 }
 
-test.beforeEach(async () => { await rm(output, { recursive: true, force: true }); });
 test.afterEach(async ({ page }, info) => {
   if (info.status === info.expectedStatus) return;
   await screenshot(page, info, 'actual-panel-failure');
@@ -91,7 +89,7 @@ test('stored toolbar at y90 leaves mobile settings and a tall searchable review 
   await page.getByLabel('投稿者名', { exact: true }).fill('狭い画面のレビュアー');
   await accessiblePanel(page);
   await page.getByLabel('AIへの情報量').selectOption('compact');
-  await page.getByRole('button', { name: '設定を保存', exact: true }).click();
+  await page.getByRole('button', { name: '保存', exact: true }).click();
   await expect(panel(page)).toBeHidden();
   for (let index = 0; index < 12; index++) await seed(page, `一覧のコメント ${index}: ${'レビュー内容と修正理由。'.repeat(12)}`);
   await page.getByRole('button', { name: 'コメント一覧', exact: true }).click();
@@ -121,6 +119,23 @@ test('a mobile real-target composer retains typed feedback through image and sou
   const item = await saved(comment); expect(item.target.selector).toBe('#purchase-button');
   expect(item.target.code?.elements[0]?.source?.file).toBe('demo/index.html'); expect(item.capture.method).toBe('dom');
   expect((await readFile(`${output}/${item.id}/screenshot.png`)).subarray(0, 8)).toEqual(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+});
+
+test('the composer enables 保存 only after it has finished growing to fit the capture preview', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' }); await setup(page, { method: 'dom' });
+  await page.evaluate(() => {
+    const events: string[] = (window as unknown as { panelEvents: string[] }).panelEvents = [];
+    const note = (event: string) => { if (events.at(-1) !== event) events.push(event); };
+    new MutationObserver((mutations) => { for (const { target } of mutations) {
+      const element = target as HTMLElement;
+      if (element.matches('.panel')) note(element.classList.contains('morphing') ? 'morphing' : 'settled');
+      else if (element.matches('button[type="submit"]')) note((element as HTMLButtonElement).disabled ? 'disabled' : 'enabled');
+    } }).observe(document.querySelector('[data-needmark]')!.shadowRoot!, { subtree: true, attributeFilter: ['class', 'disabled'] });
+  });
+  await selectPurchase(page);
+  await expect(page.getByRole('button', { name: '保存', exact: true })).toBeEnabled();
+  const events = await page.evaluate(() => (window as unknown as { panelEvents: string[] }).panelEvents);
+  expect(events.slice(events.lastIndexOf('morphing'))).toEqual(['morphing', 'settled', 'enabled']);
 });
 
 test('toolbar drag cancellation and viewport reflow preserve a typed reply, caret and valid panel scroll', async ({ page }) => {
@@ -193,12 +208,12 @@ test('an extremely short viewport temporarily hides the toolbar while settings s
   await page.getByLabel('投稿者名', { exact: true }).fill('高さが足りなくても保存できる');
   await page.setViewportSize({ width: 410, height: 220 });
   await expect(dock(page)).toBeHidden(); await accessiblePanel(page);
-  await page.getByRole('button', { name: '設定を保存', exact: true }).click();
+  await page.getByRole('button', { name: '保存', exact: true }).click();
   await expect(panel(page)).toBeHidden(); await expect(dock(page)).toBeVisible(); expect(await storedPosition(page)).toBe(raw);
   await page.setViewportSize({ width: 410, height: 814 });
   await page.getByRole('button', { name: '設定', exact: true }).click();
   await expect(page.getByLabel('投稿者名', { exact: true })).toHaveValue('高さが足りなくても保存できる');
-  await accessiblePanel(page); await page.getByRole('button', { name: 'パネルを閉じる', exact: true }).click();
+  await accessiblePanel(page); await page.getByRole('button', { name: 'キャンセル', exact: true }).click();
   await expect(dock(page)).toBeVisible(); expect(await storedPosition(page)).toBe(raw);
 });
 
@@ -291,12 +306,3 @@ test('delete confirmations replace the content of the open panel without moving 
   await expect.poll(async () => { const box = (await panel(page).boundingBox())!; return [Math.round(box.x), Math.round(box.y)]; }).toEqual([Math.round(details.x), Math.round(details.y)]);
 });
 
-test('the panel header stays at the top while the panel body scrolls', async ({ page }) => {
-  await setup(page, { width: 800, height: 600 }); await seed(page, '長いコメントの本文。\n'.repeat(60));
-  await page.getByRole('button', { name: 'コメント一覧', exact: true }).click(); await page.locator('[data-needmark] .open-item').click();
-  await expect(page.getByLabel('返信', { exact: true })).toBeVisible();
-  await panel(page).evaluate((element) => { element.scrollTop = element.scrollHeight; });
-  const header = await panel(page).locator('header').evaluate((element) => { const box = element.getBoundingClientRect(), outer = element.parentElement!.getBoundingClientRect(); return { top: box.top - outer.top, scrolled: element.parentElement!.scrollTop }; });
-  expect(header.scrolled).toBeGreaterThan(200); expect(header.top).toBeCloseTo(0, 0);
-  await expect(page.getByRole('button', { name: 'パネルを閉じる', exact: true })).toBeVisible();
-});

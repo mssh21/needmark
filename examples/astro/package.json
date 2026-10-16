@@ -1,0 +1,14 @@
+{
+  "name": "needmark-example-astro",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev --host 127.0.0.1 --port 4330"
+  },
+  "dependencies": {
+    "astro": "^5.18.2"
+  },
+  "devDependencies": {
+    "needmark": "workspace:*"
+  }
+}

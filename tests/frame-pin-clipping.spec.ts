@@ -1,11 +1,11 @@
-import { test, expect, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { test, expect, saveAndList, output, tempRoot, configureReview } from './support/review.js';
 import { build } from 'esbuild';
 import { createServer, type Server } from 'node:http';
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { resolve, join } from 'node:path';
 import { startReviewProxy, type ReviewProxy } from '../dist/proxy.js';
 import type { Feedback } from '../src/shared/types.js';
-import { saveAndList } from './save.js';
 
 const fixturePath = resolve('tests/fixtures/frame-route.jsx');
 const sourceFile = 'src/frame-route.jsx';
@@ -24,7 +24,7 @@ async function close(server: Server) {
 
 /** Reuse the actual C17 React fixture and protected public proxy, with no /source or DOM identity mocks. */
 async function withReview(page: Page, run: (review: { origin: string; output: string }) => Promise<void>) {
-  const root = await mkdtemp('/private/tmp/needmark-frame-pin-');
+  const root = await mkdtemp(join(tempRoot, 'needmark-frame-pin-'));
   let upstream: Server | undefined, proxy: ReviewProxy | undefined;
   try {
     await mkdir(root + '/src'); await writeFile(root + '/' + sourceFile, await readFile(fixturePath, 'utf8'));
@@ -54,7 +54,7 @@ async function withReview(page: Page, run: (review: { origin: string; output: st
 }
 
 // Saved pins follow current painted bounds without changing stored target evidence.
-test('a saved iframe element pin hides when its unchanged original is wholly clipped by child scrolling and recovers on scrollback', async ({ page }, testInfo) => {
+test('a saved iframe element pin hides when its unchanged original is wholly clipped by child scrolling and recovers on scrollback', { tag: '@cross-engine' }, async ({ page }, testInfo) => {
   await withReview(page, async ({ origin, output }) => {
     const frameHandle = await page.locator('#outer-review-frame').elementHandle(), frame = await frameHandle?.contentFrame();
     await frameHandle?.dispose(); if (!frame) throw new Error('Child frame is unavailable');
@@ -65,9 +65,7 @@ test('a saved iframe element pin hides when its unchanged original is wholly cli
       await frame.evaluate(() => { document.body.style.minHeight = '1800px'; });
       const parentUrl = page.url(), childUrl = frame.url(), before = await target.boundingBox();
       if (!before) throw new Error('Original target has no rectangle');
-      await page.getByRole('button', { name: '設定', exact: true }).click();
-      await page.getByLabel('キャプチャ方式').selectOption('none');
-      await page.getByRole('button', { name: '設定を保存', exact: true }).click();
+      await configureReview(page, { method: 'none' });
       const response = page.waitForResponse((item) => item.url() === origin + '/__needmark/source' && item.request().method() === 'POST');
       await page.getByRole('button', { name: 'コメント', exact: true }).click();
       await expect(page.locator('[data-needmark] .cover')).toBeVisible();
@@ -125,9 +123,7 @@ test('a saved iframe element pin hides when its unchanged original is wholly cli
 });
 
 async function configureNoImage(page: Page) {
-  await page.getByRole('button', { name: '設定', exact: true }).click();
-  await page.getByLabel('キャプチャ方式').selectOption('none');
-  await page.getByRole('button', { name: '設定を保存', exact: true }).click();
+  await configureReview(page, { method: 'none' });
 }
 
 async function saveReview(page: Page, frame: import('@playwright/test').Frame, origin: string, output: string, comment: string) {
@@ -167,7 +163,7 @@ async function reviewFrame(page: Page) {
 }
 
 // Both collision-adjusted centers must describe the remaining painted pixels, even when narrower than a marker.
-test('two saved pins stay inside a narrow positive child viewport intersection and recover their full positions', async ({ page }, testInfo) => {
+test('two saved pins stay inside a narrow positive child viewport intersection and recover their full positions', { tag: '@cross-engine' }, async ({ page }, testInfo) => {
   await withReview(page, async ({ origin, output }) => {
     const { frame, original } = await reviewFrame(page), parentUrl = page.url(), childUrl = frame.url();
     try {
@@ -177,7 +173,7 @@ test('two saved pins stay inside a narrow positive child viewport intersection a
       const second = await saveReview(page, frame, origin, output, '同じ場所のコメント二件目');
       const initialPins = await Promise.all([first.pin.boundingBox(), second.pin.boundingBox()]);
       expect(initialPins[0]).not.toBeNull(); expect(initialPins[1]).not.toBeNull();
-      expect(Math.abs(initialPins[0]!.x - initialPins[1]!.x)).toBeGreaterThan(20);
+      expect(Math.abs(initialPins[0]!.x - initialPins[1]!.x)).toBeGreaterThan(initialPins[0]!.width);
       await frame.evaluate(() => scrollTo(308, 76));
       await expect.poll(() => frame.evaluate(() => [scrollX, scrollY])).toEqual([308, 76]);
       const intersection = await page.evaluate(() => {
@@ -215,7 +211,7 @@ test('two saved pins stay inside a narrow positive child viewport intersection a
 });
 
 // Browser hit testing establishes that ordinary overflow can be escaped; containing blocks then clip that same original.
-test('saved child pins follow painted absolute and fixed escapes but hide at real containing block clips', async ({ page }, testInfo) => {
+test('saved child pins follow painted absolute and fixed escapes but hide at real containing block clips', { tag: '@cross-engine' }, async ({ page }, testInfo) => {
   await withReview(page, async ({ origin, output }) => {
     const { frame, original } = await reviewFrame(page), parentUrl = page.url(), childUrl = frame.url();
     try {
@@ -264,7 +260,7 @@ test('saved child pins follow painted absolute and fixed escapes but hide at rea
   });
 });
 
-test('saved child pins respect iframe ancestor opacity and visibility while allowing an explicitly visible descendant', async ({ page }, testInfo) => {
+test('saved child pins respect iframe ancestor opacity and visibility while allowing an explicitly visible descendant', { tag: '@cross-engine' }, async ({ page }, testInfo) => {
   await withReview(page, async ({ origin, output }) => {
     // Wrap before capturing any identity: reparenting a live iframe itself creates a fresh child document.
     await page.locator('#outer-review-frame').evaluate((frame) => { const wrapper = document.createElement('div'); wrapper.id = 'saved-frame-owner'; frame.before(wrapper); wrapper.append(frame); });
@@ -302,7 +298,7 @@ test('saved child pins respect iframe ancestor opacity and visibility while allo
   });
 });
 
-test('unconfirmed pins suppress only a unique invisible candidate on the recorded child route and preserve other fallbacks', async ({ page }, testInfo) => {
+test('unconfirmed pins suppress only a unique invisible candidate on the recorded child route and preserve other fallbacks', { tag: '@cross-engine' }, async ({ page }, testInfo) => {
   await withReview(page, async ({ origin, output }) => {
     const { frame, original } = await reviewFrame(page), parentUrl = page.url(), childUrl = frame.url();
     try {

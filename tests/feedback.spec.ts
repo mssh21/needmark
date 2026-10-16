@@ -1,13 +1,11 @@
-import { test, expect, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { test, expect, saveAndList, output, configureReview, tabColorTolerance } from './support/review.js';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { relative, resolve } from 'node:path';
-import { readFile, readdir, rm } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import type { Feedback } from '../src/shared/types.js';
-import { saveAndList } from './save.js';
 
-const output = '/private/tmp/needmark-e2e-feedback';
-test.beforeEach(async () => { await rm(output, { recursive: true, force: true }); });
 
 async function savedFeedback(): Promise<Feedback> {
   const entries = (await readdir(output)).filter((id) => !id.startsWith('.'));
@@ -39,13 +37,13 @@ async function exportedPrompt(page: Page, browserName: string): Promise<string> 
   return prompt.inputValue();
 }
 
-test('area selection saves image and feedback, survives reload, and shares status with the CLI files', async ({ page, browserName }) => {
+test('area selection saves image and feedback, survives reload, and shares status with the CLI files', { tag: '@cross-engine' }, async ({ page, browserName }) => {
   await preparePromptExport(page, browserName);
   await page.goto('/');
   await page.getByRole('button', { name: '設定', exact: true }).click();
   await page.getByLabel('投稿者名').fill('Designer A');
   await page.getByLabel('キャプチャ方式').selectOption('dom');
-  await page.getByRole('button', { name: '設定を保存' }).click();
+  await page.getByRole('button', { name: '保存', exact: true }).click();
   await page.getByRole('button', { name: 'コメント', exact: true }).click();
   const bounds = await page.locator('#product-title').boundingBox();
   await page.mouse.move(bounds!.x - 10, bounds!.y - 10);
@@ -102,11 +100,8 @@ test('the list shows lost polling connections and clears the notice once polling
 });
 
 test('native tab capture records the selected element and actual browser frame', async ({ page, browserName }) => {
-  test.skip(browserName !== 'chromium', 'The automated native tab picker is supported by the Chromium launch configuration.');
   await page.goto('/');
-  await page.getByRole('button', { name: '設定', exact: true }).click();
-  await page.getByLabel('キャプチャ方式').selectOption('tab');
-  await page.getByRole('button', { name: '設定を保存' }).click();
+  await configureReview(page, { method: 'tab' });
   await page.getByRole('button', { name: 'コメント', exact: true }).click();
   await expect(page.locator('[data-needmark] .cover')).toBeVisible();
   const button = await page.locator('#purchase-button').boundingBox();
@@ -136,8 +131,7 @@ test('native tab capture records the selected element and actual browser frame',
   }, { png: image.toString('base64'), rect: saved.target.rect, viewport: saved.viewport });
   const expected = await page.locator('#purchase-button').evaluate((element) =>
     getComputedStyle(element).backgroundColor.match(/\d+/g)!.slice(0, 3).map(Number));
-  // Tab video can introduce small YUV/RGB rounding differences.
-  expected.forEach((channel, index) => expect(Math.abs(color[index]! - channel)).toBeLessThanOrEqual(2));
+  expected.forEach((channel, index) => expect(Math.abs(color[index]! - channel)).toBeLessThanOrEqual(tabColorTolerance));
 });
 
 test('React comments retain source locations, runtime ownership and distinguish repeated component instances', async ({ page, browserName }) => {
@@ -146,9 +140,7 @@ test('React comments retain source locations, runtime ownership and distinguish 
   const purchase = page.locator('#purchase-two');
   await purchase.click();
   await expect(purchase).toHaveText('Add seats · 1');
-  await page.getByRole('button', { name: '設定', exact: true }).click();
-  await page.getByLabel('キャプチャ方式').selectOption('dom');
-  await page.getByRole('button', { name: '設定を保存' }).click();
+  await configureReview(page, { method: 'dom' });
   await page.getByRole('button', { name: 'コメント', exact: true }).click();
   const bounds = await purchase.boundingBox();
   await page.mouse.click(bounds!.x + bounds!.width / 2, bounds!.y + bounds!.height / 2);
@@ -170,29 +162,4 @@ test('React comments retain source locations, runtime ownership and distinguish 
   const prompt = await exportedPrompt(page, browserName);
   expect(prompt).toContain(`demo/react.tsx:${line}:5`);
   expect(prompt).toContain(`${saved.id}/context.json`);
-});
-
-test('DOM evidence labels ancestor hints, omits input values and bounds area samples', async ({ page }) => {
-  await page.goto('/');
-  const evidence = await page.evaluate(async (moduleUrl) => {
-    const { contextForArea, contextForElement } = await import(moduleUrl);
-    const container = document.createElement('div');
-    container.style.cssText = 'position:fixed;left:0;top:0;width:100px;height:260px;display:flex;flex-direction:column';
-    container.setAttribute('data-needmark-source', JSON.stringify({ file: 'src/Container.tsx', line: 4, column: 1, component: 'Container' }));
-    for (let index = 0; index < 13; index++) {
-      const button = document.createElement('button'); button.textContent = `Action ${index}`;
-      button.style.cssText = 'height:20px;width:100px;flex:none'; container.append(button);
-    }
-    document.body.append(container);
-    const inherited = contextForElement(container.children[0]);
-    const area = contextForArea({ x: 0, y: 0, width: 100, height: 260 }, document.querySelector('[data-needmark]'));
-    const input = document.createElement('input'); input.type = 'password'; input.value = 'private-password'; container.append(input);
-    const field = contextForElement(input);
-    container.remove();
-    return { inherited, area, field };
-  }, `/@fs/${resolve('src/client/context/code-context.ts')}`);
-  expect(evidence.inherited.elements[0]).toMatchObject({ sourceRelation: 'ancestor', source: { file: 'src/Container.tsx', line: 4 } });
-  expect(evidence.area.elements).toHaveLength(12);
-  expect(evidence.area.truncated).toBe(true);
-  expect(JSON.stringify(evidence.field)).not.toContain('private-password');
 });
