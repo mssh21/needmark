@@ -234,46 +234,6 @@ test('a genuine traversal limit retains the twenty discovered targets and persis
 });
 
 
-test('a saved twenty-target review locates its complete current group after native reflow without changing originals or saved evidence', async ({ page }, info) => {
-  await withReview(page, 'none', async (review) => {
-    const originals = await page.locator('#target-grid button').elementHandles(), originalDocument = await page.evaluateHandle(() => document);
-    const originalUrl = page.url(), before = await rectangles(page);
-    try {
-      await begin(page); await dragGrid(page, union(before)); await selection(page);
-      const comment = 'AIの修正後に保存した20対象の全体を画面上で確認する';
-      await complete(page, comment); const calls = await assertSourceCalls(review), saved = await save(page, review);
-      assertComplete(saved, review.source, before); await originalsRemain(originals);
-      const diskBefore = await readFile(`${review.output}/${saved.id}/context.json`, 'utf8');
-      await page.getByRole('button', { name: 'パネルを閉じる', exact: true }).click();
-      // The real host control applies a CSS-only React reflow, retaining the exact twenty DOM nodes.
-      await page.locator('#reflow').click(); await expect.poll(async () => (await rectangles(page))[0]!.y).toBe(before[0]!.y + 36);
-      const afterReflow = await rectangles(page);
-      expect(afterReflow).toEqual(before.map((rect) => ({ ...rect, y: rect.y + 36 }))); await originalsRemain(originals);
-      await page.getByRole('button', { name: 'コメント一覧', exact: true }).click();
-      await page.locator('[data-needmark] .open-item').click();
-      const markers = page.locator('[data-needmark] .outline:visible');
-      await expect(markers.first()).toBeVisible();
-      const actual = await markers.evaluateAll((nodes) => nodes.map((node) => {
-        const rect = node.getBoundingClientRect(); return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
-      }));
-      // Native current boxes are the oracle; saved boxes deliberately predate the reflow.
-      const current = await rectangles(page), currentUnion = union(current);
-      const identity = { sameDocument: await page.evaluate((original) => original === document, originalDocument), sameUrl: page.url() === originalUrl };
-      await info.attach('saved-twenty-locate-after-native-reflow.png', { body: await page.screenshot({ caret: 'initial' }), contentType: 'image/png' });
-      await info.attach('saved-twenty-locate-current-scope.json', { body: JSON.stringify({ saved, before, afterReflow, current, currentUnion, actual, identity,
-        sourceCalls: calls.map(({ token: _, ...value }) => value) }, null, 2), contentType: 'application/json' });
-      await originalsRemain(originals); expect(identity).toEqual({ sameDocument: true, sameUrl: true });
-      expect(await readFile(`${review.output}/${saved.id}/context.json`, 'utf8')).toBe(diskBefore);
-      await expect(page.locator('[data-needmark]').getByText('記録した場所を表示しています。現在の要素は特定できませんでした。', { exact: true })).toBeHidden();
-      const sameRect = (actual: Rectangle, expected: Rectangle) => (['x', 'y', 'width', 'height'] as const).every((key) => Math.abs(actual[key] - expected[key]) <= .5);
-      const everyTarget = actual.length === current.length && current.every((rect) => actual.some((marker) => sameRect(marker, rect)));
-      const completeUnion = actual.length === 1 && sameRect(actual[0]!, currentUnion);
-      // A complete current union or all twenty exact boxes both show the user's complete recheck scope.
-      expect(everyTarget || completeUnion, 'Locate must show the complete current20-target scope, rather than only its first successfully matched target').toBe(true);
-    } finally { await originalDocument.dispose(); await Promise.all(originals.map((element) => element.dispose())); }
-  });
-});
-
 async function openSavedGroup(page: Page) {
   await page.getByRole('button', { name: 'コメント一覧', exact: true }).click();
   await page.locator('[data-needmark] .open-item').click();

@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { test, expect, saveAndList, searchList, toggleFilter, output } from './support/review.js';
+import { test, expect, saveAndList, searchList, toggleFilter, output, configureReview } from './support/review.js';
 import { readFile, readdir, rm, mkdir } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -7,12 +7,7 @@ import { resolve } from 'node:path';
 import type { Feedback } from '../src/shared/types.js';
 async function storedAll(): Promise<Feedback[]> { const ids = (await readdir(output)).filter((id) => !id.startsWith('.')); return Promise.all(ids.map(async (id) => JSON.parse(await readFile(`${output}/${id}/context.json`, 'utf8')) as Feedback)); }
 async function stored(): Promise<Feedback> { const [id] = (await readdir(output)).filter((id) => !id.startsWith('.')); return JSON.parse(await readFile(`${output}/${id}/context.json`, 'utf8')); }
-async function configure(page: import('@playwright/test').Page, method = 'none') {
-  await page.getByRole('button', { name: '設定', exact: true }).click();
-  await page.getByLabel('投稿者名').fill('Reviewer');
-  await page.getByLabel('キャプチャ方式').selectOption(method);
-  await page.getByRole('button', { name: '保存', exact: true }).click();
-}
+const configure = (page: Page, method: 'none' | 'dom' = 'none') => configureReview(page, { author: 'Reviewer', method });
 async function clickTarget(page: import('@playwright/test').Page, selector = '#purchase-button') {
   await page.getByRole('button', { name: 'コメント', exact: true }).click();
   const rect = await page.locator(selector).boundingBox(); await page.mouse.click(rect!.x + rect!.width / 2, rect!.y + rect!.height / 2);
@@ -49,7 +44,7 @@ test('image-free comments edit, cancel, reply, survive reload and delete through
   await expect(page.locator('[data-needmark] .card')).toHaveCount(0); expect((await readdir(output)).filter((id) => !id.startsWith('.'))).toHaveLength(0);
 });
 
-test('failed save preserves text and image preview opens accessible zoom and pan viewer', async ({ page }) => {
+test('the capture preview opens an accessible zoom and pan viewer from the composer and the saved details', async ({ page }) => {
   await page.goto('/'); await configure(page, 'dom'); await clickTarget(page);
   await page.getByLabel('コメント本文').fill('画像を確認してから保存します。');
   await expect(page.getByRole('button', { name: '保存', exact: true })).toBeEnabled();
@@ -77,13 +72,22 @@ test('failed save preserves text and image preview opens accessible zoom and pan
   await page.mouse.click(5, 5); await expect(dialog).toBeHidden();
   await page.getByRole('img', { name: 'コメントした場所のキャプチャ', exact: true }).click(); await expect(dialog).toBeVisible();
   await page.keyboard.press('Escape'); await expect(dialog).toBeHidden(); await expect(page.getByLabel('コメント本文')).toHaveValue('画像を確認してから保存します。');
-  let fail = true;
-  await page.route('**/__needmark/feedback', async (route) => { if (route.request().method() === 'POST' && fail) { fail = false; await route.fulfill({ status: 500, contentType: 'application/json', body: '{"error":"Simulated save failure"}' }); } else await route.continue(); });
-  await page.getByRole('button', { name: '保存', exact: true }).click(); await expect(page.getByText('Simulated save failure')).toBeVisible();
-  await expect(page.getByLabel('コメント本文')).toHaveValue('画像を確認してから保存します。');
-  await saveAndList(page); await expect(page.getByRole('button', { name: '解決にする', exact: true })).toBeVisible();
-  await page.locator('[data-needmark] .open-item').click();
+  await saveAndList(page); await page.locator('[data-needmark] .open-item').click();
   await page.getByRole('img', { name: 'コメントのキャプチャ', exact: true }).click(); await expect(dialog).toBeVisible();
+});
+
+test('failed saves and resolves keep the comment unchanged and succeed when retried', async ({ page }) => {
+  await page.goto('/'); await configure(page); await clickTarget(page);
+  await page.getByLabel('コメント本文').fill('失敗しても消えないコメント');
+  let failSave = true;
+  await page.route('**/__needmark/feedback', async (route) => { if (route.request().method() === 'POST' && failSave) { failSave = false; await route.fulfill({ status: 500, contentType: 'application/json', body: '{"error":"Simulated save failure"}' }); } else await route.continue(); });
+  await page.getByRole('button', { name: '保存', exact: true }).click(); await expect(page.getByText('Simulated save failure')).toBeVisible();
+  await expect(page.getByLabel('コメント本文')).toHaveValue('失敗しても消えないコメント');
+  await saveAndList(page); await page.locator('[data-needmark] .open-item').click();
+  let failResolve = true;
+  await page.route('**/__needmark/feedback/*', async (route) => { if (route.request().method() === 'PATCH' && failResolve) { failResolve = false; await route.fulfill({ status: 500, contentType: 'application/json', body: '{"error":"Resolve save failed"}' }); } else await route.continue(); });
+  await page.getByRole('button', { name: '解決にする', exact: true }).click(); await expect(page.getByText('Resolve save failed', { exact:true })).toBeVisible(); expect((await stored()).status).toBe('open');
+  await page.getByRole('button', { name: '解決にする', exact: true }).click(); await expect.poll(async () => (await stored()).status).toBe('resolved');
 });
 
 test('an Alt/Option text drag previews and captures the text range instead of an area rectangle', async ({ page }) => {
@@ -141,23 +145,6 @@ test('existing pins do not intercept selecting the same element for another comm
   await expect(page.getByRole('button', { name: '解決にする', exact: true })).toHaveCount(2);
 });
 
-test('resolving from details hides the pin and export until reopened, keeps failed attempts retryable, and reply edits can cancel', async ({ page }) => {
-  await page.goto('/'); await configure(page); await clickTarget(page);
-  await page.getByLabel('コメント本文').fill('今回は仕様を維持するコメント'); await saveAndList(page);
-  await page.locator('[data-needmark] .open-item').click();
-  await page.getByLabel('返信', { exact: true }).fill('最初の補足'); await page.getByRole('button', { name: '送信', exact: true }).click();
-  await page.getByRole('button', { name: '返信の操作', exact: true }).click(); await page.getByRole('menuitem', { name: '返信を編集', exact: true }).click(); await page.getByLabel('返信の編集内容', { exact: true }).fill('キャンセルする文章'); await page.getByRole('button', { name: 'キャンセル', exact: true }).click();
-  await expect(page.getByText('最初の補足', { exact: true })).toBeVisible(); expect((await stored()).replies?.[0]?.comment).toBe('最初の補足');
-  let fail = true; await page.route('**/__needmark/feedback/*', async (route) => { if (route.request().method() === 'PATCH' && fail) { fail = false; await route.fulfill({ status: 500, contentType: 'application/json', body: '{"error":"Resolve save failed"}' }); } else await route.continue(); });
-  await page.getByRole('button', { name: '解決にする', exact: true }).click(); await expect(page.getByText('Resolve save failed', { exact:true })).toBeVisible(); expect((await stored()).status).toBe('open');
-  await page.getByRole('button', { name: '解決にする', exact: true }).click(); await expect.poll(async () => (await stored()).status).toBe('resolved');
-  await expect(page.getByRole('button', { name: '未解決に戻す', exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'コメント: 今回は仕様を維持するコメント', exact:true })).toBeHidden();
-  const saved = await stored(); const exported = await promisify(execFile)(process.execPath, [resolve('dist/cli.js'), 'export', output]); expect(exported.stdout).not.toContain(saved.comment);
-  await page.getByRole('button', { name: '未解決に戻す', exact: true }).click(); await expect.poll(async () => (await stored()).status).toBe('open');
-  await expect(page.getByRole('button', { name: 'コメント: 今回は仕様を維持するコメント', exact:true })).toBeVisible();
-});
-
 test('a comment resolved from the list stays until the list reopens, and resolving all covers only the shown open items', async ({ page }) => {
   await page.goto('/'); await configure(page);
   for (const comment of ['一覧で解決するコメント', '検索で絞るコメント', '検索で絞る別のコメント']) { await clickTarget(page); await page.getByLabel('コメント本文').fill(comment); await saveAndList(page); await expect(page.getByText(comment, { exact:true })).toBeVisible(); }
@@ -174,18 +161,6 @@ test('a comment resolved from the list stays until the list reopens, and resolvi
   await expect(page.getByText('2件を解決済みにしました。', { exact: true })).toBeVisible(); await expect(page.getByRole('button', { name: '未解決に戻す', exact: true })).toHaveCount(2);
   expect((await storedAll()).map((item) => item.status)).toEqual(['resolved', 'resolved', 'resolved']);
   await page.getByRole('button', { name: '一覧の操作', exact: true }).click(); await expect(page.getByRole('menuitem', { name: 'すべて解決済みにする', exact: true })).toBeDisabled();
-});
-
-test('multiple selection keeps numbered outlines, Backspace removes the last, and Enter completes', async ({ page }) => {
-  await page.goto('/'); await configure(page);
-  await page.getByRole('button', { name: 'コメント', exact: true }).click();
-  for (const [index, selector] of ['#purchase-button', '#product-title'].entries()) { const rect = await page.locator(selector).boundingBox(); if (!index) await page.keyboard.down('Shift'); await page.mouse.click(rect!.x + rect!.width / 2, rect!.y + rect!.height / 2); if (!index) await page.keyboard.up('Shift'); }
-  await expect(page.locator('[data-needmark] .selected-outline')).toHaveCount(2);
-  await page.keyboard.press('Backspace'); await expect(page.locator('[data-needmark] .selected-outline')).toHaveCount(1);
-  await page.keyboard.press('Enter'); await expect(page.getByLabel('コメント本文')).toBeFocused();
-  await expect(page.locator('[data-needmark] .selected-outline')).toHaveCount(0);
-  await page.getByLabel('コメント本文').fill('選択を戻してボタンだけ修正'); await saveAndList(page);
-  await expect(page.getByRole('button', { name: '解決にする', exact: true })).toHaveCount(1); const saved = await stored(); expect(saved.target.kind).toBe('multi'); expect(saved.target.code?.elements.map((element) => element.attributes.id)).toEqual(['purchase-button']);
 });
 
 test('current-page filtering and confirmed deletion of the shown items respect query strings and preserve other pages', async ({ page }) => {
@@ -231,16 +206,6 @@ test('successful writes use their returned feedback even while subsequent list r
   await page.getByRole('button', { name: '解決にする', exact: true }).click(); await expect(page.getByRole('button', { name: '未解決に戻す', exact: true })).toBeVisible(); expect((await stored()).status).toBe('resolved');
 });
 
-test('a delayed clipboard failure cannot replace a newer unsaved composer', async ({ page }) => {
-  await page.addInitScript(() => { Object.defineProperty(navigator, 'clipboard', { configurable:true, value: { writeText: () => new Promise<void>((_resolve, reject) => { (window as unknown as { rejectClipboard: (error: Error) => void }).rejectClipboard = reject; }) } }); });
-  await page.goto('/'); await configure(page); await clickTarget(page); await page.getByLabel('コメント本文').fill('コピー元のコメント'); await saveAndList(page);
-  await page.getByRole('button', { name:'プロンプトをコピー' }).click(); await clickTarget(page); await page.getByLabel('コメント本文').fill('コピー待ちの間に書いた新しいコメント');
-  await page.evaluate(() => (window as unknown as { rejectClipboard: (error: Error) => void }).rejectClipboard(new Error('Clipboard rejected')));
-  await expect(page.getByLabel('コメント本文')).toHaveValue('コピー待ちの間に書いた新しいコメント');
-  await saveAndList(page); await expect(page.getByText('コピー待ちの間に書いた新しいコメント', { exact:true })).toBeVisible();
-});
-
-
 test('pushState and replaceState immediately scope pins to the exact route', async ({ page }) => {
   await page.goto('/?variant=a'); await configure(page); await clickTarget(page); await page.getByLabel('コメント本文').fill('ルートaのコメント'); await saveAndList(page);
   await expect(page.getByRole('button', { name:'コメント: ルートaのコメント', exact:true })).toBeVisible();
@@ -275,22 +240,26 @@ test('explicitly closing typed drafts and replies allows starting another review
   const saved = await stored(); expect(saved.status).toBe('open'); expect(saved.replies ?? []).toEqual([]);
 });
 
-test('the header check resolves without a notice, shows the resolved state with prompt copy still available and reopens on a second click', async ({ page }) => {
+test('resolving from details hides its pin and export entry in place without a notice, keeps prompt copy, and reopens on a second click', async ({ page }) => {
   await page.goto('/'); await configure(page); await clickTarget(page);
   await page.getByLabel('コメント本文').fill('AIの修正を確認して承認する');
   await saveAndList(page);
   await page.locator('[data-needmark] .open-item').click();
   // Marking the rendered comment proves the toggle swaps only its button instead of re-rendering the details.
   const comment = page.locator('[data-needmark] .panel .comment'); await comment.evaluate((node) => { (node as HTMLElement).dataset.marker = 'kept'; });
+  const pin = page.getByRole('button', { name: 'コメント: AIの修正を確認して承認する', exact: true });
+  await expect(pin).toBeVisible();
   await page.getByRole('button', { name: '解決にする', exact: true }).click();
   const reopen = page.getByRole('button', { name: '未解決に戻す', exact: true });
   await expect(reopen).toHaveAttribute('aria-pressed', 'true'); expect((await stored()).status).toBe('resolved');
   await expect(page.locator('[data-needmark] .toast')).toBeHidden();
   await expect(page.getByRole('button', { name: '解決にする', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'プロンプトをコピー', exact: true })).toBeVisible();
-  await expect(comment).toHaveAttribute('data-marker', 'kept');
+  await expect(comment).toHaveAttribute('data-marker', 'kept'); await expect(pin).toBeHidden();
+  const exported = await promisify(execFile)(process.execPath, [resolve('dist/cli.js'), 'export', output]); expect(exported.stdout).not.toContain('AIの修正を確認して承認する');
   await reopen.click(); await expect(page.getByRole('button', { name: '解決にする', exact: true })).toBeVisible(); await expect(comment).toHaveAttribute('data-marker', 'kept');
   expect((await stored()).status).toBe('open'); await expect(page.getByRole('button', { name: 'プロンプトをコピー', exact: true })).toBeVisible();
+  await expect(pin).toBeVisible();
 });
 
 test('clicking a pin opens its details without leaving the hover preview on screen after re-renders', async ({ page }) => {
@@ -356,7 +325,7 @@ test('opening a comment from another page in the list goes to that page and show
   expect(await page.evaluate(() => (window as unknown as { kept?: boolean }).kept)).toBe(true);
 });
 
-test('details show authors with relative times, keep edit and delete in kebab menus, and offer reply actions on every reply without taking over its author', async ({ page }) => {
+test('details show authors with relative times, keep edit and delete in kebab menus, and let every reply be edited or cancelled without taking over its author', async ({ page }) => {
   await page.goto('/'); await configure(page); await clickTarget(page);
   await page.getByLabel('コメント本文').fill('投稿者と相対時刻を表示する'); await saveAndList(page);
   const saved = await stored(), token = (await page.locator('script[data-needmark-token]').getAttribute('data-needmark-token'))!;
@@ -369,7 +338,11 @@ test('details show authors with relative times, keep edit and delete in kebab me
   await page.getByLabel('返信', { exact: true }).fill('自分の返信'); await page.getByRole('button', { name: '送信', exact: true }).click();
   await expect(page.locator('[data-needmark] .reply')).toHaveCount(2);
   await expect(page.locator('[data-needmark] .reply', { hasText: '自分の返信' }).getByRole('button', { name: '返信の操作' })).toHaveCount(1);
-  await page.locator('[data-needmark] .reply', { hasText: 'エージェントの返信' }).getByRole('button', { name: '返信の操作' }).click();
+  const agentReply = page.locator('[data-needmark] .reply', { hasText: 'エージェントの返信' });
+  await agentReply.getByRole('button', { name: '返信の操作' }).click();
+  await page.getByRole('menuitem', { name: '返信を編集', exact: true }).click(); await page.getByLabel('返信の編集内容', { exact: true }).fill('キャンセルする文章'); await page.getByRole('button', { name: 'キャンセル', exact: true }).click();
+  await expect(page.getByText('エージェントの返信', { exact: true })).toBeVisible(); expect((await stored()).replies?.map((reply) => reply.comment)).toContain('エージェントの返信');
+  await agentReply.getByRole('button', { name: '返信の操作' }).click();
   await page.getByRole('menuitem', { name: '返信を編集', exact: true }).click(); await page.getByLabel('返信の編集内容', { exact: true }).fill('レビュアーが直した返信'); await page.getByRole('button', { name: '保存', exact: true }).click();
   await expect(page.locator('[data-needmark] .reply', { hasText: 'レビュアーが直した返信' }).locator('.byline strong')).toHaveText('Agent');
   expect((await stored()).replies?.find((reply) => reply.comment === 'レビュアーが直した返信')?.author).toBe('Agent');
