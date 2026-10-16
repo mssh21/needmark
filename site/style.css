@@ -71,7 +71,8 @@ main, .top {
 .top a { color: var(--quiet); text-decoration: none; }
 .top a:hover { color: var(--ink); }
 
-.wordmark { color: var(--ink) !important; font-weight: 650; }
+.wordmark { display: flex; }
+.wordmark img { display: block; height: 20px; width: auto; }
 
 .hero {
   padding: 56px 0 40px;
