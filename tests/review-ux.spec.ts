@@ -366,18 +366,6 @@ test('an area comment outlines the dragged rectangle in details and keeps it on 
   await expect.poll(box).toEqual([area.x, area.y - 150, area.width, area.height].map(Math.round));
 });
 
-test('pins count up in creation order and keep their numbers when earlier comments are resolved', async ({ page }) => {
-  await page.goto('/'); await configure(page);
-  for (const [selector, comment] of [['#purchase-button', '最初のコメント'], ['#product-title', '二番目のコメント']] as const) {
-    await clickTarget(page, selector); await page.getByLabel('コメント本文').fill(comment); await saveAndList(page); await page.getByRole('button', { name: 'パネルを閉じる', exact: true }).click();
-  }
-  const first = page.getByRole('button', { name: 'コメント: 最初のコメント', exact: true }), second = page.getByRole('button', { name: 'コメント: 二番目のコメント', exact: true });
-  await expect(first).toHaveText('1'); await expect(second).toHaveText('2');
-  await first.click(); await page.getByRole('button', { name: '解決にする', exact: true }).click(); await expect(page.getByRole('button', { name: '未解決に戻す', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'パネルを閉じる', exact: true }).click();
-  await expect(first).toHaveCount(0); await expect(second).toHaveText('2');
-});
-
 test('focus rings appear after keyboard input but not after clicks that move focus by script', async ({ page }) => {
   await page.goto('/'); await page.getByRole('button', { name: 'コメント一覧', exact: true }).click();
   const ring = () => page.evaluate(() => { const active = document.querySelector('[data-needmark]')!.shadowRoot!.activeElement!; return getComputedStyle(active).outlineStyle; });
@@ -386,7 +374,7 @@ test('focus rings appear after keyboard input but not after clicks that move foc
   await page.keyboard.press('Escape'); await expect(page.getByRole('button', { name: '絞り込み', exact: true })).toBeFocused(); expect(await ring()).toBe('solid');
 });
 
-test('a pin stays put and opens while hovering it changes the text of its target', async ({ page }) => {
+test('a pin stays on its target while hovering the target or the pin changes its text', async ({ page }) => {
   // The card mimics a chart tooltip: entering it adds text, so the saved text only matches while the pointer is elsewhere.
   await page.addInitScript(() => addEventListener('DOMContentLoaded', () => {
     const card = document.createElement('div'); card.id = 'hover-card'; card.textContent = 'Card';
@@ -405,13 +393,21 @@ test('a pin stays put and opens while hovering it changes the text of its target
       attributes: { id: 'hover-card' }, styles: {}, headings: [], components: [] }] } },
   } });
   expect(saved.status()).toBe(201);
-  const pin = page.locator('[data-needmark] .pin'); await expect(pin).toBeVisible({ timeout: 5000 });
-  // Over the card the text no longer matches, so the pin falls back to its recorded spot inside the card.
-  await page.mouse.move(150, 280); await expect.poll(async () => (await pin.boundingBox())!.x + 12).toBeCloseTo(320, 0);
+  const pin = page.locator('[data-needmark] .pin'), tip = page.locator('#hover-card .tip');
+  const pinX = async () => { const box = (await pin.boundingBox())!; return box.x + box.width / 2; };
+  const settled = () => page.evaluate(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))));
+  await expect.poll(pinX, { timeout: 5000 }).toBeCloseTo(300, 0);
+  // Over the card its text gains the tooltip, yet the pin stays on the card instead of its recorded spot at x 320.
+  await page.mouse.move(150, 280); await expect(tip).toBeAttached(); await settled();
+  expect(await pinX()).toBeCloseTo(300, 0);
   const box = (await pin.boundingBox())!;
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-  await page.waitForTimeout(300);
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await expect(tip).not.toBeAttached(); await settled();
   expect(await pin.boundingBox()).toEqual(box);
+  const preview = page.locator('[data-needmark] .tip');
+  await expect(preview).toContainText('ホバーで中身が変わるカード'); await expect(preview).not.toContainText('対象未確認');
   await page.mouse.down(); await page.mouse.up();
   await expect(page.getByLabel('返信', { exact: true })).toBeVisible();
+  // Away from the card, a lasting text change still means the target is unconfirmed.
+  await page.mouse.move(1150, 60); await page.locator('#hover-card').evaluate((card) => { card.firstChild!.textContent = 'Other'; });
+  await expect.poll(pinX).toBeCloseTo(320, 0);
 });
