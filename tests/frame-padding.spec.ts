@@ -1,5 +1,5 @@
 import { type Page } from '@playwright/test';
-import { test, expect, saveAndList, output, tempRoot, configureReview } from './support/review.js';
+import { test, expect, saveAndList, output, tempRoot, configureReview, tabColorTolerance } from './support/review.js';
 import { build } from 'esbuild';
 import { createServer, type Server } from 'node:http';
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
@@ -263,7 +263,7 @@ test('native tab capture masks every padded scaled child corner at its actual re
       await testInfo.attach('padded-scaled-tab-saved.png', { body: png, contentType: 'image/png' });
       await testInfo.attach('padded-scaled-tab-privacy.json', { body: JSON.stringify({ nativePixels, actual, privateRects, rect, saved }, null, 2), contentType: 'application/json' });
       expectPrivacy(actual.privacy, [46, 49, 52, 255]);
-      actual.inside.forEach((value, index) => expect(Math.abs(value - currentColor[index]!)).toBeLessThanOrEqual(2));
+      actual.inside.forEach((value, index) => expect(Math.abs(value - currentColor[index]!)).toBeLessThanOrEqual(tabColorTolerance));
       expect(saved.capture.method).toBe('tab'); expect(actual.width).toBe(saved.capture.width); expect(actual.height).toBe(saved.capture.height); expect(saved.capture.width).toBeGreaterThan(500);
       expect(saved.viewport.devicePixelRatio).toBe(2); expectGeometry(saved.target.rect, rect); expectGeometry(saved.target.code!.elements[0]!.rect, rect);
       expect(saved.target.code!.elements[0]).toMatchObject({ source: expectedSource(source), sourceRelation: 'self', sourceOrigin: 'runtime', frameUrls: [frame.url()] });

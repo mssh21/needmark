@@ -175,6 +175,14 @@ function mount(endpoint: string, token: string) {
     return { left: Number.parseFloat(panel.style.left) + x, top: Number.parseFloat(panel.style.top) + y, height: panel.offsetHeight };
   }
   function settleMorph() { const running = morphing; if (!running.length) return; morphing = []; running.forEach((animation) => animation.cancel()); panel.classList.remove('morphing'); panelPosition.hold(false); }
+  // A button enabled mid-morph is still sliding, so a click aimed at it lands where it was a frame earlier. Callers wait here first; the finished promise can resolve before the finish event, so the morph is settled here as well.
+  // 変形中に押せるようにしたボタンはまだ動いているため、狙ったクリックが1フレーム前の位置に当たる。呼び出し側はここで待つ。finishedはfinishイベントより先に解決することがあるため、ここでも変形を確定させる。
+  async function morphEnded() {
+    for (let running = morphing; running.length; running = morphing) {
+      await Promise.all(running.map((animation) => animation.finished.catch(() => {})));
+      if (morphing === running) settleMorph();
+    }
+  }
   // A panel that stays open glides from its old box to the new one instead of jumping, and a new screen slides in from the side it was reached from (a comment from the right, the list back from the left). Callers place the panel after show() (details beside their pin), so the morph runs in a microtask, still before the next frame is painted.
   // 開いたままのパネルは、跳ばずに前の位置と大きさから新しいものへ移り、新しい画面は来た方向から入る（コメントは右から、一覧へ戻るときは左から）。呼び出し側はshow()の後でパネルを配置する（詳細はピンの横）ため、変形は次のフレームを描く前のマイクロタスクで行う。
   function morph(from: PanelBox, direction?: number) {
@@ -676,7 +684,9 @@ function mount(endpoint: string, token: string) {
       const state = panel.querySelector<HTMLElement>('[data-capture-state]')!;
       state.textContent = t('画像を撮影できなかったため、画像なしで保存します。'); state.title = errorText(error); enableSubmit();
     } finally { if (hideForTab) { nativeCaptures--; if (!nativeCaptures) host.style.visibility = ''; } }
-    if (shot && await revealImage(panel.querySelector<HTMLImageElement>('.preview img')!, shot, () => { panel.querySelector<HTMLElement>('[data-capture-state]')!.hidden = true; }) && version === captureVersion && composerVersion === panelVersion) enableSubmit();
+    if (shot && await revealImage(panel.querySelector<HTMLImageElement>('.preview img')!, shot, () => { panel.querySelector<HTMLElement>('[data-capture-state]')!.hidden = true; }) && version === captureVersion && composerVersion === panelVersion) {
+      await morphEnded(); if (version === captureVersion && composerVersion === panelVersion) enableSubmit();
+    }
   }
   function enableSubmit() { panel.querySelectorAll<HTMLButtonElement>('button[type="submit"]').forEach((button) => { button.disabled = false; }); }
   function itemText(item: Feedback) { return item.intent === 'reference' ? item.target.text || item.target.code?.elements[0]?.accessibleName || item.target.selector || t('選択した範囲') : item.comment; }
