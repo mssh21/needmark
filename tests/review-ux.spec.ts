@@ -394,9 +394,11 @@ test('a pin stays on its target while hovering the target or the pin changes its
   } });
   expect(saved.status()).toBe(201);
   const pin = page.locator('[data-needmark] .pin'), tip = page.locator('#hover-card .tip');
-  const pinX = async () => { const box = (await pin.boundingBox())!; return box.x + box.width / 2; };
+  // A pin can be attached before it is laid out, so a missing box reads as NaN and the poll keeps waiting instead of throwing.
+  const pinX = async () => { const box = await pin.boundingBox(); return box ? box.x + box.width / 2 : NaN; };
   const settled = () => page.evaluate(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))));
-  await expect.poll(pinX, { timeout: 5000 }).toBeCloseTo(300, 0);
+  // The saved comment reaches the page through the list poll, which can take longer than a second on a slow runner.
+  await expect(pin).toBeVisible({ timeout: 10000 }); await expect.poll(pinX).toBeCloseTo(300, 0);
   // Over the card its text gains the tooltip, yet the pin stays on the card instead of its recorded spot at x 320.
   await page.mouse.move(150, 280); await expect(tip).toBeAttached(); await settled();
   expect(await pinX()).toBeCloseTo(300, 0);
