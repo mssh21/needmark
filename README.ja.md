@@ -6,15 +6,7 @@ UIを指してコメントを書き、いつものコーディングAIへ渡す�
 
 MITライセンス。アカウント、MCPサーバー、特定のAIプロバイダーは必須ではありません。操作UIはReactに依存せず、Vite開発用プラグイン、またはNext.jsなどの既存HTTP開発サーバー向けレビュー用プロキシで使えます。ホスト型サービスNeedBackから独立したパッケージです。
 
-## ローカルで試す
-
-```sh
-pnpm install
-pnpm build
-pnpm demo
-```
-
-`http://127.0.0.1:4190`を開き、ツールバーから対象を選んでコメントを書きます。設定で日本語・英語と、DOM・タブ・画像なしの撮影方法を選べます。デモのコメントは`demo/.needmark/feedback`に保存されます。
+[Webサイト](https://mssh21.github.io/needmark/ja/) · [ドキュメント](docs/README.md) · [npm](https://www.npmjs.com/package/needmark)
 
 ## 自分のプロジェクトに導入する
 
@@ -67,4 +59,4 @@ DOM撮影は共有許可なしで使えますが、再現できる描画に制�
 - [Getting started](docs/getting-started.md): 同じ内容の英語ガイド。
 - [アーキテクチャと動作上の制約（英語）](docs/architecture.md): 実装の詳細なリファレンス。
 - [Agentationとの比較とプロダクト評価](docs/agentation-comparison.ja.md)
-- [ドキュメント一覧](docs/README.md) · [MITライセンス](LICENSE)
+- [ドキュメント一覧](docs/README.md) · [コントリビューション（英語）](CONTRIBUTING.md) · [MITライセンス](LICENSE)
