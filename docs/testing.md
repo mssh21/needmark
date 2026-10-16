@@ -79,7 +79,7 @@ Install the browser engines once with `pnpm exec playwright install chromium web
 
 While working, run what the change touches: `pnpm test src/server/storage.test.ts`, `pnpm test:e2e tests/review-ux.spec.ts`, a single test with `-g "<title>"`, or one engine with `--project=chromium`. Rebuild with `pnpm build` before E2E after changing `src/`. Before committing or opening a pull request, all four commands must pass. CI (`.github/workflows/ci.yml`) runs `build`, `typecheck` and `test` on Node 22 and 24, and the full E2E suite on Node 24 on Ubuntu under `xvfb-run`; when E2E fails, the traces in `test-results/` are uploaded as the `playwright-traces` artifact.
 
-E2E specs run sequentially against one demo server on port 4192 that writes to `needmark-e2e-feedback` in the temporary directory (`/private/tmp` on macOS). Specs that need a proxy start their own on other ports. Chromium runs with overlay scrollbars on every platform, so the viewport keeps its full width as on macOS; the suite does not cover classic scrollbars.
+E2E specs run sequentially against one demo server on port 4192 that writes to `needmark-e2e-feedback` in the temporary directory (`/private/tmp` on macOS). Specs that need a proxy start their own on other ports. Chromium runs with overlay scrollbars on every platform, so the viewport keeps its full width as on macOS. A spec that needs classic scrollbars styles them with `::-webkit-scrollbar` in the page's initial CSS, because a styled scrollbar is never an overlay in either engine and WebKit ignores one added after the first layout.
 
 ## Maintaining the suites
 
