@@ -274,48 +274,8 @@ test('native tab capture masks every padded scaled child corner at its actual re
   });
 });
 
-test('multi marquee excludes an unpainted child control whose geometry falls entirely in padded iframe space', { tag: '@cross-engine' }, async ({ page }, testInfo) => {
-  await withReview(page, async () => {
-    const frame = await paddedFrame(page, true), target = frame.locator('[data-cy="frame-live-button"]');
-    await target.click(); await expect(target).toHaveText('Current child 1');
-    await target.evaluate((element) => Object.assign((element as HTMLElement).style, { left: '-20px', top: '260px', width: '12px', height: '12px', padding: '0', overflow: 'hidden' }));
-    const original = await target.elementHandle(); if (!original) throw new Error('Clipped original missing');
-    try {
-      const parentUrl = page.url(), childUrl = frame.url(), rect = await target.boundingBox(); if (!rect) throw new Error('Clipped native rectangle missing');
-      const point = { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
-      const parentHit = await page.evaluate((point) => document.elementFromPoint(point.x, point.y)?.id, point);
-      const childGeometry = await original.evaluate((element) => {
-        const rect = element.getBoundingClientRect();
-        return { rect: rect.toJSON(), connected: element.isConnected,
-          nativeHit: element.ownerDocument.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2) === element };
-      });
-      const frameBounds = await page.locator('#outer-capture-frame').evaluate((element) => {
-        const frame = element as HTMLIFrameElement, bounds = frame.getBoundingClientRect(), style = getComputedStyle(frame), scale = bounds.width / frame.offsetWidth;
-        return { innerBorder: bounds.left + frame.clientLeft * scale, contentLeft: bounds.left + (frame.clientLeft + parseFloat(style.paddingLeft)) * scale };
-      });
-      expect(childGeometry.connected).toBe(true); expect(childGeometry.nativeHit).toBe(false); expect(childGeometry.rect.right).toBeLessThan(0);
-      expect(parentHit).toBe('outer-capture-frame'); expect(rect.x).toBeGreaterThan(frameBounds.innerBorder); expect(rect.x + rect.width).toBeLessThan(frameBounds.contentLeft);
-      await configureMethod(page, 'none');
-      await page.getByRole('button', { name: 'コメント', exact: true }).click();
-      const cover = page.locator('[data-needmark] .cover'); await expect(cover).toBeVisible();
-      await page.mouse.move(rect.x - 1, rect.y - 1); await page.keyboard.down('Shift'); await page.mouse.down(); await page.keyboard.up('Shift'); await page.mouse.move(rect.x + rect.width + 1, rect.y + rect.height + 1, { steps: 4 }); await page.mouse.up();
-      await expect(page.locator('[data-needmark] .selected-outline')).toHaveCount(0);
-      await expect(page.locator('[data-needmark] [data-hint]')).toContainText('0件を選択');
-      await page.getByRole('button', { name: '選択を完了', exact: true }).click();
-      await expect(page.getByLabel('コメント本文')).toBeHidden(); await expect(cover).toBeVisible();
-      await expect(page.locator('[data-needmark] [data-hint]')).toContainText('0件を選択');
-      expect(await original.evaluate((element) => element.isConnected && element === element.ownerDocument.querySelector('[data-cy="frame-live-button"]'))).toBe(true);
-      expect(page.url()).toBe(parentUrl); expect(frame.url()).toBe(childUrl);
-      await testInfo.attach('padded-space-unpainted-control.json', { body: JSON.stringify({ rect, point, parentHit, childGeometry, frameBounds }, null, 2), contentType: 'application/json' });
-      await testInfo.attach('padded-space-unpainted-control.png', { body: await page.screenshot({ caret: 'initial' }), contentType: 'image/png' });
-      await page.keyboard.press('Escape'); await expect(cover).toBeHidden();
-    } finally { await original.dispose(); }
-  });
-});
-
-
-// Normal Area sampling must describe painted evidence, independently of exact JSX verification.
-test('a normal area review over iframe padding never attributes a wholly unpainted child target to its image or AI prompt', { tag: '@cross-engine' }, async ({ page }, testInfo) => {
+// Marquee and area sampling must describe painted evidence, independently of exact JSX verification.
+test('marquee and area reviews over iframe padding never attribute a wholly unpainted child target to the selection, image or AI prompt', { tag: '@cross-engine' }, async ({ page }, testInfo) => {
   await page.addInitScript(() => Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async (value: string) => {
     (window as unknown as { copied: string }).copied = value;
   } } }));
@@ -357,6 +317,13 @@ test('a normal area review over iframe padding never attributes a wholly unpaint
       expect(area.x).toBeGreaterThan(frameBounds.innerBorder); expect(area.x + area.width).toBeLessThan(frameBounds.contentLeft);
       expect(originalIdentity).toEqual({ sameDocument: true, sameNode: true });
       expect(rect.width).toBeCloseTo(15); expect(rect.height).toBeCloseTo(9.6, 1); expect(area.width).toBeGreaterThan(5); expect(area.height).toBeGreaterThan(5);
+      await page.getByRole('button', { name: 'コメント', exact: true }).click();
+      const cover = page.locator('[data-needmark] .cover'); await expect(cover).toBeVisible();
+      await page.mouse.move(rect.x - 1, rect.y - 1); await page.keyboard.down('Shift'); await page.mouse.down(); await page.keyboard.up('Shift'); await page.mouse.move(rect.x + rect.width + 1, rect.y + rect.height + 1, { steps: 4 }); await page.mouse.up();
+      await expect(page.locator('[data-needmark] .selected-outline')).toHaveCount(0);
+      await page.getByRole('button', { name: '選択を完了', exact: true }).click();
+      await expect(page.getByLabel('コメント本文')).toBeHidden(); await expect(page.locator('[data-needmark] [data-hint]')).toContainText('0件を選択');
+      await page.keyboard.press('Escape'); await expect(cover).toBeHidden();
       await configureReview(page, { method: 'dom' });
       const frameBefore = await page.locator('#outer-capture-frame').evaluate((element) => element.outerHTML);
       const childBefore = await frame.evaluate(() => ({ html: document.body.innerHTML, url: location.href, scrollX, scrollY }));

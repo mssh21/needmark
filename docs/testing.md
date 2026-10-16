@@ -31,6 +31,7 @@ Repository rules live beside the small tests: `src/structure.test.ts` enforces t
 - Start from the behaviour and ask what is the smallest environment in which it can go wrong. Logic that can be called with plain data belongs to a small test even when it was found in the browser.
 - A browser test is right when the outcome depends on layout, rendering, event dispatch or browser APIs, or when the risk is the wiring between widget, server and files in a real review flow.
 - Logic that only runs in the page (for example, collecting context from a DOM tree) may be tested in the browser through `page.evaluate`, but then belongs to one engine unless the engine changes the result.
+- When page code contains a step that works on plain data, export that step and test it in Vitest, leaving the browser test for the DOM lookup around it. For example, `runtimeFramesOf` parses V8 and JavaScriptCore stack strings in `src/client/context/code-context.test.ts`, while `tests/runtime-context.spec.ts` checks only which React fiber supplies the stack.
 - When a browser test fails because of logic, add the small test that pins that logic, and keep the browser test only for what remains engine-specific.
 
 ### Browser engines

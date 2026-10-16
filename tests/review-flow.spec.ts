@@ -197,12 +197,12 @@ test('the single save keeps reviewing without opening the list, by button or Ctr
   await expect(review(page).locator('.cover')).toBeHidden();
 });
 
-test('the draft outline marks every multiple-selection target and disappears on scroll and close', async ({ page }) => {
+test('Enter completes a multiple selection into a focused composer whose draft outline marks every target and disappears on scroll and close', async ({ page }) => {
   await page.goto('/'); await configure(page);
   await page.getByRole('button', { name: 'コメント', exact: true }).click();
   await page.keyboard.down('Shift'); await clickAt(page, '#purchase-button'); await clickAt(page, '#product-title'); await page.keyboard.up('Shift');
   await page.keyboard.press('Enter');
-  await expect(page.getByLabel('コメント本文')).toBeVisible();
+  await expect(page.getByLabel('コメント本文')).toBeFocused(); await expect(review(page).locator('.selected-outline')).toHaveCount(0);
   const outlines = review(page).locator('.draft-outline');
   await expect(outlines).toHaveCount(2);
   const title = (await page.locator('#product-title').boundingBox())!, outline = (await outlines.nth(1).boundingBox())!;

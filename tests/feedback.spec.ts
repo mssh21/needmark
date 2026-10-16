@@ -164,28 +164,3 @@ test('React comments retain source locations, runtime ownership and distinguish 
   expect(prompt).toContain(`demo/react.tsx:${line}:5`);
   expect(prompt).toContain(`${saved.id}/context.json`);
 });
-
-test('DOM evidence labels ancestor hints, omits input values and bounds area samples', async ({ page }) => {
-  await page.goto('/');
-  const evidence = await page.evaluate(async (moduleUrl) => {
-    const { contextForArea, contextForElement } = await import(moduleUrl);
-    const container = document.createElement('div');
-    container.style.cssText = 'position:fixed;left:0;top:0;width:100px;height:260px;display:flex;flex-direction:column';
-    container.setAttribute('data-needmark-source', JSON.stringify({ file: 'src/Container.tsx', line: 4, column: 1, component: 'Container' }));
-    for (let index = 0; index < 13; index++) {
-      const button = document.createElement('button'); button.textContent = `Action ${index}`;
-      button.style.cssText = 'height:20px;width:100px;flex:none'; container.append(button);
-    }
-    document.body.append(container);
-    const inherited = contextForElement(container.children[0]);
-    const area = contextForArea({ x: 0, y: 0, width: 100, height: 260 }, document.querySelector('[data-needmark]'));
-    const input = document.createElement('input'); input.type = 'password'; input.value = 'private-password'; container.append(input);
-    const field = contextForElement(input);
-    container.remove();
-    return { inherited, area, field };
-  }, `/@fs/${resolve('src/client/context/code-context.ts')}`);
-  expect(evidence.inherited.elements[0]).toMatchObject({ sourceRelation: 'ancestor', source: { file: 'src/Container.tsx', line: 4 } });
-  expect(evidence.area.elements).toHaveLength(12);
-  expect(evidence.area.truncated).toBe(true);
-  expect(JSON.stringify(evidence.field)).not.toContain('private-password');
-});
