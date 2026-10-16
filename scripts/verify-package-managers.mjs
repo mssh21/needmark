@@ -20,6 +20,9 @@ const runners = {
 };
 // Yarn 4 quarantines recently published versions, which would block checking a release right after publishing it.
 process.env.YARN_NPM_MINIMAL_AGE_GATE ??= '0';
+// Yarn 4 makes installs immutable whenever it detects CI, and the copied example has no lockfile yet, so the first install would be refused as a lockfile change.
+// Yarn 4はCIを検出するとインストールを変更不可にし、コピーした例にはまだロックファイルがないため、最初のインストールがロックファイルの変更として拒否される。
+process.env.YARN_ENABLE_IMMUTABLE_INSTALLS ??= 'false';
 const selected = (args.only ?? Object.keys(runners).join(',')).split(',');
 
 function run(command, options = {}) {
