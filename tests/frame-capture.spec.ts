@@ -97,9 +97,7 @@ async function select(page: Page, review: Review, nested = false) {
   await expect(page.getByText('修正対象のファイルを確認しました。', { exact: true })).toBeVisible(); return rect;
 }
 async function save(page: Page, review: Review, comment: string): Promise<Feedback> {
-  await page.getByLabel('コメント本文').fill(comment);
-  // Save is enabled as the preview appears, while the panel is still growing to fit it; on a slow runner a click then lands above the moving button.
-  await expect(page.locator('[data-needmark] .morphing')).toHaveCount(0); await page.getByRole('button', { name: '保存', exact: true }).click();
+  await page.getByLabel('コメント本文').fill(comment); await page.getByRole('button', { name: '保存', exact: true }).click();
   await expect(page.getByText('コメントを保存しました。', { exact: true })).toBeVisible();
   const records = await Promise.all((await readdir(review.output)).filter((name) => !name.startsWith('.')).map(async (id) => JSON.parse(await readFile(`${review.output}/${id}/context.json`, 'utf8')) as Feedback));
   const item = records.find((record) => record.comment === comment); if (!item) throw new Error('Missing saved feedback');

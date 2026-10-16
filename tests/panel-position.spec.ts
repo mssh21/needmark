@@ -121,6 +121,23 @@ test('a mobile real-target composer retains typed feedback through image and sou
   expect((await readFile(`${output}/${item.id}/screenshot.png`)).subarray(0, 8)).toEqual(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
 });
 
+test('the composer enables 保存 only after it has finished growing to fit the capture preview', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' }); await setup(page, { method: 'dom' });
+  await page.evaluate(() => {
+    const events: string[] = (window as unknown as { panelEvents: string[] }).panelEvents = [];
+    const note = (event: string) => { if (events.at(-1) !== event) events.push(event); };
+    new MutationObserver((mutations) => { for (const { target } of mutations) {
+      const element = target as HTMLElement;
+      if (element.matches('.panel')) note(element.classList.contains('morphing') ? 'morphing' : 'settled');
+      else if (element.matches('button[type="submit"]')) note((element as HTMLButtonElement).disabled ? 'disabled' : 'enabled');
+    } }).observe(document.querySelector('[data-needmark]')!.shadowRoot!, { subtree: true, attributeFilter: ['class', 'disabled'] });
+  });
+  await selectPurchase(page);
+  await expect(page.getByRole('button', { name: '保存', exact: true })).toBeEnabled();
+  const events = await page.evaluate(() => (window as unknown as { panelEvents: string[] }).panelEvents);
+  expect(events.slice(events.lastIndexOf('morphing'))).toEqual(['morphing', 'settled', 'enabled']);
+});
+
 test('toolbar drag cancellation and viewport reflow preserve a typed reply, caret and valid panel scroll', async ({ page }) => {
   await setup(page, { width: 800, height: 700 }); const raw = await storedPosition(page);
   await seed(page, '長いコメントの本文。\n'.repeat(45));
