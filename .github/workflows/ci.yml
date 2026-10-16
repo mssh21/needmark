@@ -3,7 +3,14 @@ name: CI
 on:
   push:
     branches: [main]
+    # Nothing the checks build or test reads these files, so a change limited to them skips CI.
+    paths-ignore: &non-code
+      - '**/*.md'
+      - site/**
+      - .github/workflows/pages.yml
+      - LICENSE
   pull_request:
+    paths-ignore: *non-code
 
 permissions:
   contents: read
