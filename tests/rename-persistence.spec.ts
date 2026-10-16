@@ -1,4 +1,5 @@
-import { test, expect, type Locator, type Page } from '@playwright/test';
+import { type Locator, type Page } from '@playwright/test';
+import { test, expect } from './support/review.js';
 
 const dock = (page: Page) => page.locator('[data-needmark] .dock');
 async function bounds(locator: Locator) { const rect = await locator.boundingBox(); expect(rect).not.toBeNull(); return rect!; }
@@ -30,7 +31,7 @@ test('legacy browser preferences restore review behavior and canonical preferenc
   await expect(page.getByLabel('AIへの情報量')).toHaveValue('compact');
   await expect(page.getByLabel('キーボードショートカット')).toHaveValue('false');
   await expect(page.getByLabel('表示テーマ')).toHaveValue('dark');
-  await page.getByRole('button', { name: 'パネルを閉じる', exact: true }).click();
+  await page.getByRole('button', { name: 'キャンセル', exact: true }).click();
   const canonical = {
     'needmark-author': 'Current reviewer', 'needmark-detail': 'standard', 'needmark-shortcuts': 'true',
     'needmark-theme': 'light', 'needmark-toolbar-position': JSON.stringify({ x: 220, y: 180 }),

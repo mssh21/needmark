@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NeedMark</title>
+  <meta name="description" content="UIを指してコメントを書き、いつものコーディングAIへ渡す。コメントと対象の情報、スクリーンショットをローカルファイルに保存します。">
+  <link rel="alternate" hreflang="en" href="../">
+  <link rel="stylesheet" href="../style.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 3a11 11 0 0 0-11 11v15l11-4a11 11 0 0 0 0-22z' fill='%231965e3'/%3E%3C/svg%3E">
+</head>
+<body>
+  <header class="top">
+    <a class="wordmark" href="./">NeedMark</a>
+    <nav>
+      <a class="optional" href="https://github.com/mssh21/needmark/blob/main/docs/getting-started.ja.md">ドキュメント</a>
+      <a class="optional" href="https://www.npmjs.com/package/needmark">npm</a>
+      <a href="https://github.com/mssh21/needmark">GitHub</a>
+      <a href="../" hreflang="en" lang="en">English</a>
+    </nav>
+  </header>
+
+  <main>
+    <div class="hero">
+      <h1>NeedMark</h1>
+      <p class="lead">UIを指してコメントを書き、いつものコーディングAIへ渡す。</p>
+      <div class="actions">
+        <button class="button primary" type="button" data-copy="setup-prompt" data-copied="コピーしました">
+          <span class="label">導入プロンプトをコピー</span>
+        </button>
+        <a class="button" href="https://github.com/mssh21/needmark">GitHub</a>
+      </div>
+      <p class="facts">MIT · Node.js 22.12以降 · アカウント不要、AIを選ばない · 開発時のみ動作</p>
+    </div>
+
+    <div class="mock" aria-hidden="true">
+      <div class="mock-bar"><i></i><i></i><i></i><span>localhost:5173</span></div>
+      <div class="mock-page">
+        <div class="mock-card"></div>
+        <div class="mock-card target"><span class="pin" style="top:-11px;right:-11px">1</span></div>
+        <div class="mock-card"></div>
+        <div class="mock-wide"></div>
+        <span class="pin extra" style="top:122px;right:56px">2</span>
+        <div class="note">
+          <b>修正</b>
+          <p>合計の数字が目立たない。ラベルより大きくしてほしい。</p>
+        </div>
+        <div class="toolbar">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M8 3v10M3 8h10"/></svg>
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8z"/><circle cx="8" cy="8" r="2"/></svg>
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="6"/><path d="M6.5 5.5v5M9.5 5.5v5"/></svg>
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2.5 4h11M2.5 8h7M2.5 12h4"/></svg>
+          <span class="count">2</span>
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <section id="setup">
+      <h2>AIに導入してもらう</h2>
+      <p>このプロンプトを、プロジェクトで作業しているコーディングAI（Claude Code、Codex、Cursorなど）に貼り付けてください。NeedMarkのインストール、<code>needmark.config.ts</code>の作成、開発サーバーへの組み込みまで行い、レビューの始め方を案内します。</p>
+      <div class="code prompt">
+        <div class="prompt-head">
+          <span>導入プロンプト</span>
+          <button class="button" type="button" data-copy="setup-prompt" data-copied="コピーしました"><span class="label">コピー</span></button>
+        </div>
+<pre id="setup-prompt">このプロジェクトにNeedMark（https://github.com/mssh21/needmark）を導入してください。NeedMarkは開発時だけ動くツールで、私がブラウザでUIを指してコメントを書くと、コーディングAI向けにローカルファイルとして保存されます。
+
+1. `node -v`を実行してください。Node.js 22.12以降が必要です。古い場合は作業を止めて私に伝えてください。
+2. 開発サーバーを持つアプリのフォルダで作業してください（モノレポならそのパッケージのフォルダ）。一番近いロックファイルでパッケージマネージャーを決めます。pnpm-lock.yamlならpnpm、yarn.lockならYarn、package-lock.jsonか、ロックファイルがなければnpmです。NeedMarkのコマンドはそれぞれ`pnpm exec needmark`、`yarn needmark`、`npx needmark`になります。以下では&lt;needmark&gt;と書きます。
+3. 開発用の依存として入れてください。`pnpm add -D needmark`、`yarn add -D needmark`、`npm install -D needmark`のいずれかです。
+4. needmark.config.tsがまだなければ、質問なしで初期設定し、開発サーバーにつないでください。
+   &lt;needmark&gt; init --language=ja --share=local --capture=dom --connect=yes
+   コメントをGitで共有するよう私が頼んだ場合だけ、--share=gitにしてください。
+5. initの出力を読んでください。initはvite.config.*かastro.config.*にneedmark()を追加するか、Next.jsのdevスクリプトを`needmark dev --`経由にし、変更した行を表示します。その変更はそのまま残してください。開発サーバーを検出できなかったと表示された場合は、https://github.com/mssh21/needmark/blob/main/docs/getting-started.ja.md#開発サーバーにつなぐ の手順で手動でつないでください。ほかの変更はしないでください。NeedMarkは本番ビルドには入りません。
+6. `&lt;needmark&gt; list`を実行し、`[]`と表示されることを確認してください。
+7. あなたがMCPサーバーを使える場合は、NeedMarkを登録するか私に確認してください。登録するとコメントとスクリーンショットを直接読めます。私が同意した場合だけ、このフォルダで登録してください。例：`claude mcp add needmark -- &lt;needmark&gt; mcp`、`codex mcp add needmark -- &lt;needmark&gt; mcp`
+8. 最後に、いつもの開発コマンドで開発サーバーを起動し、いつもどおり開けばページ下部にNeedMarkのツールバーが出ると伝えてください。NEEDMARK=offでNeedMarkなしで起動できること、`&lt;needmark&gt; remove`で接続を元に戻せることも伝えてください。</pre>
+      </div>
+    </section>
+
+    <section id="install">
+      <h2>導入</h2>
+      <p>Node.js 22.12以降が必要です。アプリのプロジェクトで実行します。</p>
+      <div class="code">
+        <div class="tabs" role="tablist">
+          <button type="button" role="tab" data-tab="pnpm" aria-selected="true">pnpm</button>
+          <button type="button" role="tab" data-tab="npm" aria-selected="false">npm</button>
+          <button type="button" role="tab" data-tab="yarn" aria-selected="false">Yarn</button>
+        </div>
+        <div data-panel="pnpm"><pre>pnpm add -D needmark
+pnpm exec needmark init
+pnpm dev</pre></div>
+        <div data-panel="npm" hidden><pre>npm install -D needmark
+npx needmark init
+npm run dev</pre></div>
+        <div data-panel="yarn" hidden><pre>yarn add -D needmark
+yarn needmark init
+yarn dev</pre></div>
+        <button class="copy" type="button" aria-label="コピー"><svg class="idle" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="5" y="5" width="8.5" height="8.5" rx="1.5"/><path d="M10.5 5V3.5A1 1 0 0 0 9.5 2.5h-6a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1H5"/></svg><svg class="done" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8.5l3 3 7-7"/></svg></button>
+      </div>
+      <p>いつもどおりアプリを開くと、ページ下部にNeedMarkのツールバーが表示されます。</p>
+      <p><code>init</code>は最初に推奨設定（レビュー画面はターミナルの言語、コメントはこのコンピューターだけに保存、スクリーンショットはページを描き直して作成、開発サーバーへの接続）を示します。Enterでそのまま使い、<code>n</code>と答えると説明付きの一覧から項目ごとに選べます。質問と表示は英語です。変更した行はすべて表示し、アプリのソースと本番ビルドには触れません。</p>
+      <ul>
+        <li><b>Vite</b>（React、Vueなど）：<code>vite.config.*</code>の<code>plugins</code>に<code>needmark()</code>を追加します。</li>
+        <li><b>Astro</b>：<code>astro.config.*</code>の<code>vite.plugins</code>に<code>needmark()</code>を追加します。</li>
+        <li><b>Next.js</b>：<code>dev</code>スクリプトを<code>needmark dev --</code>経由にし、いつものポートでツールバーが出るようにします。</li>
+      </ul>
+      <p><code>NEEDMARK=off</code>で自分だけNeedMarkなしで起動でき、<code>needmark.config.ts</code>の<code>enabled: false</code>で全員分を止められます。<code>needmark remove</code>で接続を元に戻せます。ほかの開発サーバーは<a href="https://github.com/mssh21/needmark/blob/main/docs/getting-started.ja.md#開発サーバーにつなぐ">開発サーバーにつなぐ</a>を参照してください。</p>
+    </section>
+
+    <section id="usage">
+      <h2>使い方</h2>
+      <ol class="steps">
+        <li>開発サーバーでアプリを開き、ツールバーの<b>コメント</b>（+）を押します。<code>Shift</code>+<code>C</code>でも始められます。</li>
+        <li>要素をクリックするか、範囲をドラッグします。Shift+クリックで複数の要素、Alt/Option+ドラッグで文章の一部を選べます。</li>
+        <li>コメントを書き、<b>修正</b>・<b>相談</b>・<b>質問</b>から種類を選んで保存します。スクリーンショットは付けても付けなくても構いません。</li>
+        <li><b>コメント一覧</b>を開いて<b>プロンプトをコピー</b>を押し、AIに貼り付けます。</li>
+        <li>AIがコードを直し、どう確認したかを返信します。結果を自分で確かめてから、コメントを解決済みにします。</li>
+      </ol>
+    </section>
+
+    <section id="files">
+      <h2>保存されるもの</h2>
+      <p>コメントは1件ずつプロジェクト内のフォルダになります。ファイルを読めるAIならどれでも扱え、ローカルに置いたままにもGitで共有もできます。</p>
+      <div class="code">
+<pre>.needmark/feedback/&lt;id&gt;/
+  comment.md       コメント、ページ、対象
+  context.json     セレクタ、コンポーネント、ソースの位置
+  screenshot.png   任意。パスワード欄はマスク</pre>
+      </div>
+    </section>
+
+    <section id="mcp">
+      <h2>AIに直接読ませる</h2>
+      <p>Claude Code、Codex、Gemini CLIなどMCPに対応したAIは、<code>needmark mcp</code>を通してコメントの一覧とスクリーンショットを読み、返信や解決、新しいコメントの待ち受けができます。追加のサーバーやアカウントは不要で、ネットワークのポートも開きません。</p>
+      <div class="code">
+        <div class="tabs" role="tablist">
+          <button type="button" role="tab" data-tab="pnpm" aria-selected="true">pnpm</button>
+          <button type="button" role="tab" data-tab="npm" aria-selected="false">npm</button>
+          <button type="button" role="tab" data-tab="yarn" aria-selected="false">Yarn</button>
+        </div>
+        <div data-panel="pnpm"><pre># Claude Code
+claude mcp add needmark -- pnpm exec needmark mcp
+# Codex
+codex mcp add needmark -- pnpm exec needmark mcp</pre></div>
+        <div data-panel="npm" hidden><pre># Claude Code
+claude mcp add needmark -- npx needmark mcp
+# Codex
+codex mcp add needmark -- npx needmark mcp</pre></div>
+        <div data-panel="yarn" hidden><pre># Claude Code
+claude mcp add needmark -- yarn needmark mcp
+# Codex
+codex mcp add needmark -- yarn needmark mcp</pre></div>
+        <button class="copy" type="button" aria-label="コピー"><svg class="idle" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="5" y="5" width="8.5" height="8.5" rx="1.5"/><path d="M10.5 5V3.5A1 1 0 0 0 9.5 2.5h-6a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1H5"/></svg><svg class="done" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8.5l3 3 7-7"/></svg></button>
+      </div>
+      <p>MCPを使わない場合も、CLIの<code>needmark export</code>、<code>watch</code>、<code>reply</code>、<code>resolve</code>で同じことができます。</p>
+    </section>
+
+    <section id="docs">
+      <h2>ドキュメント</h2>
+      <div class="links">
+        <a href="https://github.com/mssh21/needmark/blob/main/docs/getting-started.ja.md">はじめに</a>
+        <a href="https://github.com/mssh21/needmark/blob/main/docs/getting-started.ja.md#撮影とプライバシー">撮影とプライバシー</a>
+        <a href="https://github.com/mssh21/needmark/blob/main/docs/getting-started.ja.md#aiエージェントと連携する">AIエージェントと連携する</a>
+        <a href="https://github.com/mssh21/needmark/blob/main/docs/architecture.md">アーキテクチャ（英語）</a>
+      </div>
+    </section>
+  </main>
+
+  <footer>MITライセンス · 作者 <a href="https://github.com/mssh21">mssh21</a></footer>
+  <script src="../site.js"></script>
+</body>
+</html>

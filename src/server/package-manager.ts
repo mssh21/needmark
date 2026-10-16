@@ -13,3 +13,9 @@ export function needmarkCommand(from: string): string {
     if (dirname(directory) === directory) return 'npx needmark';
   }
 }
+
+const scripts: Record<string, [dev: string, remove: string]> = {
+  'pnpm exec needmark': ['pnpm dev', 'pnpm remove needmark'], 'yarn needmark': ['yarn dev', 'yarn remove needmark'], 'npx needmark': ['npm run dev', 'npm uninstall needmark'],
+};
+export const devCommand = (needmark: string) => scripts[needmark]?.[0] ?? 'npm run dev';
+export const removeCommand = (needmark: string) => scripts[needmark]?.[1] ?? 'npm uninstall needmark';

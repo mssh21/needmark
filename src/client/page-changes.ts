@@ -2,12 +2,12 @@ import { resolveElement } from './context/code-context.js';
 
 // Observing only the roots that saved pins live in keeps MutationObserver cost proportional to the feedback, not to the size of the app.
 // 保存済みピンがあるルートだけを監視し、MutationObserverの負荷をアプリの大きさではなくコメントの数に比例させる。
-export function installPageChanges(host: HTMLElement, onChange: () => void): { sync(paths: readonly (readonly string[])[]): void; dispose(): void } {
+export function installPageChanges(host: HTMLElement, onChange: (contentOnly: boolean) => void): { sync(paths: readonly (readonly string[])[]): void; dispose(): void } {
   type Root = Document | ShadowRoot;
   const observed = new Map<Root, () => void>(), frames = new Map<HTMLIFrameElement, () => void>();
   let paths: readonly (readonly string[])[] = [], disposed = false;
   const isWidget = (node: Node) => !!(node.nodeType === 1 ? node as Element : node.parentElement)?.closest('[data-needmark]');
-  const changed = () => { if (!disposed) onChange(); };
+  const changed = () => { if (!disposed) onChange(false); };
 
   function observeHistory(view: Window): () => void {
     let active = true;
@@ -62,7 +62,7 @@ export function installPageChanges(host: HTMLElement, onChange: () => void): { s
     }
     for (const [root, detach] of observed) if (!wantedRoots.has(root)) { detach(); observed.delete(root); }
     for (const root of wantedRoots) if (!observed.has(root)) {
-      const observer = new MutationObserver((records) => { if (records.some((record) => !isWidget(record.target))) changed(); });
+      const observer = new MutationObserver((records) => { if (!disposed && records.some((record) => !isWidget(record.target))) onChange(true); });
       observer.observe(root, { subtree: true, childList: true, characterData: true, attributes: true });
       root.addEventListener('scroll', changed, true);
       const view = root.nodeType === 9 ? (root as Document).defaultView : null;

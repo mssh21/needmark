@@ -1,22 +1,15 @@
-import { test, expect, type Page } from '@playwright/test';
-import { readFile, readdir, rm } from 'node:fs/promises';
+import { type Page } from '@playwright/test';
+import { test, expect, saveAndList, searchList, output, configureReview, enableWidgetOption } from './support/review.js';
+import { readFile, readdir } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { resolve } from 'node:path';
 import type { Feedback } from '../src/shared/types.js';
-import { saveAndList, searchList } from './save.js';
-const output = '/private/tmp/needmark-e2e-feedback';
-test.beforeEach(async () => { await rm(output, { recursive: true, force: true }); });
-async function setup(page: Page, submit = false, method = 'none') {
+async function setup(page: Page, submit = false, method: 'none' | 'dom' | 'tab' = 'none') {
   // The transport is controlled to exercise UI races. Server hook delivery is verified by API tests.
-  if (submit) await page.route('http://127.0.0.1:4192/', async (route) => {
-    const response = await route.fetch();
-    await route.fulfill({ response, body: (await response.text()).replace('data-needmark-capture=', 'data-needmark-submit="true" data-needmark-capture=') });
-  });
+  if (submit) await enableWidgetOption(page, 'data-needmark-submit');
   await page.goto('/');
-  await page.getByRole('button', { name: '設定', exact: true }).click();
-  await page.getByLabel('キャプチャ方式').selectOption(method);
-  await page.getByRole('button', { name: '設定を保存' }).click();
+  await configureReview(page, { method });
 }
 async function select(page: Page, selector = '#purchase-button') {
   await page.getByRole('button', { name: 'コメント', exact: true }).click();
@@ -46,8 +39,11 @@ test('a single-item copy carries the source and selector to the AI without optio
   await expect(page.getByText('コメントを保存しました。', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'AIへ送信', exact: true })).toHaveCount(0);
   await page.locator('[data-needmark] .open-item').click();
-  await page.getByRole('button', { name: 'プロンプトをコピー', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'コピーしました', exact: true })).toBeVisible();
+  const header = page.locator('[data-needmark] .panel > header');
+  await expect(header.getByRole('link', { name: 'VS Codeで開く', exact: true })).toBeVisible();
+  await header.getByRole('button', { name: 'プロンプトをコピー', exact: true }).click();
+  const done = header.getByRole('button', { name: 'コピーしました', exact: true });
+  await expect(done).toBeVisible();
   await expect.poll(() => copied(page)).toContain('ソースとセレクタをAIへ渡す');
   await expect(page.getByRole('button', { name: 'プロンプトをコピー', exact: true })).toBeVisible({ timeout: 4000 });
   expect(await copied(page)).toContain('#purchase-button'); expect(await copied(page)).toContain('demo/index.html:');

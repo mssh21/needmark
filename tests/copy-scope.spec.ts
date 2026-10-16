@@ -1,10 +1,8 @@
-import { test, expect, type Page } from '@playwright/test';
-import { rm } from 'node:fs/promises';
+import { type Page } from '@playwright/test';
+import { test, expect, searchList, toggleFilter, configureReview, enableWidgetOption } from './support/review.js';
 import type { Feedback, FeedbackInput, FeedbackStatus } from '../src/shared/types.js';
 import { input } from './fixtures.js';
-import { searchList, toggleFilter } from './save.js';
 
-const output = '/private/tmp/needmark-e2e-feedback';
 const copied = (page: Page) => page.evaluate(() => (window as unknown as { scopeCopied: string }).scopeCopied);
 function target(selector: string): FeedbackInput['target'] {
   return { kind: 'element', text: 'Review target', selector, rect: { x: 100, y: 100, width: 120, height: 40 } };
@@ -18,12 +16,8 @@ async function setup(page: Page, send = false, denied = false) {
       if (denied) throw new Error('Clipboard denied');
     } } });
   }, { denied });
-  if (send) await page.route('http://127.0.0.1:4192/', async (route) => {
-    const response = await route.fetch();
-    await route.fulfill({ response, body: (await response.text()).replace('data-needmark-capture=', 'data-needmark-submit="true" data-needmark-capture=') });
-  });
-  await page.goto('/'); await page.getByRole('button', { name: '設定', exact: true }).click();
-  await page.getByLabel('キャプチャ方式').selectOption('none'); await page.getByRole('button', { name: '設定を保存', exact: true }).click();
+  if (send) await enableWidgetOption(page, 'data-needmark-submit');
+  await page.goto('/'); await configureReview(page, { method: 'none' });
 }
 async function headers(page: Page) { return { 'x-needmark-token': (await page.locator('script[data-needmark-token]').getAttribute('data-needmark-token'))! }; }
 async function seed(page: Page, comment: string, selected: FeedbackInput['target'], status: FeedbackStatus = 'open', url = page.url()): Promise<Feedback> {
@@ -40,7 +34,6 @@ async function list(page: Page) { await page.getByRole('button', { name: 'コメ
 const copyPrompt = (page: Page) => page.getByRole('button', { name: 'プロンプトをコピー', exact: true });
 async function promptIds(page: Page, seeded: Feedback[]) { await copyPrompt(page).click(); const prompt = await copied(page); return seeded.filter((item) => prompt.includes(item.id)).map((item) => item.id).sort(); }
 
-test.beforeEach(async () => { await rm(output, { recursive: true, force: true }); });
 
 test('prompt copies and send share the searched, resolved-filtered and exact-page open scope', async ({ page }) => {
   await setup(page, true);

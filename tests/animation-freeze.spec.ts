@@ -1,12 +1,11 @@
-import { test, expect, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { test, expect, saveAndList, output, configureReview } from './support/review.js';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { readFile, readdir, rm } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import type { Feedback } from '../src/shared/types.js';
-import { saveAndList } from './save.js';
 
-const output = '/private/tmp/needmark-e2e-feedback';
 type Fixture = {
   counts: { timeout: number; interval: number; frame: number; kept: number; canceled: number };
   appAnimation: Animation; priorPaused: Animation; widgetAnimation: Animation;
@@ -21,13 +20,10 @@ async function state(page: Page) {
   });
 }
 
-test.beforeEach(async () => { await rm(output, { recursive: true, force: true }); });
 
-test('pause freezes CSS, page loops and WAAPI, keeps the widget/capture/poll live, and resumes cancelable work', async ({ page }) => {
+test('pause freezes CSS, page loops and WAAPI, keeps the widget/capture/poll live, and resumes cancelable work', { tag: '@cross-engine' }, async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: '設定', exact: true }).click();
-  await page.getByLabel('キャプチャ方式').selectOption('dom');
-  await page.getByRole('button', { name: '設定を保存' }).click();
+  await configureReview(page, { method: 'dom' });
   await page.evaluate(() => {
     const style = document.createElement('style');
     style.textContent = '@keyframes pause-fixture-spin{from{opacity:.2}to{opacity:1}}.pause-fixture-spin{animation:pause-fixture-spin .3s linear infinite}.pause-fixture-prior{animation-play-state:paused}.pause-fixture-transition{transition:opacity 2s linear}';
@@ -96,7 +92,7 @@ test('pause freezes CSS, page loops and WAAPI, keeps the widget/capture/poll liv
   expect(await page.locator('[data-needmark-freeze]').count()).toBe(0);
 });
 
-test('pagehide releases page animations and queued loops without resuming a video or animation that was already paused', async ({ page }) => {
+test('pagehide releases page animations and queued loops without resuming a video or animation that was already paused', { tag: '@cross-engine' }, async ({ page }) => {
   await page.goto('/');
   await page.evaluate(() => {
     const video = document.createElement('video'); video.id = 'pause-empty-video'; document.body.append(video);

@@ -1,8 +1,9 @@
-import { test, expect, type Frame, type Locator, type Page, type TestInfo } from '@playwright/test';
+import { type Frame, type Locator, type Page, type TestInfo } from '@playwright/test';
+import { test, expect, output, tempRoot, configureReview, tabColorTolerance } from './support/review.js';
 import { build } from 'esbuild';
 import { createServer, type Server } from 'node:http';
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { resolve, join } from 'node:path';
 import { startReviewProxy, type ReviewProxy } from '../dist/proxy.js';
 import type { Feedback, Rectangle, RuntimeSourceRequest, RuntimeSourceResult, SourceLocation } from '../src/shared/types.js';
 
@@ -23,8 +24,8 @@ async function close(server: Server) {
 }
 
 /** Actual React dev allocation frames, current local JSX, source maps and public protected proxy. */
-async function withReview(page: Page, nested: boolean, run: (review: Review) => Promise<void>, inline = false) {
-  const root = await mkdtemp('/private/tmp/needmark-frame-capture-');
+async function withReview(page: Page, nested: boolean, run: (review: Review) => Promise<void>, variant?: 'inline' | 'classic-scrollbar') {
+  const root = await mkdtemp(join(tempRoot, 'needmark-frame-capture-'));
   let upstream: Server | undefined, proxy: ReviewProxy | undefined;
   try {
     const source = await readFile(fixturePath, 'utf8'); await mkdir(root + '/src'); await writeFile(root + '/' + sourceFile, source);
@@ -54,12 +55,13 @@ async function withReview(page: Page, nested: boolean, run: (review: Review) => 
           #child-password,#child-redact{position:absolute;left:370px;width:160px;height:40px;border:0;border-radius:0;background:#9922a9;color:#fff}#child-password{top:275px}#child-redact{top:335px}
           #child-marker{position:absolute;left:370px;top:220px;width:120px;height:30px;background:#31c7ad}
           #root-password,#root-redact,#root-marker{position:absolute;left:940px;width:180px;height:40px;border:0;border-radius:0;background:#9922a9;color:#fff}#root-password{top:200px}#root-redact{top:260px}#root-marker{top:140px;background:#5b42bd}
+          ${url.searchParams.has('classic-scrollbar') ? '::-webkit-scrollbar{width:15px;height:15px;background:#c8c8c8}' : ''}
         </style></head><body><div id="app"></div><script type="module" src="/app.js"></script></body></html>`);
       } else { response.writeHead(404); response.end(); }
     });
     const target = await listen(upstream), reservation = createServer(), origin = await listen(reservation); await close(reservation);
     proxy = await startReviewProxy({ root, target, origin, capture: 'dom', editor: 'vscode' });
-    await page.goto(origin + '/' + (nested ? '?nested' : inline ? '?inline' : ''));
+    await page.goto(origin + '/' + (nested ? '?nested' : variant ? '?' + variant : ''));
     await expect(leafTarget(page, nested)).toBeVisible(); await expect(page.getByRole('button', { name: 'コメント', exact: true })).toBeVisible();
     await run({ root, output: root + '/.needmark/feedback', source, origin });
   } finally { await proxy?.close(); if (upstream?.listening) await close(upstream); await rm(root, { recursive: true, force: true }); }
@@ -81,8 +83,7 @@ function sourceOf(review: Review): SourceLocation {
   return { file: sourceFile, line: line + 1, column: lines[line]!.indexOf('<button') + 1, component: 'CaptureTarget' };
 }
 async function method(page: Page, value: 'dom' | 'none' | 'tab') {
-  await page.getByRole('button', { name: '設定', exact: true }).click();
-  await page.getByLabel('キャプチャ方式').selectOption(value); await page.getByRole('button', { name: '設定を保存', exact: true }).click();
+  await configureReview(page, { method: value });
 }
 async function select(page: Page, review: Review, nested = false) {
   const response = page.waitForResponse((response) => response.url() === review.origin + '/__needmark/source' && response.request().method() === 'POST');
@@ -106,7 +107,9 @@ async function save(page: Page, review: Review, comment: string): Promise<Feedba
 }
 async function currentChild(page: Page, nested = false) {
   const target = leafTarget(page, nested); await target.click(); await expect(target).toHaveText('Current child 1');
-  const { leaf } = await frames(page, nested); await leaf.getByRole('textbox', { name: 'Live child note', exact: true }).fill('MMMMMMMMMMMM');
+  const { leaf } = await frames(page, nested); const note = leaf.getByRole('textbox', { name: 'Live child note', exact: true }); await note.fill('MMMMMMMMMMMM');
+  // Chromium on Linux draws a near-black focus ring that the ink measurement would count as text, and DOM capture never draws focus rings.
+  await note.blur();
   expect(await target.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe('rgb(217, 91, 36)'); return leaf;
 }
 async function point(locator: Locator, name: string, color: number[], inset = 12): Promise<Sample> {
@@ -173,7 +176,7 @@ function expectPixels(actual: Awaited<ReturnType<typeof evidence>>, samples: Sam
   }
 }
 
-test('only the top document owns the review toolbar while a child opened directly remains reviewable', async ({ page }, testInfo) => {
+test('only the top document owns the review toolbar while a child opened directly remains reviewable', { tag: '@cross-engine' }, async ({ page }, testInfo) => {
   await withReview(page, true, async (review) => {
     const { outer, leaf } = await frames(page, true);
     const state = { topUrl: page.url(), outerUrl: outer.url(), leafUrl: leaf.url(), top: await page.locator('[data-needmark] .dock').count(), outer: await outer.locator('[data-needmark] .dock').count(), leaf: await leaf.locator('[data-needmark] .dock').count() };
@@ -189,7 +192,7 @@ test('only the top document owns the review toolbar while a child opened directl
   });
 });
 
-test('CSS-sized iframe DOM PNG records current React pixels and edited text with source, DPR and private regions', async ({ page }, testInfo) => {
+test('CSS-sized iframe DOM PNG records current React pixels and edited text with source, DPR and private regions', { tag: '@cross-engine' }, async ({ page }, testInfo) => {
   await withReview(page, false, async (review) => {
     const leaf = await currentChild(page), { samples, note } = await captureSamples(page);
     const dimensions = await page.locator('#outer-capture-frame').evaluate((frame) => ({ width: frame.getAttribute('width'), height: frame.getAttribute('height'), rect: frame.getBoundingClientRect().toJSON() }));
@@ -213,7 +216,7 @@ test('CSS-sized iframe DOM PNG records current React pixels and edited text with
   });
 });
 
-test('nested iframe DOM capture preserves live pixels and private rectangles after child and root scrolling', async ({ page }, testInfo) => {
+test('nested iframe DOM capture preserves live pixels and private rectangles after child and root scrolling', { tag: '@cross-engine' }, async ({ page }, testInfo) => {
   await withReview(page, true, async (review) => {
     const { outer, leaf } = await frames(page, true); await currentChild(page, true);
     await page.evaluate(() => scrollTo(0, 80)); await outer.evaluate(() => scrollTo(0, 340)); await leaf.evaluate(() => scrollTo(0, 160));
@@ -234,20 +237,44 @@ test('nested iframe DOM capture preserves live pixels and private rectangles aft
   });
 });
 
+test('a scrolled page with smooth scrolling still captures its iframe with DOM capture', { tag: '@cross-engine' }, async ({ page }, testInfo) => {
+  await withReview(page, false, async (review) => {
+    await currentChild(page);
+    await page.evaluate(() => { document.documentElement.style.scrollBehavior = 'smooth'; scrollTo({ top: 80, behavior: 'instant' }); });
+    await expect.poll(() => page.evaluate(() => scrollY)).toBe(80);
+    await method(page, 'dom'); await select(page, review); const item = await save(page, review, 'なめらかなスクロールのページでも子画面を撮る');
+    await attach(testInfo, 'smooth-scroll-frame-saved', await readFile(`${review.output}/${item.id}/screenshot.png`), { saved: item });
+    expect(item.capture.method).toBe('dom'); expect(item.viewport.scrollY).toBe(80);
+  });
+});
+
+test('a page whose classic scrollbar narrows the viewport still captures its iframe with DOM capture', { tag: '@cross-engine' }, async ({ page }, testInfo) => {
+  await withReview(page, false, async (review) => {
+    // A styled scrollbar is never an overlay, so the page reserves its width as Windows and Linux do by default, whatever the platform's scrollbar setting.
+    expect(await page.evaluate(() => innerWidth - document.documentElement.clientWidth)).toBe(15);
+    await currentChild(page);
+    const { samples, note } = await captureSamples(page);
+    await method(page, 'dom'); await select(page, review); const item = await save(page, review, '従来型スクロールバーのページでも子画面を撮る');
+    expect(item.capture.method).toBe('dom');
+    const png = await readFile(`${review.output}/${item.id}/screenshot.png`), actual = await evidence(page, png, samples, note);
+    await attach(testInfo, 'classic-scrollbar-frame-saved', png, { actual, saved: item });
+    expectPixels(actual, samples);
+  }, 'classic-scrollbar');
+});
+
 test('native tab PNG excludes review controls while preserving current child pixels and privacy masks', async ({ page, browserName }, testInfo) => {
-  test.skip(browserName !== 'chromium', 'The automated native tab picker is supported by the Chromium launch configuration.');
   await withReview(page, false, async (review) => {
     await currentChild(page); const { samples } = await captureSamples(page); await method(page, 'tab');
     const rect = await select(page, review), item = await save(page, review, '高精度の子画面画像にレビューツールを混ぜない');
     const png = await readFile(`${review.output}/${item.id}/screenshot.png`), actual = await evidence(page, png, samples);
-    await attach(testInfo, 'native-frame-saved', png, { actual, saved: item }); expectPixels(actual, samples, 2);
+    await attach(testInfo, 'native-frame-saved', png, { actual, saved: item }); expectPixels(actual, samples, tabColorTolerance);
     expect(item.capture.method).toBe('tab'); expect(item.capture.width).toBe(actual.width); expect(item.capture.height).toBe(actual.height);
     expect(item.target.rect).toEqual(rect); expect(item.target.code!.elements[0]!.rect).toEqual(rect); expect(item.capture.width).toBeGreaterThan(500);
   });
 });
 
 
-test('an inline frame keeps its current pixels between interleaved direct text and style siblings without changing original order', async ({ page }, testInfo) => {
+test('an inline frame keeps its current pixels between interleaved direct text and style siblings without changing original order', { tag: '@cross-engine' }, async ({ page }, testInfo) => {
   await withReview(page, false, async (review) => {
     await currentChild(page); const { samples } = await captureSamples(page);
     const originalLine = await page.locator('#inline-frame-line').evaluate((element) => ({
@@ -272,11 +299,11 @@ test('an inline frame keeps its current pixels between interleaved direct text a
     }))).toEqual(originalLine);
     expect(await originalChildState(page)).toEqual(originalChild); expect(item.target.rect).toEqual(rect); expect(item.target.code!.elements[0]!.rect).toEqual(rect);
     expect(item.capture).toEqual({ method: 'dom', width: 2400, height: 1700 });
-  }, true);
+  }, 'inline');
 });
 
 
-test('an unrelated iframe added during real image acquisition rejects stale pixels and retains the typed comment for explicit image-free saving', async ({ page }, testInfo) => {
+test('an unrelated iframe added during real image acquisition rejects stale pixels and retains the typed comment for image-free saving', { tag: '@cross-engine' }, async ({ page }, testInfo) => {
   await withReview(page, false, async (review) => {
     const leaf = await currentChild(page); await method(page, 'dom');
     let release = () => {}, entered = () => {};
@@ -296,7 +323,7 @@ test('an unrelated iframe added during real image acquisition rejects stale pixe
       const input = page.getByLabel('コメント本文'); await input.fill(comment);
       await expect(page.getByRole('img', { name: 'コメントした場所のキャプチャ', exact: true })).toHaveCount(0);
       await expect(page.getByRole('button', { name: '保存', exact: true })).toBeDisabled();
-      await expect(page.getByRole('button', { name: '画像なしで保存する', exact: true })).toHaveCount(0);
+      await expect(page.getByText('画像を撮影できなかったため、画像なしで保存します。', { exact: true })).toHaveCount(0);
       expect(await leaf.locator('#held-real-resource').evaluate((image) => (image as HTMLImageElement).complete)).toBe(false);
       await page.evaluate((origin) => {
         const frame = document.createElement('iframe'); frame.id = 'unrelated-late-frame';
@@ -307,11 +334,10 @@ test('an unrelated iframe added during real image acquisition rejects stale pixe
       const newFrameState = await page.evaluate(() => ({ parentUrl: location.href, frames: Array.from(document.querySelectorAll('iframe')).map((frame) => ({ id: frame.id, url: frame.contentWindow!.location.href, privateNodes: frame.contentDocument!.querySelectorAll('input[type="password"],[data-needmark-redact]').length })) }));
       expect(newFrameState.frames.find((frame) => frame.id === 'unrelated-late-frame')?.privateNodes).toBe(0);
       release();
-      await expect(page.getByRole('button', { name: '画像なしで保存する', exact: true })).toBeVisible();
+      await expect(page.getByText('画像を撮影できなかったため、画像なしで保存します。', { exact: true })).toBeVisible();
       await expect(input).toHaveValue(comment); await expect(page.getByRole('img', { name: 'コメントした場所のキャプチャ', exact: true })).toHaveCount(0);
-      await expect(page.getByRole('button', { name: '保存', exact: true })).toBeDisabled();
+      await expect(page.getByRole('button', { name: '保存', exact: true })).toBeEnabled();
       await testInfo.attach('new-frame-during-capture', { body: JSON.stringify({ original, after: await originalChildState(page), newFrameState, rect, typedComment: await input.inputValue() }, null, 2), contentType: 'application/json' });
-      await page.getByRole('button', { name: '画像なしで保存する', exact: true }).click();
       const item = await save(page, review, comment);
       expect(item.capture).toEqual({ method: 'none', width: 0, height: 0 }); expect(item.image).toBeUndefined();
       expect(await readdir(`${review.output}/${item.id}`)).not.toContain('screenshot.png');

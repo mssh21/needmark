@@ -7,3 +7,9 @@ test-results/
 playwright-report/
 *.tgz
 .DS_Store
+examples/*/.needmark/
+examples/*/dist/
+examples/astro/.astro/
+examples/next/.next/
+examples/next/next-env.d.ts
+examples/next/tsconfig.tsbuildinfo

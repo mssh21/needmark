@@ -1,14 +1,12 @@
-import { test, expect, type Page, type TestInfo } from '@playwright/test';
-import { readFile, readdir, rm } from 'node:fs/promises';
+import { type Page, type TestInfo } from '@playwright/test';
+import { test, expect, saveAndList, output } from './support/review.js';
+import { readFile, readdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import type { Feedback, Rectangle } from '../src/shared/types.js';
-import { saveAndList } from './save.js';
 
-const output = '/private/tmp/needmark-e2e-feedback';
 const outlines = (page: Page) => page.locator('[data-needmark] .selected-outline');
 const cover = (page: Page) => page.locator('[data-needmark] .cover');
 const field = (page: Page) => page.getByLabel('コメント本文');
-const resume = (page: Page) => page.getByRole('button', { name: '選択を再開', exact: true });
 
 async function fixture(page: Page, method: 'none' | 'dom' = 'none') {
   const html = await readFile(resolve('tests/fixtures/multi-selection.html'), 'utf8');
@@ -68,7 +66,6 @@ function union(rects: Rectangle[]): Rectangle {
   return { x, y, width: Math.max(...rects.map((r) => r.x + r.width)) - x, height: Math.max(...rects.map((r) => r.y + r.height)) - y };
 }
 async function screenshot(page: Page, info: TestInfo, name: string) { await info.attach(name, { body: await page.screenshot(), contentType: 'image/png' }); }
-test.beforeEach(async () => { await rm(output, { recursive: true, force: true }); });
 test.afterEach(async ({ page }, info) => {
   if (info.status === info.expectedStatus) return;
   await screenshot(page, info, 'actual-multi-selection');
@@ -113,8 +110,7 @@ test('semantic batch deduplication retains every target and additive drags do no
 
 test('marquee originals save current union geometry, actual DOM PNG pixels and complete local AI handoff', async ({ page }, info) => {
   await fixture(page, 'dom'); await begin(page); await drag(page, [80, 160], [500, 250]); await selected(page, ['target-a', 'target-b']);
-  await page.getByRole('button', { name: 'ページを操作', exact: true }).click(); await page.locator('#move-originals').click();
-  await resume(page).click(); await selected(page, ['target-a', 'target-b']);
+  await page.locator('#move-originals').evaluate((button) => (button as HTMLButtonElement).click()); await selected(page, ['target-a', 'target-b']);
   await drag(page, [645, 175], [655, 185]); await selected(page, ['target-a', 'target-b', 'partial']);
   const current = await Promise.all(['target-a', 'target-b', 'partial'].map(async (id) => (await page.locator(`#${id}`).boundingBox())!));
   const item = await save(page, '移動後の3箇所の整列を画像と対象情報に基づいて直す');
@@ -181,17 +177,7 @@ test('secondary pointers and Enter cannot commit a primary marquee and every can
   }
 });
 
-test('page operation keeps marquee originals through host interactions and prunes identical replacement before additive resumption', async ({ page }) => {
-  await fixture(page); await begin(page); await drag(page, [80, 160], [500, 250]); await selected(page, ['target-a', 'target-b']);
-  await page.getByRole('button', { name: 'ページを操作', exact: true }).click(); await expect(resume(page)).toHaveText('選択を再開 · 2件');
-  await page.locator('#host-counter').click(); await expect(page.locator('#counter')).toHaveText('1');
-  await page.locator('#clone-original').click(); await resume(page).click(); await selected(page, ['target-b']);
-  await expect(page.getByText('1件の選択対象が消えたか変わったため、選択から外しました。', { exact: true })).toBeVisible();
-  await drag(page, [645, 175], [655, 185]); await selected(page, ['target-b', 'partial']);
-  expect(idsOf(await save(page, '同じ見た目で置き換えたAを引き継がず残ったBと追加対象を保存する'))).toEqual(['target-b', 'partial']);
-});
-
-test('marquee traverses open roots, selects only visible frame content and excludes the NeedMark while retaining full target geometry', async ({ page }) => {
+test('marquee traverses open roots, selects only visible frame content and excludes the NeedMark while retaining full target geometry', { tag: '@cross-engine' }, async ({ page }) => {
   await fixture(page);
   await page.evaluate(() => { for (const id of ['basic', 'semantic', 'caps', 'host-controls']) document.getElementById(id)!.hidden = true; });
   await begin(page); await drag(page, [830, 160], [1190, 835]); await expect(outlines(page)).toHaveCount(3);
@@ -231,7 +217,7 @@ test('marquee traverses open roots, selects only visible frame content and exclu
 });
 
 
-test('marquee follows native rendering for positioned overflow escapes, visible overrides and genuine clipping without shrinking stored geometry', async ({ page }, info) => {
+test('marquee follows native rendering for positioned overflow escapes, visible overrides and genuine clipping without shrinking stored geometry', { tag: '@cross-engine' }, async ({ page }, info) => {
   await fixture(page);
   await page.evaluate(() => {
     for (const id of ['basic', 'semantic', 'caps', 'roots', 'host-controls']) document.getElementById(id)!.hidden = true;

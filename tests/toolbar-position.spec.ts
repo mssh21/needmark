@@ -1,5 +1,5 @@
-import { test, expect, type Page } from '@playwright/test';
-import { rm } from 'node:fs/promises';
+import { type Page } from '@playwright/test';
+import { test, expect } from './support/review.js';
 
 const key = 'needmark-toolbar-position';
 const dock = (page: Page) => page.locator('[data-needmark] .dock');
@@ -39,7 +39,6 @@ async function withinViewport(page: Page) {
   }).toEqual({ left: true, top: true, right: true, bottom: true });
 }
 
-test.beforeEach(async () => { await rm('/private/tmp/needmark-e2e-feedback', { recursive: true, force: true }); });
 test.afterEach(async ({ page }, info) => {
   if (info.status === info.expectedStatus) return;
   const events = await page.evaluate(() => ({ focus: document.hasFocus(), active: document.activeElement?.tagName, events: (window as unknown as { toolbarEvents: unknown[] }).toolbarEvents }));
@@ -63,7 +62,7 @@ test('only a completed primary drag saves toolbar coordinates and reload restore
   expect(await bounds(page)).toEqual(moved); expect(await stored(page)).toBe(raw);
 });
 
-test('secondary pointers cannot replace the drag, a pointer cancellation keeps the shown spot and Escape rolls back without saving', async ({ page }) => {
+test('secondary pointers cannot replace the drag, a pointer cancellation keeps the shown spot and Escape rolls back without saving', { tag: '@cross-engine' }, async ({ page }) => {
   await setup(page); await restore(page, { x: 150, y: 120 }); await recordPointer(page);
   const original = await bounds(page), raw = await stored(page);
   await startDrag(page, 100, 60); const moving = await bounds(page); expect(await captured(page)).toBe(true);
@@ -104,7 +103,7 @@ test('restored toolbar positions clamp after hide, viewport and width changes wi
   await page.keyboard.press('Shift+H'); await expect(dock(page)).toBeVisible(); await withinViewport(page);
   const shown = await bounds(page); expect(shown.x + shown.width).toBeCloseTo(696, 1);
   // Simulate a wider localized control while retaining the real widget and observer.
-  await dock(page).locator('[data-action="select"] .label').evaluate((element) => { element.textContent = '選択を再開 · 複数の対象を選択中'; });
+  await dock(page).locator('[data-action="list"]').evaluate((element) => { (element as HTMLElement).style.width = '200px'; });
   await expect.poll(async () => (await bounds(page)).width).toBeGreaterThan(shown.width);
   await withinViewport(page); const wider = await bounds(page);
   expect(wider.x).toBeLessThan(shown.x); expect(wider.x + wider.width).toBeCloseTo(696, 1); expect(await stored(page)).toBe(raw);

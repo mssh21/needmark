@@ -1,0 +1,16 @@
+{
+  "name": "needmark-example-vite-vue",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite"
+  },
+  "dependencies": {
+    "vue": "^3.5.44"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.10",
+    "needmark": "workspace:*",
+    "vite": "^8.3.4"
+  }
+}

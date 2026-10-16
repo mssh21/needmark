@@ -1,0 +1,13 @@
+{
+  "name": "needmark-example-html",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently --kill-others --names app,needmark \"sirv public --dev --no-clear --host 127.0.0.1 --port 4351\" \"needmark dev --target=http://127.0.0.1:4351 --origin=http://127.0.0.1:4350\""
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.6",
+    "needmark": "workspace:*",
+    "sirv-cli": "^3.0.1"
+  }
+}

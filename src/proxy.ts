@@ -5,6 +5,7 @@ import { createGunzip, createInflate, createBrotliDecompress } from 'node:zlib';
 import type { Socket } from 'node:net';
 import { createReviewApi } from './server/review-api.js';
 import { createRuntimeSourceResolver } from './server/runtime-source.js';
+import { reviewScriptTag } from './server/review-script.js';
 import { defaultFeedbackDirectory } from './server/storage.js';
 import type { CaptureMethod, NeedMarkOptions } from './shared/types.js';
 
@@ -18,7 +19,6 @@ export interface ReviewProxyOptions extends Pick<NeedMarkOptions, 'onFeedbackCha
 }
 export interface ReviewProxy { server: Server; origin: string; close(): Promise<void> }
 const loopback = (url: URL) => url.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
-const escapeAttribute = (value: string) => value.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 
 // Appending after the last chunk streams HTML without buffering or parsing it; browsers still run a script after </html>.
 // The 2 KB tail finds a CSP nonce split across chunk boundaries without keeping the whole document.
@@ -32,8 +32,7 @@ function injectReview(attrs: Record<string, string | boolean>, policy?: string):
       callback(null, chunk);
     },
     flush(callback) {
-      const attributes: Record<string, string | boolean> = { ...attrs, ...(nonce ? { nonce } : {}) };
-      this.push(`\n<script ${Object.entries(attributes).map(([key, value]) => value === true ? key : `${key}="${escapeAttribute(String(value))}"`).join(' ')}></script>\n`); callback();
+      this.push(reviewScriptTag({ ...attrs, ...(nonce ? { nonce } : {}) })); callback();
     },
   });
 }

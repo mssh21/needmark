@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './support/review.js';
 import { resolve } from 'node:path';
 
 const moduleUrl = `/@fs/${resolve('src/client/capture/screenshot.ts')}`;
@@ -121,7 +121,7 @@ test('native bitmap frames are closed after success and after stop during a pend
     dimensions: { method: 'tab', width: 64, height: 48 }, png: true, trackState: 'ended' });
 });
 
-test('DOM capture masks passwords and explicit redaction including open shadows and same-origin frames without altering layout', async ({ page }) => {
+test('DOM capture masks passwords and explicit redaction including open shadows and same-origin frames without altering layout', { tag: '@cross-engine' }, async ({ page }) => {
   await page.goto('/');
   const result = await page.evaluate(async (moduleUrl) => {
     const { ScreenshotCapture } = await import(moduleUrl);
@@ -174,7 +174,7 @@ test('DOM capture masks passwords and explicit redaction including open shadows 
 });
 
 
-test.describe('scrolled high-DPI capture geometry', () => {
+test.describe('scrolled high-DPI capture geometry', { tag: '@cross-engine' }, () => {
   test.use({ deviceScaleFactor: 2 });
   test('saved selection outline and redaction use viewport pixels after DOM renderer transforms', async ({ page }) => {
     await page.goto('/');

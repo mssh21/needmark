@@ -1,13 +1,13 @@
-import { test, expect, type ElementHandle, type Page, type TestInfo } from '@playwright/test';
+import { type ElementHandle, type Page, type TestInfo } from '@playwright/test';
+import { test, expect, saveAndList, output, tempRoot, configureReview } from './support/review.js';
 import { build } from 'esbuild';
 import { createServer, type Server } from 'node:http';
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { resolve, join } from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { startReviewProxy, type ReviewProxy } from '../dist/proxy.js';
 import type { Feedback, Rectangle, RuntimeSourceRequest, RuntimeSourceResult, SourceLocation } from '../src/shared/types.js';
-import { saveAndList } from './save.js';
 
 const ids = Array.from({ length: 20 }, (_, index) => `multi-${String(index + 1).padStart(2, '0')}`);
 const sourceFile = 'src/multi-complete.jsx', fixturePath = resolve('tests/fixtures/multi-complete.jsx');
@@ -31,7 +31,7 @@ async function close(server: Server) {
 }
 /** Real current JSX, React dev allocation frames, source maps and the protected public proxy. */
 async function withReview(page: Page, method: 'dom' | 'none', run: (review: Review) => Promise<void>) {
-  const root = await mkdtemp('/private/tmp/needmark-multi-complete-');
+  const root = await mkdtemp(join(tempRoot, 'needmark-multi-complete-'));
   let upstream: Server | undefined, proxy: ReviewProxy | undefined;
   const calls: Promise<SourceCall>[] = [];
   const observe = (response: import('@playwright/test').Response) => {
@@ -65,8 +65,7 @@ async function withReview(page: Page, method: 'dom' | 'none', run: (review: Revi
     } } }));
     page.on('response', observe); await page.goto(origin);
     await expect(page.locator('#target-grid button')).toHaveCount(20);
-    await page.getByRole('button', { name: '設定', exact: true }).click();
-    await page.getByLabel('キャプチャ方式').selectOption(method); await page.getByRole('button', { name: '設定を保存', exact: true }).click();
+    await configureReview(page, { method });
     await run({ origin, output: `${root}/.needmark/feedback`, source, calls });
   } finally {
     page.off('response', observe); await proxy?.close(); if (upstream?.listening) await close(upstream); await rm(root, { recursive: true, force: true });
@@ -178,13 +177,16 @@ test('forward marquee retains all twenty original targets through real DOM captu
     await info.attach('saved-twenty-targets.png', { body: png, contentType: 'image/png' });
     await info.attach('twenty-current-source-and-geometry.json', { body: JSON.stringify({ item, nativeRects, sourceCalls: calls.map(({ token: _, ...value }) => value), pixels: actual }), contentType: 'application/json' });
     const diskBefore = await readFile(`${review.output}/${item.id}/context.json`, 'utf8');
-    const reloaded = page.waitForResponse((response) => response.url().endsWith('/__needmark/feedback') && response.request().method() === 'GET');
-    await page.reload(); expect((await (await reloaded).json()).feedback).toEqual([item]);
+    // The old page keeps polling until the reload commits, and the body of a poll that answers after navigation is gone, so only the reloaded page's list request counts.
+    // 古いページはリロードが確定するまでポーリングを続け、遷移後に返ったポーリングの本文は読めないため、リロード後のページの一覧取得だけを数える。
+    let committed = false;
+    const reloaded = page.waitForResponse((response) => committed && response.url().endsWith('/__needmark/feedback') && response.request().method() === 'GET');
+    await page.reload({ waitUntil: 'commit' }); committed = true; expect((await (await reloaded).json()).feedback).toEqual([item]);
     await page.getByRole('button', { name: 'コメント一覧', exact: true }).click(); await page.locator('[data-needmark] .open-item').click();
     await page.getByRole('button', { name: 'プロンプトをコピー', exact: true }).click(); assertPrompt(await copied(page), item);
     for (const detail of ['compact', 'standard', 'detailed', 'forensic']) {
       await page.getByRole('button', { name: '設定', exact: true }).click(); await page.getByLabel('AIへの情報量').selectOption(detail);
-      await page.getByRole('button', { name: '設定を保存', exact: true }).click(); await page.getByRole('button', { name: 'コメント一覧', exact: true }).click();
+      await page.getByRole('button', { name: '保存', exact: true }).click(); await page.getByRole('button', { name: 'コメント一覧', exact: true }).click();
       await page.getByRole('button', { name: 'プロンプトをコピー', exact: true }).click(); assertPrompt(await copied(page), item); expect(await copied(page)).toContain('screenshot.png');
     }
     const cli = await execute(process.execPath, [resolve('dist/cli.js'), 'export', review.output, '--detail', 'forensic']); assertPrompt(cli.stdout, item); expect(cli.stdout).toContain('screenshot.png');
@@ -198,11 +200,10 @@ test('twenty Shift-click targets survive toggles, Backspace, additive reverse ma
     for (const id of ids) await clickTarget(page, id); await page.keyboard.up('Shift'); await selection(page);
     await clickTarget(page, ids[19]!); await selection(page, ids.slice(0, 19)); await page.keyboard.press('Backspace'); await selection(page, ids.slice(0, 18));
     await clickTarget(page, ids[18]!); await clickTarget(page, ids[19]!); await selection(page); await dragGrid(page, union(await rectangles(page)), true); await selection(page);
-    await page.getByRole('button', { name: 'ページを操作', exact: true }).click(); await expect(page.getByRole('button', { name: '選択を再開', exact: true })).toHaveText('選択を再開 · 20件');
-    await page.locator('#native-counter').click(); await expect(page.getByLabel('Native click count')).toHaveText('1'); const before = await rectangles(page);
-    await page.locator('#reflow').click(); await expect.poll(async () => (await rectangles(page))[0]!.y).toBe(before[0]!.y + 36); await originalsRemain(originals);
-    await page.getByRole('button', { name: '選択を再開', exact: true }).click(); await selection(page); const current = await rectangles(page);
-    await complete(page, '明示した20要素を解除・追加・ページ操作後も欠けずに修正する'); const calls = await assertSourceCalls(review), item = await save(page, review);
+    const before = await rectangles(page);
+    await page.locator('#reflow').evaluate((button) => (button as HTMLButtonElement).click()); await expect.poll(async () => (await rectangles(page))[0]!.y).toBe(before[0]!.y + 36); await originalsRemain(originals);
+    await selection(page); const current = await rectangles(page);
+    await complete(page, '明示した20要素を解除・追加・再配置後も欠けずに修正する'); const calls = await assertSourceCalls(review), item = await save(page, review);
     assertComplete(item, review.source, current); expect(item.capture).toEqual({ method: 'none', width: 0, height: 0 }); expect(item.image).toBeUndefined(); await originalsRemain(originals);
     await info.attach('explicit-twenty-originals-after-reflow.json', { body: JSON.stringify({ item, before, current, sourceCalls: calls.map(({ token: _, ...value }) => value) }), contentType: 'application/json' });
   });
@@ -235,46 +236,6 @@ test('a genuine traversal limit retains the twenty discovered targets and persis
   });
 });
 
-
-test('a saved twenty-target review locates its complete current group after native reflow without changing originals or saved evidence', async ({ page }, info) => {
-  await withReview(page, 'none', async (review) => {
-    const originals = await page.locator('#target-grid button').elementHandles(), originalDocument = await page.evaluateHandle(() => document);
-    const originalUrl = page.url(), before = await rectangles(page);
-    try {
-      await begin(page); await dragGrid(page, union(before)); await selection(page);
-      const comment = 'AIの修正後に保存した20対象の全体を画面上で確認する';
-      await complete(page, comment); const calls = await assertSourceCalls(review), saved = await save(page, review);
-      assertComplete(saved, review.source, before); await originalsRemain(originals);
-      const diskBefore = await readFile(`${review.output}/${saved.id}/context.json`, 'utf8');
-      await page.getByRole('button', { name: 'パネルを閉じる', exact: true }).click();
-      // The real host control applies a CSS-only React reflow, retaining the exact twenty DOM nodes.
-      await page.locator('#reflow').click(); await expect.poll(async () => (await rectangles(page))[0]!.y).toBe(before[0]!.y + 36);
-      const afterReflow = await rectangles(page);
-      expect(afterReflow).toEqual(before.map((rect) => ({ ...rect, y: rect.y + 36 }))); await originalsRemain(originals);
-      await page.getByRole('button', { name: 'コメント一覧', exact: true }).click();
-      await page.locator('[data-needmark] .open-item').click();
-      const markers = page.locator('[data-needmark] .outline:visible');
-      await expect(markers.first()).toBeVisible();
-      const actual = await markers.evaluateAll((nodes) => nodes.map((node) => {
-        const rect = node.getBoundingClientRect(); return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
-      }));
-      // Native current boxes are the oracle; saved boxes deliberately predate the reflow.
-      const current = await rectangles(page), currentUnion = union(current);
-      const identity = { sameDocument: await page.evaluate((original) => original === document, originalDocument), sameUrl: page.url() === originalUrl };
-      await info.attach('saved-twenty-locate-after-native-reflow.png', { body: await page.screenshot({ caret: 'initial' }), contentType: 'image/png' });
-      await info.attach('saved-twenty-locate-current-scope.json', { body: JSON.stringify({ saved, before, afterReflow, current, currentUnion, actual, identity,
-        sourceCalls: calls.map(({ token: _, ...value }) => value) }, null, 2), contentType: 'application/json' });
-      await originalsRemain(originals); expect(identity).toEqual({ sameDocument: true, sameUrl: true });
-      expect(await readFile(`${review.output}/${saved.id}/context.json`, 'utf8')).toBe(diskBefore);
-      await expect(page.locator('[data-needmark]').getByText('記録した場所を表示しています。現在の要素は特定できませんでした。', { exact: true })).toBeHidden();
-      const sameRect = (actual: Rectangle, expected: Rectangle) => (['x', 'y', 'width', 'height'] as const).every((key) => Math.abs(actual[key] - expected[key]) <= .5);
-      const everyTarget = actual.length === current.length && current.every((rect) => actual.some((marker) => sameRect(marker, rect)));
-      const completeUnion = actual.length === 1 && sameRect(actual[0]!, currentUnion);
-      // A complete current union or all twenty exact boxes both show the user's complete recheck scope.
-      expect(everyTarget || completeUnion, 'Locate must show the complete current20-target scope, rather than only its first successfully matched target').toBe(true);
-    } finally { await originalDocument.dispose(); await Promise.all(originals.map((element) => element.dispose())); }
-  });
-});
 
 async function openSavedGroup(page: Page) {
   await page.getByRole('button', { name: 'コメント一覧', exact: true }).click();

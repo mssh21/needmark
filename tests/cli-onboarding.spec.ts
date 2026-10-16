@@ -1,11 +1,10 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, saveAndList, output, tempRoot } from './support/review.js';
 import { execFile, spawn, type ChildProcess } from 'node:child_process';
 import { promisify } from 'node:util';
 import { createServer, type Server } from 'node:http';
 import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { resolve, join } from 'node:path';
 import type { Feedback } from '../src/shared/types.js';
-import { saveAndList } from './save.js';
 
 const cli = resolve('dist/cli.js'), execute = promisify(execFile);
 test.setTimeout(45_000);
@@ -25,7 +24,7 @@ async function exists(path: string) {
 
 // Intentional onboarding contract: init's shared settings also govern CLI proxy and local-agent commands.
 test('fresh CLI init settings govern proxy capture and one shared review directory through UI and agent commands', async ({ page }, info) => {
-  const root = await mkdtemp('/private/tmp/needmark-cli-onboarding-');
+  const root = await mkdtemp(join(tempRoot, 'needmark-cli-onboarding-'));
   let upstream: Server | undefined, dev: ChildProcess | undefined, exited: Promise<void> | undefined;
   let stdout = '', stderr = '';
   const commands: { args: string[]; stdout: string; stderr: string }[] = [];
@@ -74,7 +73,7 @@ test('fresh CLI init settings govern proxy capture and one shared review directo
     // C23 flags-only behavior ignores this generated config and initializes the fresh browser to DOM.
     await expect(page.getByLabel('キャプチャ方式')).toHaveValue('none');
     expect(setup.script.capture).toBe('none'); expect(setup.feedback).toEqual({ directory: 'reviews', command: 'npx needmark', feedback: [] });
-    await page.getByRole('button', { name: '設定を保存', exact: true }).click();
+    await page.getByRole('button', { name: '保存', exact: true }).click();
     const targetButton = page.locator('#onboarding-target'); await targetButton.click(); await expect(page.getByLabel('Native click count')).toHaveText('1');
     const original = await targetButton.elementHandle(), originalDocument = await page.evaluateHandle(() => document);
     if (!original) throw new Error('The original reviewed control is missing');
@@ -132,7 +131,7 @@ test('fresh CLI init settings govern proxy capture and one shared review directo
 type CliReview = { root: string; origin: string; run: (...args: string[]) => Promise<{ stdout: string; stderr: string }> };
 async function withConfiguredCli(page: import('@playwright/test').Page, info: import('@playwright/test').TestInfo,
   options: { flags?: string[]; serverSettings?: string }, work: (review: CliReview) => Promise<void>) {
-  const root = await mkdtemp('/private/tmp/needmark-configured-cli-');
+  const root = await mkdtemp(join(tempRoot, 'needmark-configured-cli-'));
   let upstream: Server | undefined, dev: ChildProcess | undefined, exited: Promise<void> | undefined;
   let stdout = '', stderr = '';
   const commands: { args: string[]; stdout: string; stderr: string }[] = [];
@@ -200,11 +199,11 @@ test('explicit CLI flags override shared defaults while a saved browser capture 
     const initial = await configuredEvidence(page);
     expect(initial).toMatchObject({ capture: 'dom', preference: null, status: 200, feedback: { directory: 'overrides', feedback: [] } });
     await page.getByRole('button', { name: '設定', exact: true }).click(); await expect(page.getByLabel('キャプチャ方式')).toHaveValue('dom');
-    await page.getByLabel('キャプチャ方式').selectOption('none'); await page.getByRole('button', { name: '設定を保存', exact: true }).click();
+    await page.getByLabel('キャプチャ方式').selectOption('none'); await page.getByRole('button', { name: '保存', exact: true }).click();
     await page.reload(); const afterReload = await configuredEvidence(page);
     expect(afterReload).toMatchObject({ capture: 'dom', preference: 'none', feedback: { directory: 'overrides', feedback: [] } });
     await page.getByRole('button', { name: '設定', exact: true }).click(); await expect(page.getByLabel('キャプチャ方式')).toHaveValue('none');
-    await page.getByRole('button', { name: '設定を保存', exact: true }).click();
+    await page.getByRole('button', { name: '保存', exact: true }).click();
     const saved = await saveConfiguredTarget(page, origin, 'CLIの明示した保存先と、ブラウザで選んだ画像なし設定を優先する');
     const directory = root + '/overrides/' + saved.id;
     expect(JSON.parse(await readFile(directory + '/context.json', 'utf8'))).toEqual(saved);
@@ -224,7 +223,7 @@ test('shared CLI configuration enables custom target evidence, a validated local
     const initial = await configuredEvidence(page);
     expect(initial).toMatchObject({ capture: 'none', editor: 'cursor', submit: 'true', contextAttributes: ['data-review-key'], status: 200, feedback: { directory: 'reviews', feedback: [] } });
     await page.getByRole('button', { name: '設定', exact: true }).click(); await expect(page.getByLabel('キャプチャ方式')).toHaveValue('none');
-    await page.getByRole('button', { name: '設定を保存', exact: true }).click();
+    await page.getByRole('button', { name: '保存', exact: true }).click();
     const original = await page.locator('#configured-target').elementHandle(); if (!original) throw new Error('The original configured control is missing');
     try {
       const saved = await saveConfiguredTarget(page, origin, '開発者が指定した識別子を保存し、設定したローカル処理へコメントを渡す');
