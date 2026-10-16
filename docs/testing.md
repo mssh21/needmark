@@ -121,7 +121,7 @@ Pass options after `--`, for example `pnpm test:package-managers -- --only=yarn`
 | --- | --- | --- | --- |
 | `pnpm examples:react` | `examples/vite-react` (Vite 8, React) | Vite plugin | `http://127.0.0.1:4310` |
 | `pnpm examples:vue` | `examples/vite-vue` (Vite 8, Vue) | Vite plugin | `http://127.0.0.1:4320` |
-| `pnpm examples:astro` | `examples/astro` (Astro 5) | Vite plugin in `astro.config.mjs` | `http://127.0.0.1:4330` |
+| `pnpm examples:astro` | `examples/astro` (Astro 7) | Vite plugin in `astro.config.mjs` | `http://127.0.0.1:4330` |
 | `pnpm examples:next` | `examples/next` (Next.js 16 App Router, Turbopack) | `needmark dev -- next dev`, app on a free port | `http://localhost:4340` |
 | `pnpm examples:html` | `examples/html` (static files served by `sirv`) | `needmark dev` proxy, app on 4351 | `http://127.0.0.1:4350` |
 
