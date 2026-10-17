@@ -173,6 +173,26 @@ test('DOM capture masks passwords and explicit redaction including open shadows 
   expect(result.nestedFrameValue).toBe('nested-private');
 });
 
+test('DOM capture keeps an inline iframe that fills a stretched flex item by percentage', { tag: '@cross-engine' }, async ({ page }) => {
+  await page.goto('/');
+  const result = await page.evaluate(async (moduleUrl) => {
+    const { ScreenshotCapture } = await import(moduleUrl);
+    const row = document.createElement('div');
+    row.style.cssText = 'position:fixed;left:20px;top:20px;width:600px;display:flex;gap:20px;background:white;z-index:100000';
+    const text = document.createElement('div'); text.style.cssText = 'flex:1;height:281.6px;background:rgb(12,174,93)';
+    const map = document.createElement('div'); map.style.cssText = 'flex:1;overflow:hidden;line-height:26.4px';
+    const iframe = document.createElement('iframe'); iframe.width = '100%'; iframe.height = '100%'; iframe.style.border = '0';
+    iframe.srcdoc = '<style>html,body{margin:0;height:100%;background:rgb(25,101,227)}</style>';
+    const loaded = new Promise<void>((resolve) => iframe.addEventListener('load', () => resolve(), { once: true }));
+    map.append(iframe); row.append(text, map); document.body.append(row); await loaded;
+    const capture = new ScreenshotCapture();
+    try {
+      const captured = await capture.capture('dom', { x: 600, y: 600, width: 40, height: 30 }, document.querySelector<HTMLElement>('[data-needmark]')!);
+      return { method: captured.capture.method };
+    } catch (error) { return { error: String(error) }; } finally { capture.stop(); row.remove(); }
+  }, moduleUrl);
+  expect(result).toEqual({ method: 'dom' });
+});
 
 test.describe('scrolled high-DPI capture geometry', { tag: '@cross-engine' }, () => {
   test.use({ deviceScaleFactor: 2 });

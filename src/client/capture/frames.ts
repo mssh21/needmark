@@ -17,6 +17,7 @@ export interface FrameCapturePlan {
 }
 const changed = () => new Error('撮影中に埋め込み画面が変わりました。画像なしで保存するか、場所を選び直してください。');
 const unavailable = () => new Error('埋め込み画面を再現できませんでした。画像なしで保存するか、高精度キャプチャを選んでください。');
+const sizeProperties = ['width', 'height', 'inline-size', 'block-size'];
 const ignored = (element: Element) => !!element.closest('[data-needmark],[data-html2canvas-ignore]') || element.localName === 'script';
 // html2canvas scrolls its clone before onclone, and a page with smooth scrolling is still moving there, so frames are compared in document coordinates.
 // html2canvasはoncloneの前に複製をスクロールし、なめらかなスクロールのページではまだ移動中のため、iframeは文書座標で比較する。
@@ -210,12 +211,19 @@ export async function captureFramePlan(document: Document, scale: number,
         const { parent, next } = locations[index]!;
         parent.insertBefore(frame, next);
       })));
-      for (let index = 0; index < frames.length; index++) {
+      const misplaced = () => frames.filter((frame, index) => {
         const parent = locations[index]!.parent;
         const box = parent.nodeType === 11 ? (parent as ShadowRoot).host : parent as Element;
-        if (!rectanglesMatch(documentRect(frames[index]!), records[index]!.localRect)
-          || !rectanglesMatch(documentRect(box), records[index]!.parentRect)) throw unavailable();
-      }
+        return !rectanglesMatch(documentRect(frame), records[index]!.localRect) || !rectanglesMatch(documentRect(box), records[index]!.parentRect);
+      });
+      // A frozen pixel size changes layout when the page sized the frame by percentage: in a stretched flex item the percentage
+      // counts as auto while the line is sized, so a fixed height (plus an inline frame's baseline gap) grows the parent instead.
+      // The copied class and attributes still match the page's rules, so a misplaced frame retries with the page's own sizing.
+      // 固定した画素サイズは、ページが割合で大きさを決めたiframeの配置を変える。伸長されたflexアイテムでは行の大きさを決める間は割合がautoとして扱われるため、
+      // 固定の高さ（とインラインiframeのベースラインの隙間）が親を広げてしまう。複製したclassと属性はページのルールに一致するため、ずれたiframeはページ自身の大きさで再試行する。
+      const retry = misplaced();
+      retry.forEach((frame) => sizeProperties.forEach((name) => frame.style.removeProperty(name)));
+      if (retry.length && misplaced().length) throw unavailable();
     } catch (error) { frames.forEach((frame) => frame.remove()); throw error; }
     finally { detach.forEach((clean) => clean()); }
   } };

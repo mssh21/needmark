@@ -138,6 +138,7 @@ The demo is a fictional product, Halden Analytics, used as a realistic review ta
 | `demo/index.html` | Marketing landing page (static HTML, compile-time source positions) |
 | `demo/react.html` + `demo/react.tsx` | Product dashboard (React, runtime component ownership) |
 | `demo/embed.html` | Changelog widget embedded by the landing page in a same-origin iframe |
+| `demo/map.html` | Office map embedded by the landing page from the other loopback name (`localhost` or `127.0.0.1`), so it is cross-origin like an embedded Google Map without network access |
 
 ### What the demo lets you verify
 
@@ -156,6 +157,7 @@ The demo is a fictional product, Halden Analytics, used as a realistic review ta
 | Sign-up form with password and a `data-needmark-redact` API key | Landing | Form values excluded from context, password and redacted regions masked in images |
 | "Book a demo" native modal dialog | Landing | Review UI inside the dialog focus boundary and DOM capture of modals |
 | Changelog in a same-origin iframe | Landing | Iframe selection, frame URLs and iframe capture |
+| Kickoff card: an inline cross-origin map iframe sized `width`/`height` `100%` in a stretched flex item beside the event details, and a logo SVG without intrinsic size (`width`/`height` `100%`) | Landing | DOM capture of a percentage-sized frame at widths above 1024 px (the two-column layout), and how the renderer draws an image that has only the default 300 × 150 size |
 | Status badge custom element with an open shadow root | Landing | Shadow DOM selection and root paths |
 | App shell with sidebar, search and avatar | Dashboard | Selection and pins on a dense application layout |
 | KPI cards and plan card from repeated React components | Dashboard | Runtime component chains, repeated instances, ambiguous test IDs |
