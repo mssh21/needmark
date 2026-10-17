@@ -80,7 +80,7 @@ main, .top {
 h1 {
   margin: 0 auto;
   line-height: 1;
-  max-width: 380px;
+  max-width: 320px;
   width: 100%;
 }
 
@@ -93,6 +93,18 @@ h1 img {
   max-width: 520px;
   margin: 14px auto 0;
   font-size: 17px;
+  text-wrap: balance;
+}
+
+.summary {
+  margin: 10px auto 0;
+  color: var(--quiet);
+  font-size: 14px;
+  text-wrap: balance;
+}
+
+:lang(ja) .lead, :lang(ja) .summary {
+  word-break: auto-phrase;
 }
 
 .actions {
