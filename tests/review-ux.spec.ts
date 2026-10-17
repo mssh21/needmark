@@ -8,6 +8,7 @@ import type { Feedback } from '../src/shared/types.js';
 async function storedAll(): Promise<Feedback[]> { const ids = (await readdir(output)).filter((id) => !id.startsWith('.')); return Promise.all(ids.map(async (id) => JSON.parse(await readFile(`${output}/${id}/context.json`, 'utf8')) as Feedback)); }
 async function stored(): Promise<Feedback> { const [id] = (await readdir(output)).filter((id) => !id.startsWith('.')); return JSON.parse(await readFile(`${output}/${id}/context.json`, 'utf8')); }
 const configure = (page: Page, method: 'none' | 'dom' = 'none') => configureReview(page, { author: 'Reviewer', method });
+const reviewFocus = (page: Page) => page.evaluate(() => document.querySelector('[data-needmark]')!.shadowRoot!.activeElement?.outerHTML ?? null);
 async function clickTarget(page: import('@playwright/test').Page, selector = '#purchase-button') {
   await page.getByRole('button', { name: 'コメント', exact: true }).click();
   const rect = await page.locator(selector).boundingBox(); await page.mouse.click(rect!.x + rect!.width / 2, rect!.y + rect!.height / 2);
@@ -156,7 +157,7 @@ test('a comment resolved from the list stays until the list reopens, and resolvi
   await expect(page.locator('[data-needmark] .card')).toHaveCount(2); await expect(card).toHaveCount(0);
   await searchList(page, '検索で絞るコメント'); await expect(page.locator('[data-needmark] .card')).toHaveCount(1);
   await page.getByRole('button', { name: '検索を閉じる', exact: true }).click(); await expect(page.locator('[data-needmark] .card')).toHaveCount(2);
-  await searchList(page, '別の'); await page.keyboard.press('Escape'); await expect(page.getByRole('button', { name: 'キーワード検索', exact: true })).toBeFocused();
+  await searchList(page, '別の'); await page.keyboard.press('Escape'); await expect(page.getByRole('button', { name: 'キーワード検索', exact: true })).toBeVisible(); expect(await reviewFocus(page)).toBeNull();
   await page.getByRole('button', { name: '一覧の操作', exact: true }).click(); await page.getByRole('menuitem', { name: 'すべて解決済みにする', exact: true }).click();
   await expect(page.getByText('2件を解決済みにしました。', { exact: true })).toBeVisible(); await expect(page.getByRole('button', { name: '未解決に戻す', exact: true })).toHaveCount(2);
   expect((await storedAll()).map((item) => item.status)).toEqual(['resolved', 'resolved', 'resolved']);
@@ -349,7 +350,7 @@ test('details show authors with relative times, keep edit and delete in kebab me
   await expect(page.locator('[data-needmark] .reply', { hasText: '自分の返信' }).locator('.byline time')).toHaveText('たった今');
   const kebab = page.getByRole('button', { name: 'コメントの操作', exact: true }), menu = page.locator('[data-needmark] .panel > .byline .menu');
   await kebab.click(); await expect(menu).toBeVisible(); await expect(page.getByRole('menuitem', { name: '編集', exact: true })).toBeFocused();
-  await page.keyboard.press('Escape'); await expect(menu).toBeHidden(); await expect(kebab).toBeFocused(); await expect(page.locator('[data-needmark] .panel')).toBeVisible();
+  await page.keyboard.press('Escape'); await expect(menu).toBeHidden(); expect(await reviewFocus(page)).toBeNull(); await expect(page.locator('[data-needmark] .panel')).toBeVisible();
   await kebab.click(); await expect(menu).toBeVisible(); await page.mouse.click(5, 5); await expect(menu).toBeHidden();
 });
 
@@ -366,12 +367,22 @@ test('an area comment outlines the dragged rectangle in details and keeps it on 
   await expect.poll(box).toEqual([area.x, area.y - 150, area.width, area.height].map(Math.round));
 });
 
-test('focus rings appear after keyboard input but not after clicks that move focus by script', async ({ page }) => {
+test('focus rings appear on text controls after keyboard input but never after clicks that move focus by script or on icon buttons', async ({ page }) => {
   await page.goto('/'); await page.getByRole('button', { name: 'コメント一覧', exact: true }).click();
   const ring = () => page.evaluate(() => { const active = document.querySelector('[data-needmark]')!.shadowRoot!.activeElement!; return getComputedStyle(active).outlineStyle; });
   await page.getByRole('button', { name: '絞り込み', exact: true }).click();
   await expect(page.getByRole('menuitemcheckbox', { name: 'このページのみ', exact: true })).toBeFocused(); expect(await ring()).toBe('none');
-  await page.keyboard.press('Escape'); await expect(page.getByRole('button', { name: '絞り込み', exact: true })).toBeFocused(); expect(await ring()).toBe('solid');
+  await page.keyboard.press('Tab'); await expect(page.getByRole('menuitemcheckbox').nth(1)).toBeFocused(); expect(await ring()).toBe('solid');
+  await page.keyboard.press('Shift+Tab'); await page.keyboard.press('Shift+Tab'); await expect(page.getByRole('button', { name: '絞り込み', exact: true })).toBeFocused(); expect(await ring()).toBe('none');
+});
+
+test('Escape closing the composer leaves no focus in the review UI, so no toolbar tip opens', async ({ page }) => {
+  await page.goto('/'); await configure(page); await clickTarget(page); await expect(page.getByLabel('コメント本文')).toBeFocused();
+  await page.keyboard.press('Escape'); await expect(page.getByLabel('コメント本文')).toBeHidden();
+  expect(await reviewFocus(page)).toBeNull();
+  // The tip is scheduled on a zero-delay timer after focus, so wait past it before checking that none opened.
+  await page.evaluate(() => new Promise((done) => setTimeout(done, 100)));
+  await expect(page.locator('[data-needmark] .toolbar-tip')).toBeHidden();
 });
 
 test('a pin stays on its target while hovering the target or the pin changes its text', async ({ page }) => {
