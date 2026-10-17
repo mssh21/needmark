@@ -4,18 +4,18 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>NeedMark</title>
-  <meta name="description" content="Point at your UI, leave a comment, and hand it to any coding agent. Local-first visual feedback with context and screenshots.">
+  <meta name="description" content="Write a comment wherever something needs work. NeedMark saves it with details of that element and a screenshot, so Claude Code, Codex, Cursor or whichever coding agent you already use can read it and make the fix.">
   <link rel="alternate" hreflang="ja" href="ja/">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="NeedMark">
   <meta property="og:title" content="NeedMark">
-  <meta property="og:description" content="Point at your UI, leave a comment, and hand it to any coding agent. Local-first visual feedback with context and screenshots.">
+  <meta property="og:description" content="Write a comment wherever something needs work. NeedMark saves it with details of that element and a screenshot, so Claude Code, Codex, Cursor or whichever coding agent you already use can read it and make the fix.">
   <meta property="og:url" content="https://mssh21.github.io/needmark/">
   <meta property="og:locale" content="en_US">
   <meta property="og:image" content="https://mssh21.github.io/needmark/og-image.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="NeedMark: Point at your UI, leave a comment, and hand it to any coding agent.">
+  <meta property="og:image:alt" content="NeedMark: Leave comments on your UI. Build it with AI.">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="stylesheet" href="style.css">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
@@ -35,7 +35,8 @@
       <h1><picture>
         <source srcset="logo-dark.svg" media="(prefers-color-scheme: dark)"><img src="logo-light.svg" alt="NeedMark" width="498" height="100">
       </picture></h1>
-      <p class="lead">Point at your UI, leave a comment, and hand it to any coding agent.</p>
+      <p class="lead">Leave comments on your UI. Build it with AI.</p>
+      <p class="summary">Write a comment wherever something needs work. NeedMark saves it with details of that element and a screenshot, so Claude Code, Codex, Cursor or whichever coding agent you already use can read it and make the fix.</p>
       <div class="actions">
         <button class="button primary" type="button" data-copy="setup-prompt" data-copied="Copied">
           <span class="label">Copy setup prompt</span>
@@ -206,18 +207,15 @@
         </div>
         <div data-panel="pnpm">
           <pre>pnpm add -D needmark
-pnpm exec needmark init
-pnpm dev</pre>
+pnpm exec needmark init</pre>
         </div>
         <div data-panel="npm" hidden>
           <pre>npm install -D needmark
-npx needmark init
-npm run dev</pre>
+npx needmark init</pre>
         </div>
         <div data-panel="yarn" hidden>
           <pre>yarn add -D needmark
-yarn needmark init
-yarn dev</pre>
+yarn needmark init</pre>
         </div>
         <button class="copy" type="button" aria-label="Copy"><svg class="idle" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
             <rect x="5" y="5" width="8.5" height="8.5" rx="1.5" />
@@ -226,7 +224,7 @@ yarn dev</pre>
             <path d="M3 8.5l3 3 7-7" />
           </svg></button>
       </div>
-      <p>Open your app as usual; the NeedMark toolbar appears at the bottom of the page.</p>
+      <p>Start your development server and open your app as usual; the NeedMark toolbar appears at the bottom of the page.</p>
       <p><code>init</code> first offers recommended settings: the review screen in your terminal's language, feedback kept on this computer, screenshots redrawn from the page and connecting your development server. Press Enter to accept them, or answer <code>n</code> to choose each one from a list that explains it. It lists every line it changes, and never touches your application source or production builds:</p>
       <ul>
         <li><b>Vite</b> (React, Vue and others): adds <code>needmark()</code> to <code>plugins</code> in <code>vite.config.*</code>.</li>
