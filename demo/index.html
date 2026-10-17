@@ -942,6 +942,64 @@
       background: #fff
     }
 
+    .kickoff {
+      display: flex;
+      gap: 40px;
+      padding: 40px;
+      border-radius: 22px;
+      background: var(--soft)
+    }
+
+    .kickoff-info {
+      flex: 1;
+      display: grid;
+      gap: 16px;
+      align-content: start
+    }
+
+    .kickoff-logo {
+      width: 100%;
+      height: auto
+    }
+
+    .kickoff-info dl {
+      display: grid;
+      grid-template-columns: 72px 1fr;
+      gap: 10px 16px;
+      margin: 0
+    }
+
+    .kickoff-info dt {
+      color: var(--accent-ink);
+      font-weight: 600
+    }
+
+    .kickoff-info dd {
+      margin: 0
+    }
+
+    .kickoff-map {
+      flex: 1;
+      max-width: 500px;
+      border-radius: var(--radius);
+      overflow: hidden
+    }
+
+    .kickoff-map iframe {
+      width: 100%;
+      height: 100%
+    }
+
+    @media (max-width: 1024px) {
+      .kickoff {
+        flex-direction: column
+      }
+
+      .kickoff-map {
+        max-width: 100%
+      }
+    }
+
     .signup {
       background: var(--ink);
       color: #fff;
@@ -1495,6 +1553,28 @@
       </div>
     </section>
 
+    <section class="block" id="kickoff">
+      <div class="wrap">
+        <div class="section-head">
+          <p class="kicker">Kickoff</p>
+          <h2>Meet the team in Tokyo.</h2>
+        </div>
+        <div class="kickoff">
+          <div class="kickoff-info">
+            <img class="kickoff-logo" src="/kickoff-logo.svg" alt="Halden Kickoff 2026">
+            <dl>
+              <dt>Date</dt><dd>September 12, 2026, 14:00–18:00</dd>
+              <dt>Venue</dt><dd>Halden HQ, 2-1 Kyobashi, Chuo-ku, Tokyo</dd>
+              <dt>Fee</dt><dd>Free for customers</dd>
+            </dl>
+          </div>
+          <div class="kickoff-map">
+            <iframe data-kickoff-map width="100%" height="100%" style="border:0;" loading="lazy" title="Halden HQ map"></iframe>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section class="block" id="signup">
       <div class="wrap">
         <div class="signup">
@@ -1599,6 +1679,10 @@
       autoplay.textContent = rotating ? 'Pause rotation' : 'Resume rotation'; schedule();
     });
     autoplay.textContent = rotating ? 'Pause rotation' : 'Resume rotation'; autoplay.setAttribute('aria-pressed', String(!rotating));
+    // The map loads from the other loopback name so it is cross-origin like an embedded Google Map, without depending on the network.
+    // 地図はもう一方のループバック名から読み込み、ネットワークに頼らずGoogleマップの埋め込みと同じく別オリジンにする。
+    const map = document.querySelector('[data-kickoff-map]');
+    map.src = `${location.protocol}//${location.hostname === 'localhost' ? '127.0.0.1' : 'localhost'}:${location.port}/map.html`;
     show(0);
   </script>
 </body>

@@ -81,7 +81,7 @@ function mount(endpoint: string, token: string) {
     @media(max-width:480px){.dock{bottom:8px}.dock .sep{margin:0 2px}.hint{gap:4px}.dock .hint button:not(.icon-button){padding:0 8px}.panel{max-height:calc(100dvh - 85px);bottom:68px;width:calc(100vw - 20px)}}
     @media(prefers-reduced-motion:no-preference){.panel{animation:appear .2s cubic-bezier(.2,.8,.2,1)}.panel.leaving{animation:disappear .14s cubic-bezier(.4,0,1,1) forwards;pointer-events:none}.panel.leaving[hidden]{display:block!important}@keyframes appear{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:none}}@keyframes disappear{from{opacity:1;transform:none}to{opacity:0;transform:scale(.96)}}.preview img,.toolbar-tip,.tip{animation:fade-in .16s ease-out}.preview:has(img[hidden]){animation:skeleton 1.4s linear infinite}@keyframes skeleton{from{background-position:100% 0}to{background-position:0 0}}@keyframes fade-in{from{opacity:0}}.toast{animation:toast-in .2s cubic-bezier(.2,.8,.2,1)}@keyframes toast-in{from{opacity:0;translate:0 8px}}}
     .panel.morphing{overflow:hidden}.menu{transform-origin:top right}.menu.above{top:auto;bottom:calc(100% + 4px);transform-origin:bottom right}.menu.leaving[hidden]{display:grid!important;pointer-events:none}.dock.leaving[hidden]{display:flex!important;pointer-events:none}
-  </style><style class="keyboard-focus">:is(button,a,select):focus-visible,.category input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}</style>
+  </style><style class="keyboard-focus">:is(button,a,select):focus-visible:not(:has(>svg.icon)),.menu-check:focus-visible,.category input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}</style>
   <div class="cover" hidden></div>
   <div class="outline" hidden></div><div class="text-preview" aria-hidden="true"></div><div class="selections" aria-hidden="true"></div><div class="draft-outlines" aria-hidden="true"></div><div class="pins"></div><div class="tip" hidden></div>
   <div class="target-preview" role="tooltip" aria-label="${t('選択候補')}" hidden><div class="target-title"><code data-hover-tag></code><span data-hover-name></span></div><code data-hover-component hidden></code></div>
@@ -128,7 +128,7 @@ function mount(endpoint: string, token: string) {
   let syncPageChanges: (paths: readonly (readonly string[])[]) => void = () => {};
   let selectionUrl = '';
   const selectionIdentity = new Map<Element, { context: ElementContext; root: Node; document: Document }>();
-  let pageOnly = false, showResolved = false, searching = false, query = '', returnFocus: HTMLElement | null = null, viewerReturnFocus: HTMLElement | null = null, refreshVersion = 0, offline = false, zoom = 1, pan = { x: 0, y: 0 };
+  let pageOnly = false, showResolved = false, searching = false, query = '', returnFocus: HTMLElement | null = null, viewerReturnFocus: HTMLElement | null = null, refocus = true, refreshVersion = 0, offline = false, zoom = 1, pan = { x: 0, y: 0 };
   let route = location.pathname + location.search + location.hash, hiddenPins = false, locatedId: string | null = null;
   let paused = false;
   // Items resolved from the list stay in it until the list is opened again, so the row a reviewer just checked does not vanish under the pointer.
@@ -224,7 +224,7 @@ function mount(endpoint: string, token: string) {
   // A reduced-motion switch or a hidden host cancels the animation without animationend, and descendants' animation events bubble here, so both events end the fade but only for the panel's own exit animation.
   // reduced motionへの切り替えやホストの非表示ではanimationendが来ずにアニメーションが取り消され、子孫のアニメーションイベントもここへ伝わるため、両方のイベントで終えるがパネル自身の退場アニメーションに限る。
   for (const type of ['animationend', 'animationcancel'] as const) panel.addEventListener(type, (event) => { if (event.target === panel && event.animationName === 'disappear') endFadeOut(); });
-  function closePanel() { settleMorph(); fadeOutPanel(); clearDraftOutline(); clearLocated(); sourceLookup?.abort(); sourceLookup = null; panelVersion++; captureVersion++; draft = null; editing = null; replying = null; panel.hidden = true; panelPosition.close(); clearImages(); (returnFocus?.isConnected && !returnFocus.closest('[hidden]') ? returnFocus : dock.querySelector<HTMLElement>('[data-action="select"]'))?.focus(); }
+  function closePanel() { settleMorph(); fadeOutPanel(); clearDraftOutline(); clearLocated(); sourceLookup?.abort(); sourceLookup = null; panelVersion++; captureVersion++; draft = null; editing = null; replying = null; panel.hidden = true; panelPosition.close(); clearImages(); if (refocus) (returnFocus?.isConnected && !returnFocus.closest('[hidden]') ? returnFocus : dock.querySelector<HTMLElement>('[data-action="select"]'))?.focus(); }
   // Notifications are always a toast so panels keep only their content; results the UI already shows (a deleted item, a saved reply, a pressed button) are not announced at all.
   // 通知は常にトーストにしてパネルには内容だけを置く。UIで分かる結果（削除した項目、保存した返信、押したボタンの状態）は通知しない。
   function notify(text: string, error = false) {
@@ -330,6 +330,10 @@ function mount(endpoint: string, token: string) {
   // Their stylesheet is switched instead of a host attribute, so the switch is not a DOM change that page observers (hover clearing, pin refresh) react to.
   // フォーカスリングはブラウザの:focus-visibleだけに任せず、直前の入力がキーボードかで出し分ける。パネルはクリック後もスクリプトでフォーカスを移し（一覧の再描画、メニュー、フォーカスの返却）、ブラウザによってはそこにリングを出すため。
   // ホストの属性ではなくスタイルシートを切り替える。属性の変更はDOMの変更としてページの監視（ホバーの解除やピンの更新）に拾われるため。
+  // Icon-only buttons are left out of that stylesheet: a shortcut counts as keyboard input and then lands focus on an icon (selection start focuses 終了),
+  // so shortcut users saw a ring after every shortcut. Telling icon-only buttons apart by their icon child needs .menu-check back, the one text button with an icon.
+  // アイコンだけのボタンはこのスタイルシートの対象から外す。ショートカットもキーボード入力として扱われ、その後フォーカスがアイコンへ移る（選択開始で終了ボタンへ移る）ため、
+  // ショートカットを使うたびにリングが出ていた。アイコンの子要素でアイコンだけのボタンを見分けるため、アイコン付きの唯一の文字ボタンである.menu-checkは対象に戻す。
   const keyboardFocus = shadow.querySelector<HTMLStyleElement>('.keyboard-focus')!.sheet!; keyboardFocus.disabled = true;
   addEventListener('keydown', () => { keyboardFocus.disabled = false; }, true);
   addEventListener('pointerdown', () => { keyboardFocus.disabled = true; }, true);
@@ -1055,7 +1059,7 @@ function mount(endpoint: string, token: string) {
     const header = panel.querySelector<HTMLElement>(':scope > header'), slot = (button: HTMLElement) => button.dataset.action === 'search-close' ? 'close' : button.dataset.menu ?? button.dataset.action!;
     const before = new Map([...header?.querySelectorAll<HTMLElement>('button[data-action]') ?? []].map((button) => [slot(button), button.getBoundingClientRect()]));
     searching = open; if (!open) query = ''; listHtml();
-    const next = panel.querySelector<HTMLElement>(':scope > header')!; next.querySelector<HTMLElement>(open ? '#nm-query' : '[data-action="search"]')!.focus();
+    const next = panel.querySelector<HTMLElement>(':scope > header')!; if (open || refocus) next.querySelector<HTMLElement>(open ? '#nm-query' : '[data-action="search"]')!.focus();
     if (!motion() || !header) return;
     next.querySelectorAll<HTMLElement>('button[data-action]').forEach((button) => {
       const old = before.get(slot(button)), now = button.getBoundingClientRect();
@@ -1083,7 +1087,16 @@ function mount(endpoint: string, token: string) {
     return { x: axis(box.width, width), y: axis(box.height, height) };
   }
   function panTo(x: number, y: number) { const bounds = panBounds(); if (!bounds) return; pan = { x: Math.min(bounds.x.max, Math.max(bounds.x.min, x)), y: Math.min(bounds.y.max, Math.max(bounds.y.min, y)) }; updateZoom(); }
-  function closeViewer() { viewer.hidden = true; (viewerReturnFocus?.isConnected ? viewerReturnFocus : dock.querySelector<HTMLElement>('[data-action="select"]'))?.focus(); }
+  // Escape leaves no focus behind instead of returning it to the opener: Escape is keyboard input, so the returned focus counted as :focus-visible
+  // and opened the toolbar tip of whichever icon button received it. Closers skip their own refocus here so no tip is scheduled before the blur.
+  // Escapeでは開いた元へフォーカスを返さず、フォーカスを外す。Escapeはキーボード入力のため、返したフォーカスが:focus-visibleとなり、受け取ったアイコンボタンのツールチップが開いていた。
+  // 外す前にツールチップが予約されないよう、ここでは各閉じる処理のフォーカス復帰を止める。
+  function dismiss(close: () => void) {
+    refocus = false;
+    try { close(); } finally { refocus = true; }
+    (shadow.activeElement as HTMLElement | null)?.blur(); hideToolbarTip();
+  }
+  function closeViewer() { viewer.hidden = true; if (refocus) (viewerReturnFocus?.isConnected ? viewerReturnFocus : dock.querySelector<HTMLElement>('[data-action="select"]'))?.focus(); }
   let stageDrag: { x: number; y: number; startX: number; startY: number } | null = null;
   const stage = viewer.querySelector<HTMLElement>('.stage')!, viewerImage = viewer.querySelector('img')!;
   viewerImage.addEventListener('pointerdown', (event) => { if (event.button !== 0) return; event.preventDefault(); stageDrag = { x: pan.x, y: pan.y, startX: event.clientX, startY: event.clientY }; viewerImage.setPointerCapture(event.pointerId); viewerImage.classList.add('dragging'); });
@@ -1193,9 +1206,9 @@ function mount(endpoint: string, token: string) {
     if (!pointerStart && hoverPoint && ['Control', 'Meta'].includes(event.key)) previewAt(hoverPoint.x, hoverPoint.y, event.ctrlKey || event.metaKey);
     if (!viewer.hidden && event.key === 'Tab') { const buttons = Array.from(viewer.querySelectorAll<HTMLButtonElement>('button')); const index = buttons.indexOf(shadow.activeElement as HTMLButtonElement); event.preventDefault(); buttons[(index + (event.shiftKey ? -1 : 1) + buttons.length) % buttons.length]!.focus(); return; }
     const openMenu = shadow.querySelector<HTMLElement>('.menu:not([hidden])');
-    if (event.key === 'Escape' && openMenu) { event.preventDefault(); event.stopImmediatePropagation(); closeMenus(); (openMenu.previousElementSibling as HTMLElement | null)?.focus(); return; }
-    if (event.key === 'Escape' && active?.id === 'nm-query' && active.getRootNode() === shadow) { event.preventDefault(); event.stopImmediatePropagation(); toggleSearch(false); return; }
-    if (event.key === 'Escape' && (!viewer.hidden || starting || !cover.hidden || !panel.hidden || !outline.hidden)) { event.preventDefault(); event.stopImmediatePropagation(); if (!viewer.hidden) closeViewer(); else if (starting) cancelStart(); else if (!cover.hidden && pointerStart) { clearSelectionGesture(); notify(t('ドラッグをキャンセルしました。選択済みの対象は保持しています。')); } else if (!cover.hidden && !panel.hidden) closePanel(); else if (!cover.hidden) cancelSelection(); else if (!busy) closePanel(); outline.hidden = true; return; }
+    if (event.key === 'Escape' && openMenu) { event.preventDefault(); event.stopImmediatePropagation(); dismiss(closeMenus); return; }
+    if (event.key === 'Escape' && active?.id === 'nm-query' && active.getRootNode() === shadow) { event.preventDefault(); event.stopImmediatePropagation(); dismiss(() => toggleSearch(false)); return; }
+    if (event.key === 'Escape' && (!viewer.hidden || starting || !cover.hidden || !panel.hidden || !outline.hidden)) { event.preventDefault(); event.stopImmediatePropagation(); dismiss(() => { if (!viewer.hidden) closeViewer(); else if (starting) cancelStart(); else if (!cover.hidden && pointerStart) { clearSelectionGesture(); notify(t('ドラッグをキャンセルしました。選択済みの対象は保持しています。')); } else if (!cover.hidden && !panel.hidden) closePanel(); else if (!cover.hidden) cancelSelection(); else if (!busy) closePanel(); }); outline.hidden = true; return; }
     if (!viewer.hidden) {
       if (!event.ctrlKey && !event.altKey && !event.metaKey && (!event.shiftKey || event.key === '+') && ['+', '-', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
         event.preventDefault();
