@@ -4,18 +4,18 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>NeedMark</title>
-  <meta name="description" content="UIを指してコメントを書き、いつものコーディングAIへ渡す。コメントと対象の情報、スクリーンショットをローカルファイルに保存します。">
+  <meta name="description" content="気になるところにコメントを書くと、その要素の情報とスクリーンショットが一緒に保存されます。Claude Code、Codex、Cursorなど、いつものコーディングAIがそれを読んで修正できます。">
   <link rel="alternate" hreflang="en" href="../">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="NeedMark">
   <meta property="og:title" content="NeedMark">
-  <meta property="og:description" content="UIを指してコメントを書き、いつものコーディングAIへ渡す。コメントと対象の情報、スクリーンショットをローカルファイルに保存します。">
+  <meta property="og:description" content="気になるところにコメントを書くと、その要素の情報とスクリーンショットが一緒に保存されます。Claude Code、Codex、Cursorなど、いつものコーディングAIがそれを読んで修正できます。">
   <meta property="og:url" content="https://mssh21.github.io/needmark/ja/">
   <meta property="og:locale" content="ja_JP">
-  <meta property="og:image" content="https://mssh21.github.io/needmark/og-image.png">
+  <meta property="og:image" content="https://mssh21.github.io/needmark/ja/og-image.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="NeedMark: Point at your UI, leave a comment, and hand it to any coding agent.">
+  <meta property="og:image:alt" content="NeedMark：画面にコメントを残して、AIとつくる。">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="stylesheet" href="../style.css">
   <link rel="icon" href="../favicon.svg" type="image/svg+xml">
@@ -35,7 +35,8 @@
       <h1><picture>
               <source srcset="../logo-dark.svg" media="(prefers-color-scheme: dark)"><img src="../logo-light.svg" alt="NeedMark" width="498" height="100">
             </picture></h1>
-      <p class="lead">UIを指してコメントを書き、いつものコーディングAIへ渡す。</p>
+      <p class="lead">画面にコメントを残して、AIとつくる。</p>
+      <p class="summary">気になるところにコメントを書くと、その要素の情報とスクリーンショットが一緒に保存されます。Claude Code、Codex、Cursorなど、いつものコーディングAIがそれを読んで修正できます。</p>
       <div class="actions">
         <button class="button primary" type="button" data-copy="setup-prompt" data-copied="コピーしました">
           <span class="label">導入プロンプトをコピー</span>
@@ -206,18 +207,15 @@
         </div>
         <div data-panel="pnpm">
           <pre>pnpm add -D needmark
-pnpm exec needmark init
-pnpm dev</pre>
+pnpm exec needmark init</pre>
         </div>
         <div data-panel="npm" hidden>
           <pre>npm install -D needmark
-npx needmark init
-npm run dev</pre>
+npx needmark init</pre>
         </div>
         <div data-panel="yarn" hidden>
           <pre>yarn add -D needmark
-yarn needmark init
-yarn dev</pre>
+yarn needmark init</pre>
         </div>
         <button class="copy" type="button" aria-label="コピー"><svg class="idle" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
             <rect x="5" y="5" width="8.5" height="8.5" rx="1.5" />
@@ -226,7 +224,7 @@ yarn dev</pre>
             <path d="M3 8.5l3 3 7-7" />
           </svg></button>
       </div>
-      <p>いつもどおりアプリを開くと、ページ下部にNeedMarkのツールバーが表示されます。</p>
+      <p>いつもどおり開発サーバーを起動してアプリを開くと、ページ下部にNeedMarkのツールバーが表示されます。</p>
       <p><code>init</code>は最初に推奨設定（レビュー画面はターミナルの言語、コメントはこのコンピューターだけに保存、スクリーンショットはページを描き直して作成、開発サーバーへの接続）を示します。Enterでそのまま使い、<code>n</code>と答えると説明付きの一覧から項目ごとに選べます。質問と表示は英語です。変更した行はすべて表示し、アプリのソースと本番ビルドには触れません。</p>
       <ul>
         <li><b>Vite</b>（React、Vueなど）：<code>vite.config.*</code>の<code>plugins</code>に<code>needmark()</code>を追加します。</li>
