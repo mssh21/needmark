@@ -4,7 +4,7 @@ import { ScreenshotCapture } from './capture/screenshot.js';
 import { createCaptureGuard, applyCaptureSnapshot, type CaptureAnchors } from './capture/identity.js';
 import { configureContextAttributes, hoverDescriptor, describeElement, isElementMatch, caretRangeAtPoint, rangeBetween, viewportRectForRange, viewportRectsForRange, contextForArea, elementsForMarquee, contextForElement, contextForElements, contextForRange, elementAtPoint, runtimeSourceRequest, resolveContextElement, resolveElement, selectorOf, viewportRectOf, visibleRectOf } from './context/code-context.js';
 import { formatFeedbackPrompt, type PromptDetail } from '../shared/prompt.js';
-import { installToolbarPosition } from './toolbar-position.js';
+import { installToolbarPosition, toolbarAnchor } from './toolbar-position.js';
 import { installPanelPosition } from './panel-position.js';
 import { installPageChanges } from './page-changes.js';
 import { renderMarkdown } from './markdown.js';
@@ -94,17 +94,19 @@ function mount(endpoint: string, token: string) {
   let hoverPoint: { x: number; y: number } | null = null, hoverTarget: Element | null = null;
   let detachHoverRoots = () => {};
   let refreshPanelPosition = () => {};
-  // While collapsed the toolbar is shifted so its right edge stays where it was when expanded; the shift is the difference between the two right edges.
-  // 最小化中は、広げていたときの右端の位置にそろうようツールバーをずらす。ずらす量は、広げた状態と最小化した状態の右端の差。
+  // While collapsed the toolbar is shifted so its anchored edge (or centre) stays where it was when expanded. Without a saved anchor, as for the default bottom-centre spot, it is chosen from the expanded box, which does not depend on the shift.
+  // 最小化中は、広げていたときの基準の辺（または中心）の位置にそろうようツールバーをずらす。保存された基準がない既定の下部中央などでは、ずれに左右されない広げた状態の位置から決める。
   function updateShift() {
     if (dock.classList.contains('animating')) return;
     if (!dock.classList.contains('collapsed') || dock.classList.contains('commenting')) { dock.style.setProperty('--nm-shift', '0px'); return; }
     dock.style.setProperty('--nm-shift', '0px');
-    const collapsedRight = dock.getBoundingClientRect().right; dock.classList.remove('collapsed');
-    const expandedRight = dock.getBoundingClientRect().right; dock.classList.add('collapsed');
-    dock.style.setProperty('--nm-shift', `${expandedRight - collapsedRight}px`);
+    const narrow = dock.getBoundingClientRect(); dock.classList.remove('collapsed');
+    const wide = dock.getBoundingClientRect(); dock.classList.add('collapsed');
+    const anchor = dock.style.getPropertyValue('--nm-anchor') || toolbarAnchor(wide.left, wide.width, window.innerWidth);
+    const ratio = anchor === 'start' ? 0 : anchor === 'end' ? 1 : 0.5;
+    dock.style.setProperty('--nm-shift', `${wide.left + (wide.width - narrow.width) * ratio - narrow.left}px`);
   }
-  const detachToolbarPosition = installToolbarPosition(dock, {
+  const toolbarPosition = installToolbarPosition(dock, {
     getItem: (key) => localStorage.getItem(key), setItem: (key, value) => localStorage.setItem(key, value),
   }, () => { updateShift(); refreshPanelPosition(); });
   // A drag follows the pointer from the panel's settled spot, so a running morph ends when the drag starts. A plain press leaves it running: jumping then moved other content under the pointer before the release, and the click missed its button.
@@ -279,7 +281,7 @@ function mount(endpoint: string, token: string) {
     const animation = collapseAnimation = dock.animate({ width: [`${from}px`, `${to}px`], translate: [`${previousShift}px 0px`, `${nextShift}px 0px`] }, { duration: 160, easing: 'ease-out' });
     const items = [...dock.children].filter((child): child is HTMLElement => child instanceof HTMLElement && child !== button && !child.hidden && !child.classList.contains('hint'));
     const fades = items.map((item) => item.animate({ opacity: collapsed ? [1, 0] : [0, 1] }, { duration: 160, easing: 'ease-out' }));
-    const finish = () => { if (collapseAnimation !== animation) return; collapseAnimation = undefined; dock.classList.remove('animating'); dock.classList.toggle('collapsed', collapsed); updateShift(); fades.forEach((fade) => fade.cancel()); };
+    const finish = () => { if (collapseAnimation !== animation) return; collapseAnimation = undefined; dock.classList.remove('animating'); dock.classList.toggle('collapsed', collapsed); updateShift(); fades.forEach((fade) => fade.cancel()); toolbarPosition.refresh(); };
     animation.addEventListener('finish', finish); animation.addEventListener('cancel', () => { if (collapseAnimation === animation) finish(); });
   }
   applyCollapsed();
@@ -356,14 +358,14 @@ function mount(endpoint: string, token: string) {
     if (!changed || !from || !to || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     // Morphing the same toolbar keeps the controls where the reviewer is already looking; a separate bar at the top would move the eye away from the page they are reviewing.
     // 同じツールバーを変形させることで、操作を利用者が見ている位置に留める。上部に別のバーを出すとレビュー中のページから視線が離れる。
-    // The collapsed shift is animated with the width, otherwise it jumps at the start while the width is still changing and the bar slides sideways; right alignment keeps the minimize button on the edge that barely moves.
-    // 最小化のずれは幅と一緒に動かす。ずれだけ先に切り替わると、幅が変わる間にバーが横へ流れて見えるため。右詰めにして、ほとんど動かない右端に最小化ボタンを置く。
+    // The collapsed shift is animated with the width, otherwise it jumps at the start while the width is still changing and the bar slides sideways; right alignment keeps the minimize button on the right edge, where it sits in both layouts.
+    // 最小化のずれは幅と一緒に動かす。ずれだけ先に切り替わると、幅が変わる間にバーが横へ流れて見えるため。右詰めにして、どちらの表示でも右端にある最小化ボタンを右端に置き続ける。
     // Shrinking only removes controls the reviewer is done with, so it runs shorter than growing, which reveals controls to read; at the same length it felt drawn out.
     // 縮むときは使い終えた操作を片付けるだけなので、読む操作を見せる広がるときより短くする。同じ長さでは間延びして見えた。
     const duration = to < from ? 120 : 180;
     dock.classList.add('morphing'); dock.classList.toggle('morph-end', fromShift !== toShift);
     const resize = coverMorph = dock.animate([{ width: `${from}px`, translate: `${fromShift}px 0px` }, { width: `${to}px`, translate: `${toShift}px 0px` }], { duration, easing: 'ease-out' });
-    resize.onfinish = resize.oncancel = () => { if (coverMorph === resize) dock.classList.remove('morphing', 'morph-end'); };
+    resize.onfinish = resize.oncancel = () => { if (coverMorph === resize) { dock.classList.remove('morphing', 'morph-end'); toolbarPosition.refresh(); } };
     for (const child of dock.children) if (!child.matches('.handle, .handle + .sep') && (child as HTMLElement).offsetParent) (child as HTMLElement).animate([{ opacity: 0 }, { opacity: 1 }], { duration, easing: 'ease-out' });
   }
   function applyLanguage() {
@@ -1283,5 +1285,5 @@ function mount(endpoint: string, token: string) {
     return () => { if (history[name] === wrapped) history[name] = original; };
   });
   window.addEventListener('popstate', routeChanged); window.addEventListener('hashchange', routeChanged);
-  window.addEventListener('pagehide', () => { clearHover(); window.removeEventListener('blur', clearHover); clearLocated(); nativeClearInterval(poll); pageChanges.dispose(); nativeCancelAnimationFrame(pinFrame); restoreHistory.forEach((restore) => restore()); window.removeEventListener('popstate', routeChanged); window.removeEventListener('hashchange', routeChanged); detachToolbarPosition(); panelPosition.dispose(); detachReviewLayer(); sourceLookup?.abort(); sourceLookup = null; capture.stop(); clearImages(); animationFreeze.dispose(); }, { once: true });
+  window.addEventListener('pagehide', () => { clearHover(); window.removeEventListener('blur', clearHover); clearLocated(); nativeClearInterval(poll); pageChanges.dispose(); nativeCancelAnimationFrame(pinFrame); restoreHistory.forEach((restore) => restore()); window.removeEventListener('popstate', routeChanged); window.removeEventListener('hashchange', routeChanged); toolbarPosition.detach(); panelPosition.dispose(); detachReviewLayer(); sourceLookup?.abort(); sourceLookup = null; capture.stop(); clearImages(); animationFreeze.dispose(); }, { once: true });
 }

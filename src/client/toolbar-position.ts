@@ -1,6 +1,7 @@
 import { nativeSetTimeout } from './animation-freeze.js';
 
-export interface ToolbarPosition { x: number; y: number }
+export type ToolbarAnchor = 'start' | 'center' | 'end';
+export interface ToolbarPosition { x: number; y: number; anchor?: ToolbarAnchor }
 const storageKey = 'needmark-toolbar-position';
 
 export function readToolbarPosition(storage: Pick<Storage, 'getItem'>): ToolbarPosition | undefined {
@@ -8,8 +9,9 @@ export function readToolbarPosition(storage: Pick<Storage, 'getItem'>): ToolbarP
     const raw = storage.getItem(storageKey) ?? storage.getItem('needback-kit-toolbar-position'); if (!raw || raw.length > 1000) return;
     const value: unknown = JSON.parse(raw);
     if (!value || typeof value !== 'object' || Array.isArray(value)) return;
-    const { x, y } = value as Record<string, unknown>;
-    if (typeof x === 'number' && typeof y === 'number' && Number.isFinite(x) && Number.isFinite(y)) return { x, y };
+    const { x, y, anchor } = value as Record<string, unknown>;
+    if (typeof x !== 'number' || typeof y !== 'number' || !Number.isFinite(x) || !Number.isFinite(y)) return;
+    return anchor === 'start' || anchor === 'center' || anchor === 'end' ? { x, y, anchor } : { x, y };
   } catch { /* Storage can be blocked or hold old data; the CSS default position always works. / ストレージは無効化されていたり古い値を持っていたりするが、CSSの既定位置は常に使えるため。 */ }
 }
 
@@ -23,8 +25,15 @@ export function clampToolbarPosition(position: ToolbarPosition, size: { width: n
   return { x: axis(position.x, size.width, viewport.width), y: axis(position.y, size.height, viewport.height) };
 }
 
-export function installToolbarPosition(dock: HTMLElement, storage: Pick<Storage, 'getItem' | 'setItem'>, onChange?: () => void): () => void {
-  const view = dock.ownerDocument.defaultView; if (!view) return () => {};
+// The edge nearest the viewport side stays put when the toolbar collapses or expands, so a toolbar parked against a side stays against it instead of drifting into the page. Thirds leave a toolbar placed near the middle shrinking evenly around its centre.
+// たたむ・広げるときは画面の端に近い側の辺を固定し、端に寄せたツールバーが端から離れてページ内へずれないようにする。三等分にして、中央付近に置いたものは中心を保って左右均等に縮める。
+export function toolbarAnchor(left: number, width: number, viewportWidth: number): ToolbarAnchor {
+  const center = left + width / 2;
+  return center < viewportWidth / 3 ? 'start' : center > viewportWidth * 2 / 3 ? 'end' : 'center';
+}
+
+export function installToolbarPosition(dock: HTMLElement, storage: Pick<Storage, 'getItem' | 'setItem'>, onChange?: () => void): { detach: () => void; refresh: () => void } {
+  const view = dock.ownerDocument.defaultView; if (!view) return { detach: () => {}, refresh: () => {} };
   // The user's choice stays separate from the clamped coordinates on screen, so a temporarily wider toolbar or smaller viewport
   // does not move it for the rest of the session.
   // 画面に出す補正済みの座標と利用者が選んだ位置を分けて持つことで、一時的にツールバーが広がったり画面が狭まったりしても、その後ずっとずれたままにならない。
@@ -34,8 +43,10 @@ export function installToolbarPosition(dock: HTMLElement, storage: Pick<Storage,
     dock.style.setProperty('right', 'auto'); dock.style.setProperty('bottom', 'auto'); dock.style.setProperty('transform', 'none');
     dock.style.setProperty('left', `${next.x}px`); dock.style.setProperty('top', `${next.y}px`); onChange?.();
   };
-  // `--nm-shift` is a visual offset that keeps the right edge fixed while the toolbar is collapsed, so saved coordinates are those of the expanded toolbar and the visible left is x + shift.
-  // `--nm-shift` は最小化中に右端を動かさないための見た目だけのずれで、保存する座標は広げた状態のもの。見えている左端は x + shift になる。
+  // `--nm-shift` is a visual offset that keeps the `--nm-anchor` edge fixed while the toolbar is collapsed, so saved coordinates are those of the expanded toolbar and the visible left is x + shift.
+  // The anchor is saved with the position because it is chosen from where the toolbar was shown when dropped; deriving it again from the expanded coordinates could pick another edge and move a collapsed toolbar after a reload.
+  // `--nm-shift` は最小化中に `--nm-anchor` の辺を動かさないための見た目だけのずれで、保存する座標は広げた状態のもの。見えている左端は x + shift になる。
+  // 基準の辺は置いたときに見えていた位置から決めるため、座標と一緒に保存する。広げた状態の座標から決め直すと別の辺が選ばれ、再読み込み後にたたんだツールバーがずれることがある。
   const shift = (): number => Number.parseFloat(dock.style.getPropertyValue('--nm-shift')) || 0;
   const clampVisible = (next: ToolbarPosition): ToolbarPosition => clampToolbarPosition(next, dock.getBoundingClientRect(), { width: view.innerWidth, height: view.innerHeight });
   const clamp = (next: ToolbarPosition): ToolbarPosition => { const offset = shift(), visible = clampVisible({ x: next.x + offset, y: next.y }); return { x: visible.x - offset, y: visible.y }; };
@@ -46,7 +57,11 @@ export function installToolbarPosition(dock: HTMLElement, storage: Pick<Storage,
     for (const [property, value, priority] of previous.styles) { if (value) dock.style.setProperty(property, value, priority); else dock.style.removeProperty(property); }
     release(previous); onChange?.();
   };
-  const resize = (): void => { if (!visible()) { cancel(); return; } if (!drag && preferred) place(clamp(preferred)); };
+  const anchor = (value?: ToolbarAnchor): void => { if (value) dock.style.setProperty('--nm-anchor', value); else dock.style.removeProperty('--nm-anchor'); };
+  // While the width animates the observed size is a passing frame, and clamping to it pushed a toolbar at the right edge off screen and back; the caller refreshes once the animation ends.
+  // 幅のアニメーション中に観測される大きさは途中のフレームにすぎず、それに合わせて画面内へ収めると右端のツールバーが画面外へ跳ねて戻っていた。アニメーション終了後に呼び出し側が refresh する。
+  const resizing = (): boolean => !!dock.getAnimations?.().some((animation) => (animation.effect as KeyframeEffect | null)?.getKeyframes().some((frame) => 'width' in frame));
+  const resize = (): void => { if (!visible()) { cancel(); return; } if (!drag && preferred && !resizing()) { anchor(preferred.anchor); place(clamp(preferred)); } };
   const down = (event: PointerEvent): void => {
     if (drag || !event.isPrimary || event.button !== 0 || !visible()) return;
     // The whole toolbar is a grip, not only the narrow handle. Capturing on the pressed button or link keeps its click when the pointer
@@ -55,7 +70,7 @@ export function installToolbarPosition(dock: HTMLElement, storage: Pick<Storage,
     // それ以外の場所では既定動作を止めてページの文字選択が始まらないようにする。
     const button = (event.target as Element).closest('button, a'), target = button ?? dock, rect = dock.getBoundingClientRect();
     drag = { pointer: event.pointerId, x: event.clientX, y: event.clientY, origin: { x: rect.left, y: rect.top }, target, viewport: `${view.innerWidth}x${view.innerHeight}`,
-      styles: ['left', 'top', 'right', 'bottom', 'transform', '--nm-shift'].map((property) => [property, dock.style.getPropertyValue(property), dock.style.getPropertyPriority(property)]) };
+      styles: ['left', 'top', 'right', 'bottom', 'transform', '--nm-shift', '--nm-anchor'].map((property) => [property, dock.style.getPropertyValue(property), dock.style.getPropertyPriority(property)]) };
     try { target.setPointerCapture(event.pointerId); } catch { drag = undefined; return; }
     if (!button) event.preventDefault();
   };
@@ -67,8 +82,9 @@ export function installToolbarPosition(dock: HTMLElement, storage: Pick<Storage,
     if (visible()) {
       // The shift depends on the anchoring mode, which `place` changes from centered to absolute, so it is read again after placing.
       // ずれの大きさは中央寄せから座標指定へ切り替わると変わるため、配置した後でもう一度読む。
-      const target = clampVisible({ x: current.origin.x + dx, y: current.origin.y + dy }); place(target);
-      const offset = shift(); current.position = { x: target.x - offset, y: target.y }; if (offset) place(current.position);
+      const target = clampVisible({ x: current.origin.x + dx, y: current.origin.y + dy }), side = toolbarAnchor(target.x, dock.getBoundingClientRect().width, view.innerWidth);
+      anchor(side); place(target);
+      const offset = shift(); current.position = { x: target.x - offset, y: target.y, anchor: side }; if (offset) place(current.position);
     }
   };
   const up = (event: PointerEvent): void => {
@@ -101,10 +117,11 @@ export function installToolbarPosition(dock: HTMLElement, storage: Pick<Storage,
   view.addEventListener('pointercancel', lost, true); dock.addEventListener('lostpointercapture', lost);
   view.addEventListener('keydown', escape, true); view.addEventListener('resize', viewportResize);
   const observer = typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(resize); observer?.observe(dock); resize();
-  return () => {
+  const detach = (): void => {
     cancel(); observer?.disconnect();
     dock.removeEventListener('pointerdown', down); view.removeEventListener('pointermove', move, true); view.removeEventListener('pointerup', up, true); dock.removeEventListener('click', click, true);
     view.removeEventListener('pointercancel', lost, true); dock.removeEventListener('lostpointercapture', lost);
     view.removeEventListener('keydown', escape, true); view.removeEventListener('resize', viewportResize);
   };
+  return { detach, refresh: resize };
 }
