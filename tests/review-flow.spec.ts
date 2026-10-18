@@ -54,14 +54,20 @@ test('the bottom-centred icon toolbar names each tool, explains its purpose in t
   await expect(tip).toHaveText('CommentPick a spot on the page and leave a comment');
 });
 
-test('collapsing leaves only the expand button, keeps shortcuts and an active pause, and persists across reload', async ({ page }) => {
+test('collapsing leaves only the expand button, keeps shortcuts with their selection controls and an active pause, and persists across reload', async ({ page }) => {
   await page.goto('/'); await configure(page);
   await page.getByRole('button', { name: 'ツールバーをたたむ', exact: true }).click();
   const expand = page.getByRole('button', { name: 'ツールバーを広げる', exact: true });
   await expect(expand).toHaveAttribute('aria-expanded', 'false');
   for (const name of ['コメント', 'ピンの表示切り替え', 'アニメーションを停止', 'コメント一覧', '設定']) await expect(page.getByRole('button', { name, exact: true })).toBeHidden();
+  const end = page.getByRole('button', { name: '終了', exact: true });
   await page.keyboard.press('Shift+C'); await expect(review(page).locator('.cover')).toBeVisible();
-  await page.keyboard.press('Escape'); await expect(expand).toHaveAttribute('aria-expanded', 'false'); await page.keyboard.press('Shift+P');
+  await expect(end).toBeVisible(); await expect(expand).toBeHidden();
+  await page.keyboard.press('Escape'); await expect(end).toBeHidden(); await expect(expand).toBeVisible();
+  await page.keyboard.press('Shift+C'); await clickAt(page, 'h1');
+  await expect(page.getByLabel('コメント本文')).toBeVisible(); await expect(end).toBeHidden(); await expect(expand).toBeVisible();
+  await page.getByRole('button', { name: 'キャンセル', exact: true }).click();
+  await expect(expand).toHaveAttribute('aria-expanded', 'false'); await page.keyboard.press('Shift+P');
   const resume = page.getByRole('button', { name: 'アニメーションを再開', exact: true });
   await expect(resume).toBeHidden();
   await expand.click(); await expect(resume).toBeVisible(); await expect(resume).toHaveText('');
