@@ -57,7 +57,7 @@ test('only a completed primary drag saves toolbar coordinates and reload restore
   await startDrag(page, -150, -180); await page.mouse.up();
   const moved = await bounds(page), raw = await stored(page);
   expect(moved.x).toBeCloseTo(initial.x - 150, 1); expect(moved.y).toBeCloseTo(initial.y - 180, 1);
-  expect(JSON.parse(raw!)).toEqual({ x: moved.x, y: moved.y });
+  expect(JSON.parse(raw!)).toEqual({ x: moved.x, y: moved.y, anchor: 'center' });
   await page.reload(); await expect(dock(page)).toBeVisible();
   expect(await bounds(page)).toEqual(moved); expect(await stored(page)).toBe(raw);
 });
@@ -73,7 +73,7 @@ test('secondary pointers cannot replace the drag, a pointer cancellation keeps t
   expect(await bounds(page)).toEqual(moving); expect(await captured(page)).toBe(true); expect(await stored(page)).toBe(raw);
   await handle(page).evaluate((element) => element.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true, composed: true, pointerId: (window as unknown as { toolbarPointer: number }).toolbarPointer })));
   expect(await captured(page)).toBe(false); await page.mouse.up();
-  expect(await bounds(page)).toEqual(moving); const kept = await stored(page); expect(JSON.parse(kept!)).toEqual({ x: moving.x, y: moving.y });
+  expect(await bounds(page)).toEqual(moving); const kept = await stored(page); expect(JSON.parse(kept!)).toEqual({ x: moving.x, y: moving.y, anchor: expect.any(String) });
   await startDrag(page, 60, 40); expect(await captured(page)).toBe(true);
   await page.keyboard.press('Escape'); expect(await captured(page)).toBe(false); await page.mouse.up();
   expect(await bounds(page)).toEqual(moving); expect(await stored(page)).toBe(kept);
@@ -89,7 +89,7 @@ test('viewport resize cancels an unfinished drag and a completed edge drag store
   expect(await bounds(page)).toEqual(original); expect(await stored(page)).toBe(raw);
   await startDrag(page, 500, 445); await page.mouse.up(); await withinViewport(page);
   const edge = await bounds(page); expect(edge.x + edge.width).toBeCloseTo(796, 1); expect(edge.y + edge.height).toBeCloseTo(596, 1);
-  expect(JSON.parse((await stored(page))!)).toEqual({ x: edge.x, y: edge.y });
+  expect(JSON.parse((await stored(page))!)).toEqual({ x: edge.x, y: edge.y, anchor: 'end' });
   await page.reload(); expect(await bounds(page)).toEqual(edge);
 });
 
@@ -117,10 +117,26 @@ test('the toolbar drags from a button without running it, a plain click still ru
   await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2); await page.mouse.down();
   await page.mouse.move(start.x + start.width / 2 - 200, start.y + start.height / 2 - 300, { steps: 4 }); await page.mouse.up();
   const moved = await bounds(page); expect(moved.x).toBeCloseTo(initial.x - 200, 1); expect(moved.y).toBeCloseTo(initial.y - 300, 1);
-  await expect(panel).toBeHidden(); expect(JSON.parse((await stored(page))!)).toEqual({ x: moved.x, y: moved.y });
+  await expect(panel).toBeHidden(); expect(JSON.parse((await stored(page))!)).toEqual({ x: moved.x, y: moved.y, anchor: expect.any(String) });
   await list.click(); await expect(panel).toBeVisible();
   await page.keyboard.press('Escape'); await expect(panel).toBeHidden();
   const view = page.viewportSize()!; await page.setViewportSize({ width: Math.ceil(moved.x + moved.width / 2), height: view.height });
   await withinViewport(page); expect((await bounds(page)).x).toBeLessThan(moved.x);
   await page.setViewportSize(view); await expect.poll(async () => (await bounds(page)).x).toBeCloseTo(moved.x, 1);
+});
+
+test('collapsing and expanding keep a toolbar parked at either side against that side in every frame', async ({ page }) => {
+  await setup(page);
+  const frames = () => dock(page).evaluate((element) => new Promise<{ left: number; right: number }[]>((resolve) => {
+    const values: { left: number; right: number }[] = []; element.querySelector<HTMLElement>('[data-action="collapse"]')!.click();
+    const sample = () => { const rect = element.getBoundingClientRect(); values.push({ left: Math.round(rect.left), right: Math.round(rect.right) }); if (values.length < 16) requestAnimationFrame(sample); else resolve(values); };
+    sample();
+  }));
+  for (const [x, side, edge] of [[4, 'left', 4], [100000, 'right', 1196]] as const) {
+    await restore(page, { x, y: 300 }); const expanded = await bounds(page);
+    const collapsing = await frames(), expanding = await frames();
+    expect(new Set([...collapsing, ...expanding].map((frame) => frame[side]))).toEqual(new Set([edge]));
+    expect(collapsing.at(-1)!.right - collapsing.at(-1)!.left).toBeLessThan(expanded.width / 2);
+    expect(await bounds(page)).toEqual(expanded);
+  }
 });
