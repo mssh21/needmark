@@ -58,5 +58,4 @@ Set `language: 'en'` or `'ja'` in `needmark.config.ts`; the UI defaults to Japan
 - [Getting started](docs/getting-started.md): configuration, selection, handoff, sharing and migration.
 - [はじめに](docs/getting-started.ja.md): the same guide in Japanese.
 - [Architecture and operating limits](docs/architecture.md): detailed implementation reference in English.
-- [Agentation comparison and product evaluation (Japanese)](docs/agentation-comparison.ja.md)
 - [Documentation index](docs/README.md) · [Contributing](CONTRIBUTING.md) · [MIT license](LICENSE)

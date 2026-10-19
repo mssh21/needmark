@@ -34,7 +34,7 @@ const english = {
   "アニメーションを再開": "Resume animations",
   "コメント一覧": "Comments",
   "設定": "Settings",
-  "画像プレビュー": "Image preview",
+  "プレビュー": "Preview",
   "縮小": "Zoom out",
   "拡大": "Zoom in",
   "表示をリセット": "Reset view",

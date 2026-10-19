@@ -2,7 +2,7 @@
 
 Common rules for developing and maintaining NeedMark. They apply to every agent and contributor; task-specific procedures live in skills.
 
-> **Reference documentation (repo-first).** The source of truth is [`docs/`](./docs/) (index: [`docs/README.md`](./docs/README.md)). When you add or change behavior, update `docs/` first and the code in the same change. Documentation describes **only the current implementation**: no implementation memos, design notes, future plans, TODOs or drift annotations. If documentation disagrees with the code, **the current implementation wins**: rewrite the document to match it instead of annotating the gap. Open work and the Agentation benchmark live in [`docs/agentation-comparison.ja.md`](./docs/agentation-comparison.ja.md).
+> **Reference documentation (repo-first).** The source of truth is [`docs/`](./docs/) (index: [`docs/README.md`](./docs/README.md)). When you add or change behavior, update `docs/` first and the code in the same change. Documentation describes **only the current implementation**: no implementation memos, design notes, future plans, TODOs or drift annotations. If documentation disagrees with the code, **the current implementation wins**: rewrite the document to match it instead of annotating the gap.
 
 ## Tooling
 

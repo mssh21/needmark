@@ -28,7 +28,7 @@ clone.showModal();
 - Line comments: one or more `//` lines in English, followed by the same reason in Japanese.
 - Empty `catch` blocks and other inline spots: `/* English. / 日本語。 */`.
 - JSDoc on exported API (`/** … */`): one sentence stating why the API exists in this shape, or a pointer to the document that specifies it (`See docs/getting-started.md#project-configuration`), in both languages. Do not restate option behavior.
-- Do not add `TODO` without an issue link; record open work in `docs/agentation-comparison.ja.md` or an issue.
+- Do not add `TODO` without an issue link; record open work in an issue.
 
 ## When you change code
 
