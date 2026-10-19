@@ -4,4 +4,5 @@ export default {
   language: 'ja',
   capture: 'dom',
   outputDir: '.needmark/feedback',
+  editor: 'vscode',
 } satisfies NeedMarkOptions;

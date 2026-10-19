@@ -58,3 +58,66 @@ export function instrumentHtml(html: string, file: string) {
   visit(document);
   return output.toString();
 }
+
+const nativeTag = /^[a-z][a-z0-9-]*$/;
+// Elements that never render a visible box or are rewritten by Astro itself, so a source attribute on them is noise or breaks slots.
+// 表示される箱を持たない、またはAstro自身が書き換える要素。ソース属性を付けてもノイズになるかスロットを壊す。
+const astroSkipped = new Set(['html', 'head', 'meta', 'link', 'script', 'style', 'title', 'base', 'slot']);
+const jsxPosition = /(?:[(=?:&|,[{>]|\breturn)\s*$/;
+
+// Astro compiles templates itself, so the template is read as HTML and every start tag found in plain markup is annotated. Tags that
+// only look like markup inside a JS string or a comparison would corrupt the expression, so a scan of the `{}` expressions
+// rejects them instead of guessing from the HTML parser alone.
+// Astroはテンプレートを独自にコンパイルするため、テンプレートをHTMLとして読み、通常のマークアップにある開始タグだけに付与する。
+// JSの文字列や比較演算子の中にあるタグらしき文字列へ付けると式が壊れるため、HTMLパーサーの結果だけに頼らず、`{}`式の走査で除外する。
+export function instrumentAstro(code: string, file: string, origins: string[] | undefined, mapFilename = file) {
+  const frontmatter = code.match(/^\s*---[^\n]*\n[\s\S]*?\n---[ \t]*(?=\r?\n|$)/);
+  // Blanking keeps every offset, line and column of the original while hiding code the HTML parser must not read.
+  // 空白に置き換えれば、HTMLパーサーに読ませたくない部分を隠しても元のオフセット・行・列が変わらない。
+  const blank = (text: string) => text.replace(/[^\r\n]/g, ' ');
+  const template = (frontmatter ? blank(frontmatter[0]) + code.slice(frontmatter[0].length) : code)
+    .replace(/<!--[\s\S]*?-->/g, blank)
+    .replace(/(<(script|style)\b[^>]*>)([\s\S]*?)(<\/\2>)/gi, (_all, open: string, _name: string, body: string, close: string) => open + blank(body) + close);
+  const guard = origins ? `${JSON.stringify(origins)}.includes(Astro.url.origin)` : `${JSON.stringify(LOOPBACK_HOSTNAMES)}.includes(Astro.url.hostname)`;
+  const quoted = new Uint8Array(template.length), expressionStart = new Int32Array(template.length).fill(-1);
+  for (let index = 0, depth = 0, start = -1; index < template.length; index++) {
+    const char = template[index]!;
+    if (depth > 0) expressionStart[index] = start;
+    if (depth === 0) { if (char === '{') { depth = 1; start = index; expressionStart[index] = index; } continue; }
+    if (char === '{') depth++;
+    else if (char === '}') depth--;
+    else if (char === '"' || char === "'" || char === '`') {
+      // A quote in JSX text such as "don't" must not hide the rest of the template, so only a template literal may span lines.
+      // JSX本文の"don't"のような引用符でテンプレートの残りを隠さないよう、複数行にまたがれるのはテンプレートリテラルだけにする。
+      let end = index + 1;
+      while (end < template.length && template[end] !== char && (char === '`' || template[end] !== '\n')) end += template[end] === '\\' ? 2 : 1;
+      quoted.fill(1, index, Math.min(end + 1, template.length)); index = end;
+    } else if (char === '/' && (template[index + 1] === '/' || template[index + 1] === '*')) {
+      const end = template[index + 1] === '/' ? template.indexOf('\n', index) : template.indexOf('*/', index + 2) + 1;
+      const stop = end > 0 ? end : template.length;
+      quoted.fill(1, index, stop); index = stop - 1;
+    }
+  }
+  const output = new MagicString(code);
+  const document = parseHtml(template, { sourceCodeLocationInfo: true });
+  function visit(node: DefaultTreeAdapterMap['node'], parentStart = -1) {
+    let start = parentStart;
+    if ('tagName' in node && node.sourceCodeLocation?.startTag) {
+      const location = node.sourceCodeLocation.startTag, at = location.startOffset;
+      const insideExpression = expressionStart[at]! >= 0;
+      const valid = !quoted[at] && template.slice(at + 1, at + 1 + node.tagName.length) === node.tagName && nativeTag.test(node.tagName)
+        && (!insideExpression || jsxPosition.test(template.slice(0, at)) || parentStart > expressionStart[at]!);
+      if (valid) {
+        start = at;
+        if (!astroSkipped.has(node.tagName) && !node.attrs.some((item) => item.name === attribute)) {
+          const source: SourceLocation = { file, line: location.startLine, column: location.startCol };
+          output.appendLeft(at + node.tagName.length + 1, ` ${attribute}={${guard} ? ${JSON.stringify(JSON.stringify(source))} : undefined}`);
+        }
+      }
+    }
+    if ('childNodes' in node) node.childNodes.forEach((child) => visit(child, start));
+    if ('content' in node) visit(node.content, start);
+  }
+  visit(document);
+  return output.hasChanged() ? { code: output.toString(), map: output.generateMap({ hires: true, source: mapFilename, includeContent: true }).toString() } : undefined;
+}
