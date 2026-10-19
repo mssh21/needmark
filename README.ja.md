@@ -58,5 +58,4 @@ DOM撮影は共有許可なしで使えますが、再現できる描画に制�
 - [はじめに](docs/getting-started.ja.md): 設定、選択、AIへの受け渡し、共有、移行。
 - [Getting started](docs/getting-started.md): 同じ内容の英語ガイド。
 - [アーキテクチャと動作上の制約（英語）](docs/architecture.md): 実装の詳細なリファレンス。
-- [Agentationとの比較とプロダクト評価](docs/agentation-comparison.ja.md)
 - [ドキュメント一覧](docs/README.md) · [コントリビューション（英語）](CONTRIBUTING.md) · [MITライセンス](LICENSE)
