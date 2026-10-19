@@ -35,6 +35,12 @@ it('resolves Vite working-directory-relative annotations while constraining them
   await expect(sourceEditorUrl(options, location('../outside.tsx'))).rejects.toThrow('not allowed');
 });
 
+it('opens Astro templates, which carry source positions like JSX', async () => {
+  const { root, options } = await project();
+  await writeFile(join(root, 'Page.astro'), '<h1>Hi</h1>');
+  expect(await sourceEditorUrl(options, location('Page.astro'))).toMatch(/^vscode:\/\/file\/.*\/Page\.astro:1:1$/);
+});
+
 it('keeps a project root symlink compatible and returns the canonical in-project file for a safe internal symlink', async () => {
   const { base, root, options } = await project();
   await writeFile(join(root, 'Card.tsx'), '<button />');

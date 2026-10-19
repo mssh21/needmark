@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parse as parseHtml } from 'parse5';
 import { transform } from 'esbuild';
-import { instrumentHtml, instrumentJsx } from './code-source.js';
+import { instrumentAstro, instrumentHtml, instrumentJsx } from './code-source.js';
 
 describe('development source locations', () => {
   it('maps HTML to original positions without interpreting script text as markup', () => {
@@ -48,5 +48,23 @@ describe('development source locations', () => {
   it('does not overwrite explicit annotations and handles strings with JSX-like content', () => {
     const code = 'const str = "<button/>"; export function Form(){return <button data-needmark-source="custom">OK</button>}';
     expect(instrumentJsx(code, 'src/Form.tsx', ['http://localhost:5173'])).toBeUndefined();
+  });
+
+  it('annotates native Astro tags with their template position and leaves components, scripts and JS strings alone', () => {
+    const code = ['---', 'const a = 1 < 2;', '---', '<Layout>', '  <h1 class={a ? "x" : "y"}>Hi</h1>', '  {list.map((x) => <li><b>{x}</b></li>)}', '  {"<div>"}', '  <p>don\'t</p><button>Go</button> {a<b}', '</Layout>', '<script>const t = "<i>";</script>'].join('\n');
+    const result = instrumentAstro(code, 'src/pages/index.astro', undefined)!;
+    const tagged = [...result.code.matchAll(/<(\w+)\s+data-needmark-source=\{.*?\? "((?:[^"\\]|\\.)*)" : undefined\}/g)].map(([, tag, json]) => [tag, JSON.parse(JSON.parse(`"${json}"`))]);
+    expect(tagged).toEqual([
+      ['h1', { file: 'src/pages/index.astro', line: 5, column: 3 }],
+      ['li', { file: 'src/pages/index.astro', line: 6, column: 20 }],
+      ['b', { file: 'src/pages/index.astro', line: 6, column: 24 }],
+      ['p', { file: 'src/pages/index.astro', line: 8, column: 3 }],
+      ['button', { file: 'src/pages/index.astro', line: 8, column: 15 }],
+    ]);
+    expect(result.code).toContain('{"<div>"}');
+    expect(result.code).toContain('{a<b}');
+    expect(result.code).toContain('<Layout>');
+    expect(result.code).toContain('<script>const t = "<i>";</script>');
+    expect(result.code).toContain('Astro.url.hostname');
   });
 });

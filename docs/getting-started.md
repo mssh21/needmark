@@ -105,7 +105,7 @@ export default defineConfig({
 });
 ```
 
-Astro renders pages without Vite's HTML transformation, so the plugin appends the widget script to the end of each HTML response instead. Source positions are not added to `.astro` templates; feedback keeps the DOM context and file hints.
+Astro renders pages without Vite's HTML transformation, so the plugin appends the widget script to the end of each HTML response instead. Native tags in `.astro` templates receive source positions, so the editor button works for them; components, expressions that only look like markup and `<script>`/`<style>` bodies are left untouched.
 
 ### Next.js and other development servers
 
