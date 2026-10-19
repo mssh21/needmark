@@ -50,7 +50,7 @@ test('the capture preview opens an accessible zoom and pan viewer from the compo
   await page.getByLabel('コメント本文').fill('画像を確認してから保存します。');
   await expect(page.getByRole('button', { name: '保存', exact: true })).toBeEnabled();
   await page.getByRole('img', { name: 'コメントした場所のキャプチャ', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: '画像プレビュー' }); await expect(dialog).toBeVisible();
+  const dialog = page.getByRole('dialog', { name: 'プレビュー' }); await expect(dialog).toBeVisible();
   await page.keyboard.press('Shift+C');
   await expect(page.getByText('クリックで要素をコメント・ドラッグで範囲をコメント / Escで戻る', { exact:true })).toBeHidden();
   await dialog.getByRole('button', { name: '拡大', exact: true }).click(); await expect(dialog.getByRole('button', { name: '表示をリセット', exact: true })).toHaveText('125%');
@@ -75,6 +75,21 @@ test('the capture preview opens an accessible zoom and pan viewer from the compo
   await page.keyboard.press('Escape'); await expect(dialog).toBeHidden(); await expect(page.getByLabel('コメント本文')).toHaveValue('画像を確認してから保存します。');
   await saveAndList(page); await page.locator('[data-needmark] .open-item').click();
   await page.getByRole('img', { name: 'コメントのキャプチャ', exact: true }).click(); await expect(dialog).toBeVisible();
+});
+
+test('a tall capture is contained in the preview stage and can be panned until a margin shows on every side', async ({ page }) => {
+  await page.goto('/'); await configure(page, 'dom'); await clickTarget(page);
+  await page.getByLabel('コメント本文').fill('縦長の画像を確認します。');
+  await page.getByRole('img', { name: 'コメントした場所のキャプチャ', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'プレビュー' }), image = dialog.getByRole('img', { name: 'コメントした場所のキャプチャ拡大', exact: true });
+  await expect(dialog).toBeVisible();
+  await image.evaluate(async (node) => { const canvas = document.createElement('canvas'); canvas.width = 600; canvas.height = 4000; (node as HTMLImageElement).src = canvas.toDataURL(); await (node as HTMLImageElement).decode(); });
+  const stage = (await dialog.locator('.stage').boundingBox())!, fitted = (await image.boundingBox())!;
+  expect(fitted.height).toBeLessThanOrEqual(stage.height + 1); expect(fitted.width).toBeLessThanOrEqual(stage.width + 1);
+  const zoomIn = dialog.getByRole('button', { name: '拡大', exact: true }); for (let index = 0; index < 8; index++) await zoomIn.click();
+  await page.mouse.move(stage.x + stage.width / 2, stage.y + stage.height / 2); await page.mouse.down(); await page.mouse.move(stage.x + stage.width / 2, stage.y + stage.height / 2 + 5000, { steps: 4 }); await page.mouse.up();
+  const [, , y] = (await image.evaluate((node) => (node as HTMLElement).style.transform)).match(/translate\((-?\d+)px, ?(-?\d+)px\)/)!.map(Number);
+  expect(y).toBeGreaterThan(stage.height * 0.5);
 });
 
 test('failed saves and resolves keep the comment unchanged and succeed when retried', async ({ page }) => {

@@ -110,7 +110,7 @@ test('a mobile real-target composer retains typed feedback through image and sou
   await accessiblePanel(page);
   await expect(field).toHaveValue(comment); await accessiblePanel(page);
   await page.getByRole('img', { name: 'コメントした場所のキャプチャ', exact: true }).click();
-  await expect(page.getByRole('dialog', { name: '画像プレビュー' })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'プレビュー' })).toBeVisible();
   await page.keyboard.press('Escape'); await expect(field).toHaveValue(comment);
   await page.setViewportSize({ width: 410, height: 650 }); await accessiblePanel(page); await expect(field).toHaveValue(comment);
   await screenshot(page, info, 'expanded-composer-after-resize');
@@ -296,4 +296,3 @@ test('delete confirmations replace the content of the open panel without moving 
   await expect(page.getByRole('button', { name: '削除する', exact: true })).toBeVisible();
   await expect.poll(async () => { const box = (await panel(page).boundingBox())!; return [Math.round(box.x), Math.round(box.y)]; }).toEqual([Math.round(details.x), Math.round(details.y)]);
 });
-
