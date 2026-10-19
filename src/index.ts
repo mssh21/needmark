@@ -5,7 +5,7 @@ import { createReviewApi, validateReviewOptions } from './server/review-api.js';
 import { loadProjectConfig } from './server/config.js';
 import { defaultFeedbackDirectory } from './server/storage.js';
 import type { NeedMarkOptions } from './shared/types.js';
-import { instrumentHtml, instrumentJsx } from './server/code-source.js';
+import { instrumentAstro, instrumentHtml, instrumentJsx } from './server/code-source.js';
 import { isAllowedOrigin } from './shared/origin.js';
 import { appendReviewScript } from './server/review-script.js';
 import { needmarkEnabled } from './server/enabled.js';
@@ -82,9 +82,12 @@ export function needmark(options?: NeedMarkOptions): Plugin {
         if (!active) return;
         const file = id.split('?')[0]!;
         const local = relative(root, file);
-        if (transformOptions?.ssr || !/\.[jt]sx$/.test(file) || local.startsWith('..') || local.includes('node_modules')) return;
+        // Astro renders .astro templates in the server environment, so only JSX is limited to the client.
+        // Astroは.astroテンプレートをサーバー環境で描画するため、クライアント側に限るのはJSXだけにする。
+        const astro = file.endsWith('.astro');
+        if (!/\.[jt]sx$/.test(file) && !astro || transformOptions?.ssr && !astro || local.startsWith('..') || local.includes('node_modules')) return;
         try {
-          return instrumentJsx(code, relative(process.cwd(), file).replaceAll('\\', '/'), origins, file);
+          return (astro ? instrumentAstro : instrumentJsx)(code, relative(process.cwd(), file).replaceAll('\\', '/'), origins, file);
         } catch { return; } /* Source metadata is optional; a parser gap must not break the user's dev server. / ソース情報は任意のため、パーサー非対応で開発サーバーを止めない。 */
       },
     },

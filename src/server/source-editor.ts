@@ -31,7 +31,7 @@ export async function sourceEditorUrl(options: SourceEditorOptions, input: unkno
   const lexicalRoot = within(configuredRoot, candidate) ? configuredRoot : root;
   if (!within(lexicalRoot, candidate) || restricted(relative(lexicalRoot, candidate))) throw new InputError('Source file is not allowed');
   const absolute = await realpath(candidate), name = relative(root, absolute);
-  if (!within(root, absolute) || restricted(name) || !/\.(?:[cm]?[jt]s|[jt]sx|html?|css|vue|svelte)$/i.test(name)) throw new InputError('Source file is not allowed');
+  if (!within(root, absolute) || restricted(name) || !/\.(?:[cm]?[jt]s|[jt]sx|html?|css|vue|svelte|astro)$/i.test(name)) throw new InputError('Source file is not allowed');
   const output = resolve(configuredRoot, options.outputDir ?? defaultFeedbackDirectory(configuredRoot));
   const privateOutput = await realpath(output).catch((error: NodeJS.ErrnoException) => { if (error.code === 'ENOENT') return output; throw error; });
   if (candidate === output || within(output, candidate) || absolute === privateOutput || within(privateOutput, absolute)) throw new InputError('Source file is not allowed');
