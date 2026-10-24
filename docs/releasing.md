@@ -16,7 +16,7 @@ The release workflow does not run E2E tests; the CI workflow runs them on pull r
 
 ## Making a release
 
-1. On a branch, make sure `pnpm test:e2e` passes and user-facing changes were checked in the demo.
+1. Make sure CI, including the full E2E suite, passed for the changes being released and user-facing changes were checked in the demo.
 2. Bump the version without creating a tag, choosing the [semantic version](https://semver.org) step: `patch` for fixes, `minor` for backward-compatible features, `major` for breaking changes.
 
    ```sh

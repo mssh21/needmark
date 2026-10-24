@@ -40,7 +40,8 @@ For a Playwright test, also decide whether WebKit could behave differently (rend
 ## 5. Run
 
 - While iterating: `pnpm test <file>`, or `pnpm build` then `pnpm test:e2e <spec> -g "<title>" --project=chromium`.
-- Before committing: `pnpm build`, `pnpm typecheck`, `pnpm test` and `pnpm test:e2e` all pass. A full E2E run takes about ten minutes; run it in the background and report the summary line.
+- Before committing: `pnpm build`, `pnpm typecheck` and `pnpm test` pass, and so do the E2E specs that cover the change: `pnpm test:e2e <spec> [<spec> ...]` for the specs you added or changed, plus every spec that uses a caption, role or flow you changed (`grep -rln "<caption>" tests/`). Report the summary line.
+- Do not run the full `pnpm test:e2e` locally; CI runs it on the pull request. Merge only after every CI job, E2E included, passes. Run the full suite locally only to reproduce a CI failure.
 - Check user-facing changes in the demo as described in docs/testing.md#manual-check.
 
 ## 6. Leave the suite smaller or equal where you can
@@ -57,4 +58,4 @@ For a Playwright test, also decide whether WebKit could behave differently (rend
 - [ ] No styling, static copy or type-level guarantees are asserted.
 - [ ] `@cross-engine` only where WebKit could behave differently.
 - [ ] Redundant tests touched by the change were removed or merged.
-- [ ] `pnpm build`, `pnpm typecheck`, `pnpm test`, `pnpm test:e2e` pass.
+- [ ] `pnpm build`, `pnpm typecheck`, `pnpm test` and the E2E specs covering the change pass locally; the full E2E suite passes in CI before merging.
