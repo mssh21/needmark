@@ -39,6 +39,22 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
 
+  vite7:
+    name: Vite 7
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # The peer range still accepts Vite 7 while the lockfile pins Vite 8, so this job swaps in Vite 7 and the plugin-react major that supports it.
+      - run: pnpm add -Dw vite@7.3.7 @vitejs/plugin-react@5.2.0
+      - run: pnpm build
+      - run: pnpm test src/index.test.ts
+
   e2e:
     name: E2E
     runs-on: ubuntu-latest
