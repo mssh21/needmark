@@ -219,7 +219,9 @@ describe('Vite integration boundaries', () => {
     await writeFile(join(directory, '.needmark/feedback/comment.md'), 'private feedback');
     await writeFile(join(directory, 'index.html'), '<html><body><script type="module" src="/component.tsx"></script></body></html>');
     await writeFile(join(directory, 'component.tsx'), 'document.body.textContent = JSON.stringify(<button>Buy</button>);');
-    await build({ configFile: false, root: directory, esbuild: { jsxFactory: 'createElement' }, plugins: [needmark({ origins: ['http://127.0.0.1:4195'] })], logLevel: 'silent' });
+    // Under Vitest's NODE_ENV=test Oxc would add JSX `__source` paths, and the temporary directory's name contains "needmark".
+    // Vitestでは NODE_ENV=test のためOxcがJSXに`__source`のパスを足し、一時ディレクトリ名に「needmark」が含まれてしまう。
+    await build({ configFile: false, root: directory, oxc: { jsx: { runtime: 'classic', pragma: 'createElement', development: false } }, plugins: [needmark({ origins: ['http://127.0.0.1:4195'] })], logLevel: 'silent' });
     expect(await readdir(join(directory, 'dist'))).toEqual(['assets', 'index.html']);
     const assets = await readdir(join(directory, 'dist/assets'));
     for (const asset of assets) expect(await readFile(join(directory, 'dist/assets', asset), 'utf8')).not.toContain('needmark');
