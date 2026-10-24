@@ -1022,9 +1022,9 @@ function mount(endpoint: string, token: string) {
   async function copy(selected?: Feedback[], button?: HTMLButtonElement) {
     const single = selected?.length === 1, scope = selected ?? filteredItems(), repairs = scope.filter((item) => single ? item.intent !== 'reference' : isRepairFeedback(item)); if (!repairs.length && scope.some((item) => item.intent === 'reference')) return;
     const copied = await copyText(formatFeedbackPrompt(repairs, directory, detail, language, single, command), t('AIへの指示'), !button);
-    // Copy buttons confirm the copy on themselves and return after a moment, so the reviewer sees the result where they clicked without a lingering status line; the check is drawn in the success colour so the icon change stands out without text that would widen the header.
-    // コピーのボタンはその場でコピー完了を示して少し後に戻る。押した場所で結果が分かり、状態の行が残らないようにするため。ヘッダーの幅を変える文字を足さずに気付けるよう、チェックは成功色で描く。
-    if (copied && button?.isConnected && !button.dataset.copied) { const original = button.innerHTML, label = button.getAttribute('aria-label'); button.dataset.copied = ''; button.innerHTML = icon('checkCircle'); if (label) button.setAttribute('aria-label', t('コピーしました')); nativeSetTimeout(() => { if (button.isConnected) { button.innerHTML = original; if (label) button.setAttribute('aria-label', label); delete button.dataset.copied; } }, 2000); }
+    // Copy buttons confirm the copy on themselves and return after a moment, so the reviewer sees the result where they clicked without a lingering status line; the check is drawn in the success colour so the icon change stands out without text that would widen the header. It is a bare check rather than the circled one because the circled check beside it already means resolve.
+    // コピーのボタンはその場でコピー完了を示して少し後に戻る。押した場所で結果が分かり、状態の行が残らないようにするため。ヘッダーの幅を変える文字を足さずに気付けるよう、チェックは成功色で描く。隣の丸付きチェックは解決を表すため、丸のないチェックにする。
+    if (copied && button?.isConnected && !button.dataset.copied) { const original = button.innerHTML, label = button.getAttribute('aria-label'); button.dataset.copied = ''; button.innerHTML = icon('check'); if (label) button.setAttribute('aria-label', t('コピーしました')); nativeSetTimeout(() => { if (button.isConnected) { button.innerHTML = original; if (label) button.setAttribute('aria-label', label); delete button.dataset.copied; } }, 2000); }
   }
   async function send(selected: Feedback[]) {
     selected = selected.filter(isRepairFeedback);
