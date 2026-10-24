@@ -71,7 +71,7 @@ Skills live in `.claude/skills/`. They hold procedures only; rules and behaviour
 - Turn tasks into verifiable goals: "fix the bug" → "write a failing test that reproduces it, then make it pass"; "refactor X" → "tests pass before and after".
 - Follow [`docs/testing.md`](./docs/testing.md): test behaviour through public interfaces, at the smallest layer that can catch the failure, one behaviour per test. Browser tests are for what needs a real engine; tag them `@cross-engine` only when WebKit could behave differently.
 - Update existing tests in the same change when behavior changes intentionally, and delete or merge tests the change makes redundant instead of adding more beside them.
-- While iterating, run the tests the change touches. A task is not done until `pnpm typecheck`, `pnpm test`, `pnpm build` and `pnpm test:e2e` pass, and user-facing changes were checked in the demo.
+- While iterating, run the tests the change touches. A task is not done until `pnpm typecheck`, `pnpm test` and `pnpm build` pass, the E2E specs that cover the changed behaviour pass, and user-facing changes were checked in the demo. Do not run the full `pnpm test:e2e` locally; CI runs it on every pull request, and a pull request is merged only after CI passes.
 - For multi-step work, state a short plan with a verification for each step.
 
 ---
