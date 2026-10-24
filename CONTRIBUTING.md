@@ -18,7 +18,7 @@ The project rules for contributors and coding agents are in [AGENTS.md](AGENTS.m
 
 - Keep each pull request focused on one change.
 - Add or update tests as described in [docs/testing.md](docs/testing.md): at the smallest layer that can catch the failure, one behaviour per test, and with a failing test first for bug fixes. Remove tests your change makes redundant.
-- Before opening it, make sure `pnpm build`, `pnpm typecheck`, `pnpm test` and `pnpm test:e2e` pass (CI runs all four). Install the browsers once with `pnpm exec playwright install chromium webkit`. For changes to packaging, the CLI or dependencies, also run `pnpm test:package-managers`.
+- Before opening it, make sure `pnpm build`, `pnpm typecheck` and `pnpm test` pass, along with the E2E specs that cover your change (`pnpm test:e2e <spec>`). CI runs all of these and the full E2E suite on the pull request. Install the browsers once with `pnpm exec playwright install chromium webkit`. For changes to packaging, the CLI or dependencies, also run `pnpm test:package-managers`.
 - Check user-facing changes in the demo.
 - Leave `version` in `package.json` unchanged; maintainers bump it when releasing ([docs/releasing.md](docs/releasing.md)).
 
