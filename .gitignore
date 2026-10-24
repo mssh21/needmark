@@ -13,3 +13,4 @@ examples/astro/.astro/
 examples/next/.next/
 examples/next/next-env.d.ts
 examples/next/tsconfig.tsbuildinfo
+examples/next/AGENTS.md
