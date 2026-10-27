@@ -75,9 +75,12 @@ export function installPanelPosition(panel: HTMLElement, dock: HTMLElement, onDr
   const refresh = () => { if (!disposed && !frame) frame = nativeRequestAnimationFrame(update); };
   // The header is the grip, like a dialog title bar; its buttons keep their clicks because a press on a control never starts a drag.
   // ダイアログのタイトルバーのようにヘッダーを持ち手にする。操作部品の上で押したときはドラッグを始めないため、ヘッダーのボタンはそのままクリックできる。
+  // The composer and settings have no header, so their blank space is the grip instead; the save path stays selectable and the scrollbar keeps scrolling.
+  // 作成パネルと設定にはヘッダーがないため、代わりに余白を持ち手にする。保存先の文字は選択でき、スクロールバーはスクロールに使えるよう除く。
   const down = (event: PointerEvent) => {
-    const target = event.target as Element, grip = target.closest?.('header');
-    if (drag || !event.isPrimary || event.button !== 0 || !grip || grip.parentElement !== panel || target.closest('button,a,input,select,textarea,label,[role="menu"]')) return;
+    const target = event.target as Element, header = panel.querySelector(':scope > header'), box = target === panel ? panel.getBoundingClientRect() : undefined;
+    const grip = header ? target.closest?.('header') === header : !box || (event.clientX - box.left < panel.clientLeft + panel.clientWidth && event.clientY - box.top < panel.clientTop + panel.clientHeight);
+    if (drag || !event.isPrimary || event.button !== 0 || !grip || target.closest('button,a,input,select,textarea,label,output,[role="menu"]')) return;
     // The inline left and top are the untransformed spot; the bounding box would be scaled while the entry animation runs.
     // インラインのleftとtopは変形前の位置。登場アニメーション中は外接矩形が縮小されているため使わない。
     const rect = panel.getBoundingClientRect(), left = Number.parseFloat(panel.style.left), top = Number.parseFloat(panel.style.top);

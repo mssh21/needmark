@@ -245,6 +245,20 @@ test('the panel header drags the panel, keeps its spot across screens and Escape
   expect(reopened.x).toBeCloseTo(start.x, 0); expect(reopened.y).toBeCloseTo(start.y, 0);
 });
 
+test('the header-less composer drags from its blank space while its fields keep their own presses', async ({ page }) => {
+  await setup(page, { width: 1000, height: 800 }); await selectPurchase(page);
+  const field = page.getByLabel('コメント本文'); await field.fill('動かしても残る');
+  await panel(page).evaluate((element) => Promise.all(element.getAnimations().map((animation) => animation.finished)));
+  const start = (await panel(page).boundingBox())!;
+  await page.mouse.move(start.x + 8, start.y + 8); await page.mouse.down(); await page.mouse.move(start.x - 192, start.y - 92, { steps: 5 }); await page.mouse.up();
+  const moved = (await panel(page).boundingBox())!;
+  expect(moved.x).toBeCloseTo(start.x - 200, 0); expect(moved.y).toBeCloseTo(start.y - 100, 0);
+  const text = (await field.boundingBox())!;
+  await page.mouse.move(text.x + 20, text.y + 20); await page.mouse.down(); await page.mouse.move(text.x + 220, text.y + 120, { steps: 5 }); await page.mouse.up();
+  const still = (await panel(page).boundingBox())!; expect(still.x).toBeCloseTo(moved.x, 0); expect(still.y).toBeCloseTo(moved.y, 0);
+  await expect(field).toHaveValue('動かしても残る'); await expect(field).toBeFocused();
+});
+
 test('a page that swallows pointerup leaves a dragged panel and toolbar where they were dropped', async ({ page }) => {
   // Gesture and outside-click libraries stop pointerup before NeedMark sees it; only the end of the pointer capture still arrives.
   await page.addInitScript(() => addEventListener('pointerup', (event) => event.stopImmediatePropagation(), true));
