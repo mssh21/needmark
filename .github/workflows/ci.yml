@@ -59,6 +59,11 @@ jobs:
     name: E2E
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # The image ships the browsers and their OS packages, so no apt mirror is hit at run time; src/ci.test.ts keeps its tag on the locked Playwright version.
+    # --user 1001 matches the runner's workspace owner, and Chromium needs --ipc=host to avoid running out of shared memory.
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
+      options: --user 1001 --ipc=host
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -68,7 +73,6 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
-      - run: pnpm exec playwright install --with-deps chromium webkit
       # Chromium runs headed for the native tab-picker tests, so it needs a virtual display.
       - run: xvfb-run --auto-servernum pnpm test:e2e
       - if: failure()
