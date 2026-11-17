@@ -6,7 +6,7 @@ import { loadProjectConfig } from './server/config.js';
 import { defaultFeedbackDirectory } from './server/storage.js';
 import type { NeedMarkOptions } from './shared/types.js';
 import { instrumentAstro, instrumentHtml, instrumentJsx } from './server/code-source.js';
-import { isAllowedOrigin } from './shared/origin.js';
+import { isAllowedOrigin, requestOrigin } from './shared/origin.js';
 import { appendReviewScript } from './server/review-script.js';
 import { needmarkEnabled } from './server/enabled.js';
 
@@ -69,7 +69,7 @@ export function needmark(options?: NeedMarkOptions): Plugin {
       if (!active) return;
       server.middlewares.use((request, response, next) => {
         if (api.handle(request, response)) return;
-        const origin = `${server.config.server.https ? 'https' : 'http'}://${request.headers.host ?? ''}`;
+        const origin = requestOrigin(request, !!server.config.server.https);
         const sameOrigin = !request.headers.origin || request.headers.origin === origin;
         const page = { origin: sameOrigin ? origin : '', injected: false };
         if (request.method === 'GET' && isAllowedOrigin(page.origin, origins)) appendReviewScript(response, api.scriptAttrs, () => page.injected);
