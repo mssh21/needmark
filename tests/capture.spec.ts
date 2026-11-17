@@ -194,6 +194,29 @@ test('DOM capture keeps an inline iframe that fills a stretched flex item by per
   expect(result).toEqual({ method: 'dom' });
 });
 
+test('DOM capture shows a panel whose entrance animation already finished at full opacity', { tag: '@cross-engine' }, async ({ page }) => {
+  await page.goto('/');
+  const color = await page.evaluate(async (moduleUrl) => {
+    const { ScreenshotCapture } = await import(moduleUrl);
+    const style = document.createElement('style'); style.textContent = '@keyframes nm-test-appear{from{opacity:0}}';
+    const panel = document.createElement('div');
+    panel.style.cssText = 'position:fixed;left:40px;top:40px;width:200px;height:120px;background:rgb(12,174,93);z-index:100000;animation:nm-test-appear 2s ease-out';
+    document.head.append(style); document.body.append(panel);
+    await Promise.all(panel.getAnimations().map((animation) => { animation.currentTime = 1999; return animation.finished; }));
+    const capture = new ScreenshotCapture();
+    try {
+      const captured = await capture.capture('dom', { x: 600, y: 600, width: 40, height: 30 }, document.querySelector<HTMLElement>('[data-needmark]')!);
+      const image = new Image(); image.src = captured.screenshot; await image.decode();
+      const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
+      const context = canvas.getContext('2d')!; context.drawImage(image, 0, 0);
+      const scale = image.width / innerWidth;
+      return Array.from(context.getImageData(Math.round(140 * scale), Math.round(100 * scale), 1, 1).data).slice(0, 3);
+    } finally { capture.stop(); panel.remove(); style.remove(); }
+  }, moduleUrl);
+  const expected = [12, 174, 93];
+  color.forEach((value, index) => expect(Math.abs(value - expected[index]!)).toBeLessThanOrEqual(2));
+});
+
 test.describe('scrolled high-DPI capture geometry', { tag: '@cross-engine' }, () => {
   test.use({ deviceScaleFactor: 2 });
   test('saved selection outline and redaction use viewport pixels after DOM renderer transforms', async ({ page }) => {
