@@ -62,7 +62,7 @@ jobs:
     # The image ships the browsers and their OS packages, so no apt mirror is hit at run time; src/ci.test.ts keeps its tag on the locked Playwright version.
     # --user 1001 matches the runner's workspace owner, and Chromium needs --ipc=host to avoid running out of shared memory.
     container:
-      image: mcr.microsoft.com/playwright:v1.64.1-noble
+      image: mcr.microsoft.com/playwright:v1.65.1-noble
       options: --user 1001 --ipc=host
     steps:
       - uses: actions/checkout@v7
