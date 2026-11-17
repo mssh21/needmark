@@ -9,7 +9,7 @@ import { sourceEditorUrl } from './source-editor.js';
 import { needmarkCommand } from './package-manager.js';
 import { normalizeContextAttributes } from '../shared/context-attributes.js';
 import { isNeedMarkLanguage, type NeedMarkLanguage } from '../shared/language.js';
-import { isAllowedOrigin } from '../shared/origin.js';
+import { isAllowedOrigin, requestOrigin } from '../shared/origin.js';
 
 export function validateReviewOptions(options: Pick<NeedMarkOptions, 'enabled' | 'origins' | 'language' | 'capture' | 'editor' | 'contextAttributes'>): { origins?: string[]; capture: CaptureMethod; language: NeedMarkLanguage } {
   if (options.enabled !== undefined && typeof options.enabled !== 'boolean') throw new Error('NeedMark enabled must be true or false.');
@@ -96,7 +96,7 @@ export function createReviewApi(options: ReviewApiOptions) {
   };
 
   function handle(request: IncomingMessage, response: ServerResponse): boolean {
-    const origin = `${options.secure ? 'https' : 'http'}://${request.headers.host ?? ''}`;
+    const origin = requestOrigin(request, !!options.secure);
     const path = (request.url ?? '').split('?')[0]!;
     if (path !== endpoint && !path.startsWith(`${endpoint}/`)) return false;
     if (!isAllowedOrigin(origin, origins) || (request.headers.origin && request.headers.origin !== origin)
