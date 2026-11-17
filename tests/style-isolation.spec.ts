@@ -5,14 +5,14 @@ import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import type { Feedback } from '../src/shared/types.js';
 
 const widget = (page: Page) => page.locator('[data-needmark]');
-const inheritedTypography = 'font-family:monospace;font-size:24px;font-weight:900;font-style:italic;letter-spacing:.15em;word-spacing:.3em;text-transform:uppercase;text-indent:64px;text-align:right;direction:rtl;white-space:nowrap';
+const inheritedTypography = 'font-family:monospace;font-size:24px;font-weight:900;font-style:italic;letter-spacing:.15em;word-spacing:.3em;text-transform:uppercase;text-indent:64px;text-align:right;direction:rtl;white-space:nowrap;caret-color:transparent';
 const clientSamples = ['label[for="nm-author"]', '#nm-author', '.panel .mono', '[data-action="settings-save"]', '[data-hint]', '.dock button', '.badge'];
 
 async function typography(root: Locator, selectors: string[]) {
   return root.evaluate((node, selectors) => Object.fromEntries(selectors.map((selector) => {
     const element = (node.shadowRoot ?? node).querySelector(selector)!;
     const style = getComputedStyle(element);
-    return [selector, Object.fromEntries(['fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'letterSpacing', 'wordSpacing', 'textTransform', 'textIndent', 'textAlign', 'direction', 'whiteSpace'].map((key) => [key, style[key as keyof CSSStyleDeclaration]]))];
+    return [selector, Object.fromEntries([...['fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'letterSpacing', 'wordSpacing', 'textTransform', 'textIndent', 'textAlign', 'direction', 'whiteSpace'].map((key) => [key, style[key as keyof CSSStyleDeclaration]]), ['caretFollowsText', style.caretColor === style.color]])];
   })), selectors);
 }
 async function prepare(page: Page) {
