@@ -66,6 +66,11 @@ function mount(endpoint: string, token: string) {
   const host = document.createElement('div');
   host.dataset.needmark = ''; host.lang = language; host.setAttribute('data-html2canvas-ignore', 'true');
   host.style.cssText = 'position:fixed;inset:0;z-index:2147483647;pointer-events:none';
+  // Popovers, menus and selects close on presses and focus outside them through document listeners, and a press on the review UI retargets to this host, so a menu vanished before it could be picked or captured.
+  // Stopping the bubble here hides review interactions from those listeners while NeedMark's own document listeners, which all use the capture phase, still run.
+  // ポップオーバーやメニュー、セレクトは外側の押下やフォーカスをdocumentのリスナーで検知して閉じる。レビューUIでの操作はこのホストに置き換わって届くため、メニューが選択や撮影の前に消えていた。
+  // ここでバブリングを止めればページのリスナーにはレビューの操作が届かず、NeedMark自身のdocumentのリスナーはすべてキャプチャ段階なのでそのまま動く。
+  for (const type of ['pointerdown', 'pointerup', 'mousedown', 'mouseup', 'click', 'dblclick', 'auxclick', 'contextmenu', 'touchstart', 'touchend', 'focusin', 'focusout', 'keydown', 'keyup', 'keypress']) host.addEventListener(type, (event) => event.stopPropagation());
   const animationFreeze = installAnimationFreeze(host);
   const shadow = host.attachShadow({ mode: 'open' });
   shadow.innerHTML = `<style>
