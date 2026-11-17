@@ -211,6 +211,11 @@ function domCloneOptions(source: Document): (clone: Document) => void {
       dialog.close(); dialog.showModal();
       Object.assign(dialog.style, { position: 'fixed', left: `${rect.x}px`, top: `${rect.y}px`, right: 'auto', bottom: 'auto', margin: '0', width: `${rect.width}px`, height: `${rect.height}px`, maxWidth: 'none', maxHeight: 'none', boxSizing: 'border-box', transform: 'none', zIndex: String(2147483000 + order) });
     });
+    // The clone's elements are new, so CSS animations restart from their first keyframe there and an entrance fade (a modal or menu appearing) was drawn nearly transparent.
+    // Finishing the finite ones shows the settled state the page displays; infinite ones cannot finish and are left as they were.
+    // 複製の要素は新しく作られるため、CSSアニメーションが最初のキーフレームからやり直され、モーダルやメニューの登場時のフェードがほぼ透明で描かれていた。
+    // 有限のものを終わらせればページに表示されている落ち着いた状態になる。無限のものは終えられないため、そのままにする。
+    clone.getAnimations?.().forEach((animation) => { if (Number.isFinite(animation.effect?.getComputedTiming().endTime)) animation.finish(); });
     sensitiveElements(clone).forEach((element) => { (element as HTMLElement).style.visibility = 'hidden'; });
     clone.querySelectorAll('img[loading="lazy"]').forEach((image) => image.setAttribute('loading', 'eager'));
     clone.querySelectorAll<HTMLElement>('*').forEach((element) => element.style.setProperty('scroll-behavior', 'auto'));
