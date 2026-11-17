@@ -85,3 +85,27 @@ test('DOM capture preserves a native modal target and redaction while excluding 
   await page.keyboard.press('Escape');
   await expect(page.locator('#capture-modal')).toHaveJSProperty('open', true);
 });
+
+test('a page menu that closes on outside presses stays open while commenting on its item', async ({ page }) => {
+  await page.goto('/');
+  await configureReview(page, { method: 'none' });
+  await page.evaluate(() => {
+    const menu = document.createElement('div'); menu.id = 'outside-menu'; menu.setAttribute('role', 'menu');
+    menu.style.cssText = 'position:fixed;top:120px;left:120px;padding:8px;background:white;border:1px solid #888';
+    menu.innerHTML = '<button role="menuitem" style="padding:12px 24px">Archive project</button>';
+    document.body.append(menu);
+    // Popover and select components commonly close from bubble-phase document listeners, so the fixture reacts to the same events.
+    // ポップオーバーやセレクトはdocumentのバブリング段階のリスナーで閉じることが多いため、同じイベントに反応させる。
+    for (const type of ['pointerdown', 'mousedown', 'click', 'focusin']) document.addEventListener(type, (event) => { if (!menu.contains(event.target as Node)) menu.remove(); });
+  });
+  await page.getByRole('button', { name: 'コメント', exact: true }).click();
+  const item = await page.getByRole('menuitem', { name: 'Archive project' }).boundingBox();
+  await page.mouse.click(item!.x + item!.width / 2, item!.y + item!.height / 2);
+  await page.getByLabel('コメント本文').fill('アーカイブは確認を挟む');
+  await expect(page.locator('#outside-menu')).toBeAttached();
+  await page.getByRole('button', { name: '保存', exact: true }).click();
+  await expect(page.getByLabel('コメント本文')).toBeHidden();
+  await expect(page.locator('#outside-menu')).toBeAttached();
+  const [id] = await readdir(output), saved = JSON.parse(await readFile(`${output}/${id}/context.json`, 'utf8')) as Feedback;
+  expect(saved.target.code?.elements[0]?.accessibleName).toBe('Archive project');
+});
