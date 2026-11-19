@@ -58,7 +58,7 @@
   },
   "dependencies": {
     "@babel/parser": "^8.0.7",
-    "html2canvas-pro": "2.5.2",
+    "html2canvas-pro": "2.6.4",
     "jiti": "2.7.0",
     "magic-string": "^1.4.3",
     "parse5": "^8.0.1"
