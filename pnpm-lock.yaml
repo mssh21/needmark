@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  html2canvas-pro@2.6.4: f02caf7f5bdb55847c69e0b14725863a7c1ea94ef1ba7bd43ddd6b0c8435d375
+
 importers:
 
   .:
@@ -13,7 +16,7 @@ importers:
         version: 8.1.3
       html2canvas-pro:
         specifier: 2.6.4
-        version: 2.6.4
+        version: 2.6.4(patch_hash=f02caf7f5bdb55847c69e0b14725863a7c1ea94ef1ba7bd43ddd6b0c8435d375)
       jiti:
         specifier: 2.7.0
         version: 2.7.0
@@ -3701,7 +3704,7 @@ snapshots:
 
   html-void-elements@3.0.0: {}
 
-  html2canvas-pro@2.6.4: {}
+  html2canvas-pro@2.6.4(patch_hash=f02caf7f5bdb55847c69e0b14725863a7c1ea94ef1ba7bd43ddd6b0c8435d375): {}
 
   http-cache-semantics@4.3.0: {}
 
