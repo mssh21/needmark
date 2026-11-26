@@ -3,3 +3,5 @@ packages:
 allowBuilds:
   esbuild: true
   sharp: false
+patchedDependencies:
+  html2canvas-pro@2.6.4: patches/html2canvas-pro@2.6.4.patch

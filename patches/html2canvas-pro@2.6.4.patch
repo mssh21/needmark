@@ -1,0 +1,39 @@
+diff --git a/dist/html2canvas-pro.cjs b/dist/html2canvas-pro.cjs
+index 0a143c3c34ea01e868f72e308b3eafc2ce6fed22..8fdd6e36d921db32494b2389aee10e40846d5e44 100644
+--- a/dist/html2canvas-pro.cjs	
++++ b/dist/html2canvas-pro.cjs
+@@ -8295,7 +8295,7 @@ const iframeLoader = (iframe, logger, signal) => {
+ 			interval = setInterval(() => {
+ 				attempts++;
+ 				if (signal?.aborted) onAbort();
+-				else if (documentClone.body.childNodes.length > 0 && documentClone.readyState === "complete") {
++				else if (documentClone.documentElement.childNodes.length > 0 && documentClone.readyState === "complete") {
+ 					clearInterval(interval);
+ 					interval = void 0;
+ 					clearTimeout(watchdog);
+diff --git a/dist/html2canvas-pro.esm.js b/dist/html2canvas-pro.esm.js
+index 0ebb4d3b0244b1f42dce298716cd34821e86b5fe..d51c3d67a4c40bb1040d71abc9380a60af029e30 100644
+--- a/dist/html2canvas-pro.esm.js	
++++ b/dist/html2canvas-pro.esm.js
+@@ -8291,7 +8291,7 @@ const iframeLoader = (iframe, logger, signal) => {
+ 			interval = setInterval(() => {
+ 				attempts++;
+ 				if (signal?.aborted) onAbort();
+-				else if (documentClone.body.childNodes.length > 0 && documentClone.readyState === "complete") {
++				else if (documentClone.documentElement.childNodes.length > 0 && documentClone.readyState === "complete") {
+ 					clearInterval(interval);
+ 					interval = void 0;
+ 					clearTimeout(watchdog);
+diff --git a/dist/html2canvas-pro.js b/dist/html2canvas-pro.js
+index 3e7e0afe18fe223f5013aa419f564a63e96de209..a8567430ea45822c23a34f4d724be6d66a2e647c 100644
+--- a/dist/html2canvas-pro.js	
++++ b/dist/html2canvas-pro.js
+@@ -8298,7 +8298,7 @@
+ 				interval = setInterval(() => {
+ 					attempts++;
+ 					if (signal?.aborted) onAbort();
+-					else if (documentClone.body.childNodes.length > 0 && documentClone.readyState === "complete") {
++					else if (documentClone.documentElement.childNodes.length > 0 && documentClone.readyState === "complete") {
+ 						clearInterval(interval);
+ 						interval = void 0;
+ 						clearTimeout(watchdog);
